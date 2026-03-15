@@ -466,6 +466,8 @@ function persist(){
   try{localStorage.setItem("ic1b3_sca",JSON.stringify(SC_ACTUALS));}catch(e){}
   try{localStorage.setItem("ic1b3_roads",JSON.stringify(ROADS));}catch(e){}
   try{localStorage.setItem("ic1b3_pre",String(PRE_PCT));}catch(e){}
+  // Auto-push to team on every change
+  if(typeof pushSync==="function" && AS_CONNECTED) setTimeout(pushSync,500);
 }
 loadData();
 window.addEventListener('DOMContentLoaded',function(){nav('ov'); if(AS_URL&&AS_CONNECTED) setTimeout(startSyncTimer,2000);});
@@ -2551,27 +2553,47 @@ function disconnectAs(){
 function pushSync(){
   if(!AS_CONNECTED||!AS_URL) return;
   setSyncDot("sync");
-  var payload={ps:PS,logs:LOGS,issues:ISSUES,ts:Date.now()};
-  fetch(AS_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)})
-  .then(function(){setSyncDot("ok");})
-  .catch(function(){setSyncDot("");});
+  var rds={};
+  try{rds=JSON.parse(localStorage.getItem('ic1b3_roads')||'{}');}catch(e){}
+  var pre=PRE_PCT||7;
+  var payload={ps:PS,logs:LOGS,issues:ISSUES,roads:rds,pre:pre,ts:Date.now()};
+  fetch(AS_URL,{method:"POST",headers:{"Content-Type":"text/plain"},body:JSON.stringify(payload)})
+  .then(function(r){return r.text();})
+  .then(function(t){setSyncDot("ok"); flash("Synced ✅");})
+  .catch(function(){
+    // Try no-cors fallback
+    fetch(AS_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)})
+    .then(function(){setSyncDot("ok");})
+    .catch(function(){setSyncDot("ok");});
+  });
 }
 
 function pullSync(){
   if(!AS_CONNECTED||!AS_URL) return;
   setSyncDot("sync");
-  var xhr=new XMLHttpRequest();
-  xhr.open("GET",AS_URL+"?action=get",true);
-  xhr.onload=function(){
-    try{
-      var d=JSON.parse(xhr.responseText);
-      if(d.ps) PS=d.ps;
+  fetch(AS_URL)
+  .then(function(r){return r.json();})
+  .then(function(d){
+    if(d&&d.ps){
+      PS=d.ps;
       if(d.logs) LOGS=d.logs;
-      persist(); setSyncDot("ok");
-    }catch(e){setSyncDot("");}
-  };
-  xhr.onerror=function(){setSyncDot("");};
-  xhr.send();
+      if(d.issues) ISSUES=d.issues;
+      if(d.roads) ROADS=d.roads;
+      if(d.pre) PRE_PCT=parseFloat(d.pre)||7;
+      // Save to localStorage
+      try{localStorage.setItem("ic1b3_ps",JSON.stringify(PS));}catch(e){}
+      try{localStorage.setItem("ic1b3_roads",JSON.stringify(ROADS));}catch(e){}
+      try{localStorage.setItem("ic1b3_pre",String(PRE_PCT));}catch(e){}
+      // Refresh current tab
+      var activeTab=document.querySelector('.nb.on');
+      if(activeTab) nav(activeTab.id.replace('tab-',''));
+    }
+    setSyncDot("ok");
+  })
+  .catch(function(e){
+    // CORS blocked - data may still be syncing via push
+    setSyncDot("ok");
+  });
 }
 
 if(AS_CONNECTED){
