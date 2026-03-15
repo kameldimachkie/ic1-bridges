@@ -1899,7 +1899,84 @@ function dlPDF(){
   ph+='</div>';
 
   // ══════════════════════════════════════════════
-  // PAGE 2 — EXECUTIVE SUMMARY + S-CURVE
+  // PAGE 2 — EXECUTIVE NARRATIVE SUMMARY
+  // ══════════════════════════════════════════════
+  ph+='<div class="page sp" style="background:#fff;">';
+  ph+='<div style="position:absolute;top:0;left:0;right:0;height:5px;background:linear-gradient(90deg,#D4A843,#f0c866,#D4A843);"></div>';
+
+  // Page header
+  ph+='<div style="border-bottom:2px solid #e2e8f0;padding-bottom:12px;margin-bottom:22px;display:flex;align-items:flex-end;justify-content:space-between;">';
+  ph+='<div>';
+  ph+='<div style="font-size:7.5pt;color:#D4A843;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:5px;">IC1 · Interchange 1 Road Improvements</div>';
+  ph+='<div style="font-size:16pt;font-weight:900;color:#0f172a;letter-spacing:-0.3px;">Project Narrative Summary</div>';
+  ph+='<div style="width:40px;height:3px;background:#D4A843;border-radius:2px;margin-top:8px;"></div>';
+  ph+='</div>';
+  ph+='<div style="text-align:right;font-size:7.5pt;color:#94a3b8;">'+today3+'</div>';
+  ph+='</div>';
+
+  // Build paragraph data
+  var schedStatus=variance3>=0?"ahead of":"behind";
+  var schedWord=variance3>=0?"progressing well and ahead of":"currently running behind";
+  var brStatus=brOnlyPct===0?"has not yet commenced":brOnlyPct<25?"is in its early stages":brOnlyPct<50?"is progressing steadily":brOnlyPct<75?"is well advanced":"is nearing completion";
+  var ibnStatus=ibnPct===0?"has not yet commenced":ibnPct<50?"is in progress":"is well advanced";
+  var satStatus=satPct===0?"has not yet commenced":satPct<50?"is in progress":"is well advanced";
+  var overallWord=ov<10?"early":ov<30?"progressing":ov<60?"advancing well":ov<85?"well advanced":"nearing completion";
+
+  // Main paragraph
+  ph+='<div style="background:#f8fafc;border-radius:12px;border-left:4px solid #D4A843;padding:20px 24px;margin-bottom:20px;">';
+  ph+='<div style="font-size:9pt;font-weight:700;color:#0f172a;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px;">Project Status Overview</div>';
+  ph+='<p style="font-size:9.5pt;color:#334155;line-height:1.85;text-align:justify;">';
+  ph+='As of <b>'+today3+'</b>, the <b>IC1 Road Improvements Project</b> located at King Khalid Road, Diriyah, Kingdom of Saudi Arabia, has achieved an overall completion of <b style="color:#D4A843;">'+ov+'%</b> against a planned progress of <b>'+timePct3+'%</b>, ';
+  ph+='resulting in a schedule variance of <b style="color:'+vCol3+';">'+(variance3>=0?'+':'')+variance3+'%</b>. The project is '+schedWord+' the planned schedule by <b style="color:'+vCol3+';">'+Math.abs(variance3)+'%</b>.';
+  ph+='</p>';
+  ph+='</div>';
+
+  // Works breakdown paragraphs
+  ph+='<div style="margin-bottom:18px;">';
+  ph+='<div style="font-size:9pt;font-weight:700;color:#0f172a;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px;">Works Breakdown</div>';
+
+  // Preliminary
+  ph+='<div style="display:flex;gap:12px;margin-bottom:12px;padding:12px 16px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;">';
+  ph+='<div style="width:3px;border-radius:2px;background:#06C98F;flex-shrink:0;"></div>';
+  ph+='<div>';
+  ph+='<div style="font-size:8pt;font-weight:700;color:#06C98F;margin-bottom:4px;">Preliminary Works — '+PRE_PCT+'%</div>';
+  ph+='<p style="font-size:9pt;color:#475569;line-height:1.75;margin:0;">Preliminary works have been <b>fully completed</b> at <b>'+PRE_PCT+'%</b>, representing the mobilisation, site preparation, and pre-construction activities carried out between June 2025 and February 2026.</p>';
+  ph+='</div></div>';
+
+  // Bridges
+  ph+='<div style="display:flex;gap:12px;margin-bottom:12px;padding:12px 16px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;">';
+  ph+='<div style="width:3px;border-radius:2px;background:#D4A843;flex-shrink:0;"></div>';
+  ph+='<div>';
+  ph+='<div style="font-size:8pt;font-weight:700;color:#D4A843;margin-bottom:4px;">Bridge Works — '+brOnlyPct+'% (Weight: '+BR_W+'%)</div>';
+  ph+='<p style="font-size:9pt;color:#475569;line-height:1.75;margin:0;">Structural works across the <b>10 bridges</b> (A, B, C, D, E, G, K, L, M, N) encompassing <b>90 piers and abutments</b> '+brStatus+' at <b>'+brOnlyPct+'%</b>. This component carries the highest project weight at <b>'+BR_W+'%</b> and remains the primary focus of ongoing construction activities.</p>';
+  ph+='</div></div>';
+
+  // Roads
+  ph+='<div style="display:flex;gap:12px;margin-bottom:4px;padding:12px 16px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;">';
+  ph+='<div style="width:3px;border-radius:2px;background:#3B82F6;flex-shrink:0;"></div>';
+  ph+='<div>';
+  ph+='<div style="font-size:8pt;font-weight:700;color:#3B82F6;margin-bottom:4px;">Road Works — Ibn Saud: '+ibnPct+'% · Prince Sattam: '+satPct+'% (Weight: 3% each)</div>';
+  ph+='<p style="font-size:9pt;color:#475569;line-height:1.75;margin:0;">Works on <b>Imam Ibn Saud Road</b> '+ibnStatus+' at <b>'+ibnPct+'%</b>, while works on <b>Prince Sattam Road</b> '+satStatus+' at <b>'+satPct+'%</b>. Both road improvement components each carry a weight of <b>3%</b> of the overall project value.</p>';
+  ph+='</div></div>';
+  ph+='</div>';
+
+  // Outlook paragraph
+  ph+='<div style="background:linear-gradient(135deg,#f0f9ff,#fff);border-radius:10px;border:1px solid #bae6fd;padding:16px 20px;margin-bottom:16px;">';
+  ph+='<div style="font-size:8pt;font-weight:700;color:#0369a1;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">Project Outlook</div>';
+  ph+='<p style="font-size:9pt;color:#334155;line-height:1.85;margin:0;">The project is targeted for <b>handover in September 2027</b>, with <b>'+remaining3+' days</b> remaining. As of the report date, <b>'+elapsed3+' days</b> have elapsed out of a total contract duration of <b>'+totalDays3+' days</b> (<b>'+timePct3+'%</b> of the contract period). '+(variance3>=0?'The project is performing <b style="color:#06C98F;">ahead of schedule</b> and efforts should be maintained to sustain this positive trajectory.':'The project team is advised to review progress and implement <b style="color:#EF4444;">recovery measures</b> to close the schedule gap and meet the contractual handover date.')+'</p>';
+  ph+='</div>';
+
+  // Prepared by footer
+  ph+='<div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid #e2e8f0;padding-top:12px;">';
+  ph+='<div style="font-size:7.5pt;color:#64748b;"><b style="color:#0f172a;">Prepared by:</b> Kamel Dimachkie — Head of Surveying Department, Khatib &amp; Alami</div>';
+  ph+='<div style="font-size:7.5pt;color:#94a3b8;">Page 2</div>';
+  ph+='</div>';
+
+  ph+='<div style="position:absolute;bottom:0;left:0;right:0;height:4px;background:linear-gradient(90deg,transparent,#D4A843,transparent);"></div>';
+  ph+='</div>';
+
+  // ══════════════════════════════════════════════
+  // PAGE 3 — EXECUTIVE SUMMARY + S-CURVE
   // ══════════════════════════════════════════════
   ph+='<div class="page sp">';
   ph+='<div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#D4A843,transparent);"></div>';
@@ -1907,7 +1984,7 @@ function dlPDF(){
   ph+='<svg style="position:absolute;top:10px;right:20px;opacity:0.04" width="180" height="100" viewBox="0 0 180 100"><path d="M0 80 Q45 15 90 15 Q135 15 180 80" stroke="#0f172a" stroke-width="3" fill="none"/><line x1="45" y1="45" x2="45" y2="80" stroke="#0f172a" stroke-width="2"/><line x1="135" y1="45" x2="135" y2="80" stroke="#0f172a" stroke-width="2"/><rect x="0" y="80" width="180" height="6" fill="#0f172a"/></svg>';
 
   ph+='<div class="sec-hdr"><div class="sec-title">Executive Summary</div><div class="sec-date">Report Date: '+today3+'</div></div>';
-  ph+='<div class="pn">Page 2</div>';
+  ph+='<div class="pn">Page 5</div>';
 
   // KPIs
   ph+='<div style="display:flex;gap:9px;margin-bottom:14px;">';
@@ -2073,14 +2150,14 @@ function dlPDF(){
   ph+='</div>';
 
   // ══════════════════════════════════════════════
-  // PAGE 3 — DASHBOARD + BRIDGE SUMMARY
+  // PAGE 4 — DASHBOARD + BRIDGE SUMMARY
   // ══════════════════════════════════════════════
   ph+='<div class="page sp">';
   ph+='<div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#D4A843,transparent);"></div>';
   ph+='<svg style="position:absolute;bottom:20px;right:10px;opacity:0.04" width="200" height="120" viewBox="0 0 200 120"><path d="M0 100 Q50 20 100 20 Q150 20 200 100" stroke="#0f172a" stroke-width="3" fill="none"/><line x1="50" y1="55" x2="50" y2="100" stroke="#0f172a" stroke-width="2"/><line x1="150" y1="55" x2="150" y2="100" stroke="#0f172a" stroke-width="2"/></svg>';
 
   ph+='<div class="sec-hdr"><div class="sec-title">Project Dashboard</div><div class="sec-date">As of '+today3+'</div></div>';
-  ph+='<div class="pn">Page 3</div>';
+  ph+='<div class="pn">Page 5</div>';
 
   // Dashboard: mini donuts row
   ph+='<div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">';
@@ -2174,7 +2251,7 @@ function dlPDF(){
   ph+='</div>';
 
   // ══════════════════════════════════════════════
-  // PAGE 5 — PROJECT SUMMARY (white, clean)
+  // PAGE 5 — PROJECT SUMMARY (closing) (white, clean)
   // ══════════════════════════════════════════════
   ph+='<div class="page" style="background:#ffffff!important;color:#1e293b;position:relative;overflow:hidden;display:flex;flex-direction:column;">';
   // Gold top bar
