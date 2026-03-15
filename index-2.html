@@ -241,9 +241,9 @@ body{display:flex;flex-direction:column;}
     
     
     
-    <button class="nb"     id="tab-tl" onclick="nav('tl')">Timeline</button>
+    
     <button class="nb"     id="tab-rp" onclick="nav('rp')">Report</button>
-    <button class="nb"     id="tab-is" onclick="nav('is')">Issues</button>
+    
     <button class="nb"     id="tab-gn" onclick="nav('gn')"><svg width="16" height="14" viewBox="0 0 22 18" fill="none" style="vertical-align:-3px;margin-right:4px"><rect x="1" y="14" width="20" height="3" rx="1.5" fill="currentColor" opacity="0.75"/><path d="M2 14 Q6 2 11 2 Q16 2 20 14" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round"/><line x1="7.5" y1="9" x2="7.5" y2="14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="14.5" y1="9" x2="14.5" y2="14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="2" y1="9" x2="20" y2="9" stroke="currentColor" stroke-width="1" stroke-dasharray="2,2" opacity="0.35"/></svg>Scope</button>
     <button class="nb"     id="tab-mp" onclick="nav('mp')"><svg width="16" height="14" viewBox="0 0 22 18" fill="none" style="vertical-align:-3px;margin-right:4px"><line x1="1" y1="9" x2="21" y2="9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" opacity="0.75"/><line x1="8" y1="1" x2="8" y2="17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/><line x1="16" y1="1" x2="16" y2="17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/><path d="M3 9 Q7 4 11 4 Q15 4 19 9" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="11" cy="9" r="2.8" fill="currentColor" opacity="0.9"/><circle cx="11" cy="9" r="1.2" fill="#07090d"/></svg>Map</button>
   </div>
@@ -659,7 +659,7 @@ function countAllPiers(){
 // ═══════════════════════════════════════════════════════════════
 // NAVIGATION
 // ═══════════════════════════════════════════════════════════════
-var ALL_TABS=["ov","tr","rd","lg","dr","wr","tl","rp","is","gn","mp"];
+var ALL_TABS=["ov","tr","rd","lg","dr","wr","rp","gn","mp"];
 
 function nav(id){
   for(var i=0;i<ALL_TABS.length;i++){
@@ -1742,62 +1742,103 @@ function dlPDF(){
   // ══════════════════════════════════════════════
   // PAGE 1 — COVER
   // ══════════════════════════════════════════════
-  ph+='<div class="page" style="background:linear-gradient(150deg,#07090d 0%,#0d1520 60%,#162035 100%);color:#fff;">';
-  // Top decorative bar
-  ph+='<div style="height:5px;background:linear-gradient(90deg,#D4A843,#f0c866,#D4A843);"></div>';
-  // Decorative arch pattern top-right
-  ph+='<svg style="position:absolute;top:0;right:0;opacity:0.07" width="320" height="320" viewBox="0 0 320 320"><circle cx="320" cy="0" r="280" fill="none" stroke="#D4A843" stroke-width="1"/><circle cx="320" cy="0" r="220" fill="none" stroke="#D4A843" stroke-width="1"/><circle cx="320" cy="0" r="160" fill="none" stroke="#D4A843" stroke-width="1"/><circle cx="320" cy="0" r="100" fill="none" stroke="#D4A843" stroke-width="1"/></svg>';
-  // Bridge arch watermark bottom-left
-  ph+='<svg style="position:absolute;bottom:30px;left:-20px;opacity:0.04" width="300" height="160" viewBox="0 0 300 160"><path d="M0 140 Q75 20 150 20 Q225 20 300 140" stroke="#D4A843" stroke-width="4" fill="none"/><line x1="75" y1="70" x2="75" y2="140" stroke="#D4A843" stroke-width="3"/><line x1="225" y1="70" x2="225" y2="140" stroke="#D4A843" stroke-width="3"/><rect x="0" y="140" width="300" height="10" fill="#D4A843"/></svg>';
+  ph+='<div class="page" style="background:#fff;color:#1e293b;position:relative;overflow:hidden;">';
 
-  ph+='<div style="padding:36px 44px 0;">';
-  // Header
-  ph+='<div style="display:flex;align-items:center;gap:14px;margin-bottom:60px;">'+bridgeIcon;
-  ph+='<div><div style="font-size:24pt;font-weight:900;letter-spacing:3px;color:#D4A843;">SITESYNC</div>';
-  ph+='<div style="font-size:7.5pt;color:#64748b;letter-spacing:3px;text-transform:uppercase;margin-top:2px;">Construction Progress Management</div></div></div>';
-
-  // Title block
-  ph+='<div style="margin-bottom:8px;">';
-  ph+='<div style="font-size:9pt;color:#D4A843;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">Progress Report</div>';
-  ph+='<div style="font-size:28pt;font-weight:900;color:#fff;line-height:1.1;letter-spacing:-0.5px;">IC1 Road<br><span style="color:#D4A843;">Improvements</span></div>';
-  ph+='</div>';
-  ph+='<div style="width:70px;height:4px;background:linear-gradient(90deg,#D4A843,transparent);border-radius:2px;margin:20px 0;"></div>';
-
-  // Project meta
-  ph+='<div style="font-size:8.5pt;color:#94a3b8;line-height:2.1;">';
-  ph+='<div><span style="color:#64748b;display:inline-block;width:110px;">Project</span><span style="color:#e2e8f0;">IC1 — Interchange 1 Road Improvements</span></div>';
-  ph+='<div><span style="color:#64748b;display:inline-block;width:110px;">Location</span><span style="color:#e2e8f0;">King Khalid Road, Diriyah, KSA</span></div>';
-  ph+='<div><span style="color:#64748b;display:inline-block;width:110px;">Consultant</span><span style="color:#e2e8f0;">Khatib &amp; Alami</span></div>';
-  ph+='<div><span style="color:#64748b;display:inline-block;width:110px;">Prepared by</span><span style="color:#D4A843;font-weight:700;">Kamel Dimachkie — Head of Surveying</span></div>';
-  ph+='<div><span style="color:#64748b;display:inline-block;width:110px;">Report Date</span><span style="color:#e2e8f0;">'+today3+'</span></div>';
-  ph+='<div><span style="color:#64748b;display:inline-block;width:110px;">Contract Period</span><span style="color:#e2e8f0;">June 2025 — September 2027</span></div>';
-  ph+='</div>';
+  // ── Black header with subtle crosshatch texture ──────────
+  ph+='<div style="background:#1a1a1a;width:100%;padding:36px 44px 30px;position:relative;overflow:hidden;">';
+  // Texture: subtle diagonal lines SVG overlay
+  ph+='<svg style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0.06;pointer-events:none;" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="diag" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="12" stroke="#D4A843" stroke-width="1"/></pattern></defs><rect width="100%" height="100%" fill="url(#diag)"/></svg>';
+  // Arch watermark
+  ph+='<svg style="position:absolute;bottom:-10px;right:20px;opacity:0.10" width="200" height="110" viewBox="0 0 200 110"><path d="M0 90 Q50 12 100 12 Q150 12 200 90" stroke="#D4A843" stroke-width="2.5" fill="none"/><line x1="50" y1="46" x2="50" y2="90" stroke="#D4A843" stroke-width="2"/><line x1="150" y1="46" x2="150" y2="90" stroke="#D4A843" stroke-width="2"/></svg>';
+  // Gold top rule
+  ph+='<div style="width:100%;height:3px;background:linear-gradient(90deg,#D4A843,#f0c866,#D4A843);border-radius:2px;margin-bottom:20px;"></div>';
+  // Logo row
+  ph+='<div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">';
+  ph+='<svg width="40" height="40" viewBox="0 0 48 48" fill="none"><path d="M3 36 Q13 9 24 9 Q35 9 45 36" stroke="#D4A843" stroke-width="3" fill="none" stroke-linecap="round"/><line x1="15" y1="23" x2="15" y2="36" stroke="#D4A843" stroke-width="2.5" stroke-linecap="round"/><line x1="33" y1="23" x2="33" y2="36" stroke="#D4A843" stroke-width="2.5" stroke-linecap="round"/><rect x="2" y="36" width="44" height="6" rx="2" fill="#D4A843" opacity="0.25"/></svg>';
+  ph+='<div><div style="font-size:20pt;font-weight:900;letter-spacing:3px;color:#D4A843;">SITESYNC</div>';
+  ph+='<div style="font-size:7pt;color:#888;letter-spacing:3px;text-transform:uppercase;margin-top:1px;">Construction Progress Management</div></div></div>';
+  // Title
+  ph+='<div style="font-size:23pt;font-weight:900;color:#fff;letter-spacing:-0.3px;line-height:1.15;">IC1 Road <span style="color:#D4A843;">Improvements</span></div>';
+  ph+='<div style="font-size:9.5pt;color:#999;margin-top:5px;letter-spacing:1.5px;text-transform:uppercase;">Progress Report</div>';
+  ph+='<div style="width:48px;height:3px;background:#D4A843;border-radius:2px;margin-top:14px;"></div>';
   ph+='</div>';
 
-  // Overall progress card
-  ph+='<div style="margin:36px 44px 0;background:rgba(212,168,67,0.07);border:1px solid rgba(212,168,67,0.2);border-radius:14px;padding:24px 28px;display:flex;align-items:center;gap:28px;">';
-  ph+=donut3(ov,'#D4A843',90);
-  ph+='<div style="flex:1;">';
-  ph+='<div style="font-size:10pt;font-weight:700;color:#D4A843;margin-bottom:12px;letter-spacing:0.3px;">OVERALL PROJECT COMPLETION</div>';
-  var wRows3=[
-    {lbl:"Preliminary Works",pct:PRE_PCT,wt:PRE_PCT,c:"#06C98F",done:true},
-    {lbl:"Bridge Works",pct:brOnlyPct,wt:BR_W,c:"#D4A843",done:false},
-    {lbl:"Ibn Saud Road",pct:ibnPct,wt:3,c:"#3B82F6",done:false},
-    {lbl:"Prince Sattam Road",pct:satPct,wt:3,c:"#3B82F6",done:false}
+  // ── White body ───────────────────────────────────────────
+  ph+='<div style="padding:28px 44px 20px;">';
+
+  // Row: Large donut  +  project details table
+  ph+='<div style="display:flex;align-items:flex-start;gap:32px;margin-bottom:24px;">';
+
+  // Donut — larger (120px) so % is very visible
+  var r5=50; var circ5=2*3.14159*r5; var fill5=Math.round(circ5*ov/100);
+  ph+='<div style="flex-shrink:0;text-align:center;">';
+  ph+='<svg width="120" height="120" viewBox="0 0 120 120">';
+  ph+='<circle cx="60" cy="60" r="'+r5+'" fill="none" stroke="#e2e8f0" stroke-width="9"/>';
+  ph+='<circle cx="60" cy="60" r="'+r5+'" fill="none" stroke="#D4A843" stroke-width="9" stroke-dasharray="'+fill5+' '+circ5+'" stroke-linecap="round" transform="rotate(-90 60 60)"/>';
+  ph+='<text x="60" y="54" text-anchor="middle" font-family="Arial" font-weight="900" font-size="18" fill="#D4A843">'+ov+'%</text>';
+  ph+='<text x="60" y="70" text-anchor="middle" font-family="Arial" font-size="7.5" fill="#94a3b8" font-weight="600">COMPLETE</text>';
+  ph+='<text x="60" y="83" text-anchor="middle" font-family="Arial" font-size="6.5" fill="#cbd5e1">Overall</text>';
+  ph+='</svg>';
+  ph+='</div>';
+
+  // Project details — clean 2-col table with divider
+  ph+='<div style="flex:1;border-left:3px solid #D4A843;padding-left:20px;">';
+  ph+='<div style="font-size:8pt;font-weight:700;color:#D4A843;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Project Details</div>';
+  ph+='<table style="border:none;border-collapse:collapse;width:100%;font-size:8.5pt;">';
+  var metaRows2=[
+    ['Project','IC1 — Interchange 1 Road Improvements'],
+    ['Location','King Khalid Road, Diriyah, KSA'],
+    ['Client','Diriyah Gate Development Authority'],
+    ['Consultant','Khatib &amp; Alami'],
+    ['Prepared by','Kamel Dimachkie — Head of Surveying'],
+    ['Contract','June 2025 — September 2027'],
+    ['Report Date',today3]
   ];
-  for(var wi3=0;wi3<wRows3.length;wi3++){
-    var wr3=wRows3[wi3]; var earn3=Math.round(wr3.pct/100*wr3.wt*10)/10;
-    ph+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;">';
-    ph+='<div style="width:120px;font-size:7.5pt;color:#94a3b8;">'+wr3.lbl+'</div>';
-    ph+='<div style="flex:1;height:6px;background:#1e2d3d;border-radius:3px;">';
-    ph+='<div style="width:'+wr3.pct+'%;height:6px;background:'+wr3.c+';border-radius:3px;"></div></div>';
-    ph+='<div style="font-size:7.5pt;font-weight:700;color:'+wr3.c+';min-width:55px;text-align:right;">'+wr3.pct+'% → <span style="color:#475569;font-weight:400;">'+earn3+'</span></div>';
+  for(var mi5=0;mi5<metaRows2.length;mi5++){
+    var isPrep=mi5===4;
+    ph+='<tr style="border-bottom:1px solid #f1f5f9;">';
+    ph+='<td style="padding:5px 16px 5px 0;color:#94a3b8;font-weight:600;white-space:nowrap;width:100px;font-size:7.5pt;">'+metaRows2[mi5][0]+'</td>';
+    ph+='<td style="padding:5px 0;color:'+(isPrep?'#D4A843':'#1e293b')+';font-weight:'+(isPrep?'700':'400')+';font-size:8pt;">'+metaRows2[mi5][1]+'</td>';
+    ph+='</tr>';
+  }
+  ph+='</table></div></div>';
+
+  // Weight breakdown
+  ph+='<div style="background:#f8fafc;border-radius:10px;padding:13px 18px;border:1px solid #e2e8f0;margin-bottom:20px;">';
+  ph+='<div style="font-size:7.5pt;font-weight:700;color:#64748b;margin-bottom:9px;text-transform:uppercase;letter-spacing:0.5px;">Weight Breakdown</div>';
+  var wRows5=[
+    {lbl:"Preliminary Works",pct:PRE_PCT,wt:PRE_PCT,c:"#06C98F"},
+    {lbl:"Bridge Works",pct:brOnlyPct,wt:BR_W,c:"#D4A843"},
+    {lbl:"Ibn Saud Road",pct:ibnPct,wt:3,c:"#3B82F6"},
+    {lbl:"Prince Sattam Road",pct:satPct,wt:3,c:"#3B82F6"}
+  ];
+  for(var wk2=0;wk2<wRows5.length;wk2++){
+    var wr6=wRows5[wk2]; var earn6=Math.round(wr6.pct/100*wr6.wt*10)/10;
+    ph+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">';
+    ph+='<div style="width:128px;font-size:7.5pt;color:#64748b;">'+wr6.lbl+'</div>';
+    ph+='<div style="width:24px;font-size:7pt;font-weight:700;color:#94a3b8;text-align:right;">'+wr6.wt+'%</div>';
+    ph+='<div style="flex:1;height:6px;background:#e2e8f0;border-radius:3px;">';
+    ph+='<div style="width:'+wr6.pct+'%;height:6px;background:'+wr6.c+';border-radius:3px;"></div></div>';
+    ph+='<div style="font-size:7.5pt;font-weight:700;color:'+wr6.c+';min-width:52px;text-align:right;">'+wr6.pct+'% → '+earn6+'</div>';
     ph+='</div>';
   }
-  ph+='</div></div>';
+  ph+='</div>';
 
-  // Bottom bar
-  ph+='<div style="position:absolute;bottom:0;left:0;right:0;height:5px;background:linear-gradient(90deg,#D4A843,#f0c866,#D4A843);"></div>';
+  // Variance + QR
+  ph+='<div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;">';
+  ph+='<div style="background:'+(variance3>=0?"#f0fdf4":"#fff1f2")+'";flex:1;border-radius:8px;border-left:4px solid '+vCol3+';padding:10px 16px;">';
+  ph+='<div style="font-size:9pt;font-weight:700;color:'+vCol3+';">'+(variance3>=0?"▲ Ahead of Schedule":"▼ Behind Schedule")+'</div>';
+  ph+='<div style="font-size:7.5pt;color:#64748b;margin-top:3px;">Actual: '+ov+'% &nbsp;·&nbsp; Time: '+timePct3+'% &nbsp;·&nbsp; Δ '+(variance3>=0?"+":"")+variance3+'%</div>';
+  ph+='</div>';
+  ph+='<div style="text-align:center;flex-shrink:0;">';
+  var qrU2='https://api.qrserver.com/v1/create-qr-code/?size=100x100&data='+encodeURIComponent('https://ahmeddimachkie.github.io/ic1-bridges/');
+  ph+='<img src="'+qrU2+'" width="96" height="96" style="border:3px solid #1e293b;border-radius:6px;display:block;">';
+  ph+='<div style="font-size:7pt;color:#64748b;margin-top:5px;font-weight:600;">Scan to open the app</div>';
+  ph+='</div>';
+  ph+='</div>';
+
+  ph+='</div>';
+  ph+='<div style="height:4px;background:linear-gradient(90deg,#D4A843,#f0c866,#D4A843);position:absolute;bottom:0;left:0;right:0;"></div>';
   ph+='</div>';
 
   // ══════════════════════════════════════════════
@@ -1835,65 +1876,113 @@ function dlPDF(){
   ph+='<div style="font-size:20pt;font-weight:900;color:'+vCol3+';">'+(variance3>=0?'+':'')+variance3+'%</div>';
   ph+='</div>';
 
-  // S-CURVE embedded SVG chart
+  // S-CURVE — identical formula to app S-Curve tab
   ph+='<div class="stitle">S-Curve — Planned vs Actual</div>';
-  var CW=480; var CH=130; var LPAD=28; var BPAD=22;
-  var cW2=CW-LPAD-8; var cH2=CH-BPAD-10;
-  function scX(i){return LPAD+Math.round(i/(scMonths.length-1)*cW2);}
-  function scY(v){return (CH-BPAD)-Math.round(v/100*cH2);}
 
-  ph+='<div style="background:#f8fafc;border-radius:10px;padding:14px 10px 8px;border:1px solid #e2e8f0;margin-bottom:14px;">';
-  ph+='<svg viewBox="0 0 '+CW+' '+CH+'" style="width:100%;display:block;">';
+  // ── Same data as rGnSCurve ──────────────────────────────
+  var pdfMonths=["Jun'25","Jul","Aug","Sep","Oct","Nov","Dec","Jan'26","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec","Jan'27","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep'27"];
+  var pdfPlanned=[0,1,2,3,4,5,6,7,10,14,18,23,28,34,41,48,55,62,68,74,79,84,88,92,95,97,99,100];
+  var pdfSCA={};
+  try{pdfSCA=JSON.parse(localStorage.getItem("ic1b3_sca")||"{}");}catch(e){}
+
+  var pdfActual=[];
+  for(var pmi=0;pmi<pdfMonths.length;pmi++){
+    var pmk=pdfMonths[pmi].replace("'","");
+    pdfActual.push(pdfSCA[pmk]!==undefined?pdfSCA[pmk]:null);
+  }
+  var pdfTodayIdx=Math.min(pdfMonths.length-1,Math.floor((new Date()-new Date("2025-06-01"))/(30*86400000)));
+
+  // Build actual points — always starts at (0,0)
+  var pdfActPts=[{i:0,v:0}];
+  for(var pai=0;pai<pdfActual.length;pai++){
+    if(pdfActual[pai]!==null) pdfActPts.push({i:pai,v:pdfActual[pai]});
+  }
+  // Add today's real overall as last point
+  var pdfLastPt=pdfActPts[pdfActPts.length-1];
+  if(pdfLastPt.i!==pdfTodayIdx||pdfLastPt.v!==ov){
+    pdfActPts.push({i:pdfTodayIdx,v:ov});
+  }
+  var pdfPlannedNow=pdfPlanned[Math.min(pdfPlanned.length-1,pdfTodayIdx)]||0;
+  var pdfVariance=Math.round((ov-pdfPlannedNow)*10)/10;
+  var pdfVarCol=pdfVariance>=0?"#06C98F":"#EF4444";
+
+  // ── SVG chart ──────────────────────────────────────────
+  var PCW=490; var PCH=140; var PLPAD=30; var PBPAD=24;
+  var pcW=PCW-PLPAD-8; var pcH=PCH-PBPAD-12;
+  function scpX(i){return PLPAD+Math.round(i/(pdfMonths.length-1)*pcW);}
+  function scpY(v){return (PCH-PBPAD)-Math.round(v/100*pcH);}
+
+  ph+='<div style="background:#f8fafc;border-radius:10px;padding:12px 10px 6px;border:1px solid #e2e8f0;margin-bottom:12px;">';
+  ph+='<svg viewBox="0 0 '+PCW+' '+PCH+'" style="width:100%;display:block;">';
+
   // Grid
-  for(var g=0;g<=4;g++){
-    var gv=g*25; var gy=scY(gv);
-    ph+='<line x1="'+LPAD+'" y1="'+gy+'" x2="'+(LPAD+cW2)+'" y2="'+gy+'" stroke="#e2e8f0" stroke-width="0.8"/>';
-    ph+='<text x="'+(LPAD-3)+'" y="'+(gy+3)+'" text-anchor="end" font-size="6" fill="#94a3b8">'+gv+'</text>';
+  for(var pg=0;pg<=4;pg++){
+    var pgv=pg*25; var pgy=scpY(pgv);
+    ph+='<line x1="'+PLPAD+'" y1="'+pgy+'" x2="'+(PLPAD+pcW)+'" y2="'+pgy+'" stroke="#e2e8f0" stroke-width="0.8"/>';
+    ph+='<text x="'+(PLPAD-3)+'" y="'+(pgy+3)+'" text-anchor="end" font-size="6" fill="#94a3b8">'+pgv+'</text>';
   }
   // Month labels every 4
-  for(var ml3=0;ml3<scMonths.length;ml3+=4){
-    var lx3=scX(ml3);
-    ph+='<text x="'+lx3+'" y="'+(CH-BPAD+10)+'" text-anchor="middle" font-size="6" fill="#94a3b8">'+scMonths[ml3]+'</text>';
-    ph+='<line x1="'+lx3+'" y1="'+(CH-BPAD)+'" x2="'+lx3+'" y2="'+(CH-BPAD+3)+'" stroke="#CBD5E1" stroke-width="0.8"/>';
+  for(var pml=0;pml<pdfMonths.length;pml+=4){
+    var plx=scpX(pml);
+    ph+='<text x="'+plx+'" y="'+(PCH-PBPAD+10)+'" text-anchor="middle" font-size="6" fill="#94a3b8">'+pdfMonths[pml]+'</text>';
+    ph+='<line x1="'+plx+'" y1="'+(PCH-PBPAD)+'" x2="'+plx+'" y2="'+(PCH-PBPAD+3)+'" stroke="#CBD5E1" stroke-width="0.8"/>';
   }
   // Axes
-  ph+='<line x1="'+LPAD+'" y1="8" x2="'+LPAD+'" y2="'+(CH-BPAD)+'" stroke="#CBD5E1" stroke-width="1"/>';
-  ph+='<line x1="'+LPAD+'" y1="'+(CH-BPAD)+'" x2="'+(LPAD+cW2)+'" y2="'+(CH-BPAD)+'" stroke="#CBD5E1" stroke-width="1"/>';
+  ph+='<line x1="'+PLPAD+'" y1="8" x2="'+PLPAD+'" y2="'+(PCH-PBPAD)+'" stroke="#CBD5E1" stroke-width="1"/>';
+  ph+='<line x1="'+PLPAD+'" y1="'+(PCH-PBPAD)+'" x2="'+(PLPAD+pcW)+'" y2="'+(PCH-PBPAD)+'" stroke="#CBD5E1" stroke-width="1"/>';
 
-  // Planned area fill
-  var pfill="M"+scX(0)+" "+scY(scPlanned[0]);
-  for(var pi4=1;pi4<scPlanned.length;pi4++) pfill+=" L"+scX(pi4)+" "+scY(scPlanned[pi4]);
-  pfill+=" L"+(LPAD+cW2)+" "+(CH-BPAD)+" L"+LPAD+" "+(CH-BPAD)+" Z";
-  ph+='<path d="'+pfill+'" fill="#D4A843" opacity="0.08"/>';
-  // Planned line
-  var pline="M"+scX(0)+" "+scY(scPlanned[0]);
-  for(var pi5=1;pi5<scPlanned.length;pi5++) pline+=" L"+scX(pi5)+" "+scY(scPlanned[pi5]);
-  ph+='<path d="'+pline+'" stroke="#D4A843" stroke-width="1.5" fill="none" stroke-dasharray="5,3" opacity="0.8"/>';
+  // Planned fill
+  var ppfill="M"+scpX(0)+" "+scpY(pdfPlanned[0]);
+  for(var ppfi=1;ppfi<pdfPlanned.length;ppfi++) ppfill+=" L"+scpX(ppfi)+" "+scpY(pdfPlanned[ppfi]);
+  ppfill+=" L"+(PLPAD+pcW)+" "+(PCH-PBPAD)+" L"+PLPAD+" "+(PCH-PBPAD)+" Z";
+  ph+='<path d="'+ppfill+'" fill="#D4A843" opacity="0.07"/>';
 
-  // Actual line
-  var aPts=[]; for(var ai4=0;ai4<scActual.length;ai4++){if(scActual[ai4]!==null) aPts.push({x:scX(ai4),y:scY(scActual[ai4])});}
-  if(aPts.length>1){
-    var aline="M"+aPts[0].x+" "+aPts[0].y;
-    for(var ap4=1;ap4<aPts.length;ap4++) aline+=" L"+aPts[ap4].x+" "+aPts[ap4].y;
-    ph+='<path d="'+aline+'" stroke="#06C98F" stroke-width="2" fill="none" stroke-linecap="round"/>';
-    ph+='<circle cx="'+aPts[aPts.length-1].x+'" cy="'+aPts[aPts.length-1].y+'" r="3.5" fill="#06C98F"/>';
-  }
+  // Planned line — gold dashed (same as app)
+  var ppline="M"+scpX(0)+" "+scpY(pdfPlanned[0]);
+  for(var ppi=1;ppi<pdfPlanned.length;ppi++) ppline+=" L"+scpX(ppi)+" "+scpY(pdfPlanned[ppi]);
+  ph+='<path d="'+ppline+'" stroke="#D4A843" stroke-width="1.5" fill="none" stroke-dasharray="5,3" opacity="0.85"/>';
+
+  // Actual line — green solid (same as app)
+  var paline="M"+scpX(pdfActPts[0].i)+" "+scpY(pdfActPts[0].v);
+  for(var api2=1;api2<pdfActPts.length;api2++) paline+=" L"+scpX(pdfActPts[api2].i)+" "+scpY(pdfActPts[api2].v);
+  ph+='<path d="'+paline+'" stroke="#06D6A0" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>';
+  // Dot at today
+  var pLastPt=pdfActPts[pdfActPts.length-1];
+  ph+='<circle cx="'+scpX(pLastPt.i)+'" cy="'+scpY(pLastPt.v)+'" r="4" fill="#06D6A0"/>';
+  ph+='<text x="'+(scpX(pLastPt.i)+6)+'" y="'+(scpY(pLastPt.v)+4)+'" font-size="8" font-weight="900" fill="#06D6A0">'+ov+'%</text>';
 
   // TODAY line
-  var tx3=scX(todayMIdx3);
-  ph+='<line x1="'+tx3+'" y1="8" x2="'+tx3+'" y2="'+(CH-BPAD)+'" stroke="#EF4444" stroke-width="1.2" stroke-dasharray="3,2" opacity="0.7"/>';
-  ph+='<text x="'+tx3+'" y="6" text-anchor="middle" font-size="5.5" fill="#EF4444" font-weight="700">TODAY</text>';
+  var ptx=scpX(pdfTodayIdx);
+  ph+='<line x1="'+ptx+'" y1="8" x2="'+ptx+'" y2="'+(PCH-PBPAD)+'" stroke="#EF4444" stroke-width="1.2" stroke-dasharray="3,2" opacity="0.7"/>';
+  ph+='<text x="'+ptx+'" y="6" text-anchor="middle" font-size="5.5" fill="#EF4444" font-weight="700">TODAY</text>';
 
   // Legend
-  ph+='<g transform="translate('+LPAD+',10)">';
+  ph+='<g transform="translate('+PLPAD+',10)">';
   ph+='<line x1="0" y1="5" x2="14" y2="5" stroke="#D4A843" stroke-width="1.5" stroke-dasharray="4,2"/>';
-  ph+='<text x="17" y="8" font-size="6" fill="#94a3b8">Planned</text>';
-  ph+='<line x1="58" y1="5" x2="72" y2="5" stroke="#06C98F" stroke-width="2"/>';
-  ph+='<text x="75" y="8" font-size="6" fill="#94a3b8">Actual</text>';
+  ph+='<text x="17" y="8" font-size="6" fill="#64748b">Planned</text>';
+  ph+='<line x1="58" y1="5" x2="72" y2="5" stroke="#06D6A0" stroke-width="2.5"/>';
+  ph+='<text x="75" y="8" font-size="6" fill="#64748b">Actual</text>';
   ph+='</g>';
-  ph+='</svg></div>';
 
-  // Weight table
+  // Variance callout inside chart
+  ph+='<text x="'+(PLPAD+pcW-2)+'" y="20" text-anchor="end" font-size="7" font-weight="700" fill="'+pdfVarCol+'">'+(pdfVariance>=0?'▲ Ahead ':'▼ Behind ')+Math.abs(pdfVariance)+'%</text>';
+  ph+='</svg>';
+
+  // Planned / Actual / Variance pills
+  ph+='<div style="display:flex;gap:10px;justify-content:center;padding:6px 0 2px;">';
+  ph+='<div style="text-align:center;padding:5px 14px;background:#fff;border-radius:6px;border:1px solid #e2e8f0;">';
+  ph+='<div style="font-size:6.5pt;color:#64748b;">Planned</div>';
+  ph+='<div style="font-size:11pt;font-weight:900;color:#D4A843;">'+pdfPlannedNow+'%</div></div>';
+  ph+='<div style="text-align:center;padding:5px 14px;background:#fff;border-radius:6px;border:1px solid #e2e8f0;">';
+  ph+='<div style="font-size:6.5pt;color:#64748b;">Actual</div>';
+  ph+='<div style="font-size:11pt;font-weight:900;color:#06D6A0;">'+ov+'%</div></div>';
+  ph+='<div style="text-align:center;padding:5px 14px;background:#fff;border-radius:6px;border:1px solid '+pdfVarCol+'33;">';
+  ph+='<div style="font-size:6.5pt;color:#64748b;">Variance</div>';
+  ph+='<div style="font-size:11pt;font-weight:900;color:'+pdfVarCol+';">'+(pdfVariance>=0?"+":"")+pdfVariance+'%</div></div>';
+  ph+='</div>';
+  ph+='</div>';
+
+// Weight table
   ph+='<div class="stitle">Weight Breakdown</div>';
   ph+='<table><tr><th>Component</th><th style="text-align:center">Weight</th><th>Progress</th><th style="text-align:center">Earned</th><th>Status</th></tr>';
   var preEarned3=Math.round(PRE_PCT*10)/10;
@@ -2028,53 +2117,180 @@ function dlPDF(){
   ph+='</div>';
 
   // ══════════════════════════════════════════════
-  // PAGE 5 — SIGNATURE / CLOSING
+  // PAGE 5 — PROJECT SUMMARY (white, clean)
   // ══════════════════════════════════════════════
-  ph+='<div class="page" style="background:linear-gradient(150deg,#07090d 0%,#0d1520 60%,#162035 100%);display:flex;flex-direction:column;justify-content:space-between;padding:40px 44px;">';
-  ph+='<div style="height:4px;background:linear-gradient(90deg,#D4A843,#f0c866,#D4A843);position:absolute;top:0;left:0;right:0;"></div>';
-  // Decorative circles
-  ph+='<svg style="position:absolute;top:0;right:0;opacity:0.06" width="260" height="260" viewBox="0 0 260 260"><circle cx="260" cy="0" r="220" fill="none" stroke="#D4A843" stroke-width="1"/><circle cx="260" cy="0" r="160" fill="none" stroke="#D4A843" stroke-width="1"/><circle cx="260" cy="0" r="100" fill="none" stroke="#D4A843" stroke-width="1"/></svg>';
+  ph+='<div class="page" style="background:#fff;color:#1e293b;position:relative;overflow:hidden;display:flex;flex-direction:column;">';
+  // Gold top bar
+  ph+='<div style="height:5px;background:linear-gradient(90deg,#D4A843,#f0c866,#D4A843);"></div>';
 
+  // ── Header strip ─────────────────────────────────────────
+  ph+='<div style="padding:28px 44px 22px;border-bottom:1px solid #e2e8f0;">';
+  ph+='<div style="display:flex;align-items:center;justify-content:space-between;">';
   ph+='<div>';
-  ph+=bridgeIcon;
-  ph+='<div style="font-size:22pt;font-weight:900;color:#D4A843;letter-spacing:1px;margin-top:16px;">IC1 Road Improvements</div>';
-  ph+='<div style="font-size:9pt;color:#64748b;margin-top:4px;">Diriyah, Kingdom of Saudi Arabia</div>';
-  ph+='<div style="width:60px;height:3px;background:linear-gradient(90deg,#D4A843,transparent);margin:16px 0;border-radius:2px;"></div>';
-  ph+='<div style="color:#94a3b8;font-size:8.5pt;line-height:2;">';
-  ph+='<div><span style="color:#64748b;display:inline-block;width:120px;">Scope</span><span style="color:#cbd5e1;">10 Bridges (A,B,C,D,E,G,K,L,M,N) · 88 Piers</span></div>';
-  ph+='<div><span style="color:#64748b;display:inline-block;width:120px;">Road Works</span><span style="color:#cbd5e1;">Ibn Saud Road · Prince Sattam Road</span></div>';
-  ph+='<div><span style="color:#64748b;display:inline-block;width:120px;">Overall Progress</span><span style="color:#D4A843;font-weight:700;">'+ov+'%</span></div>';
-  ph+='<div><span style="color:#64748b;display:inline-block;width:120px;">Variance</span><span style="color:'+vCol3+';font-weight:700;">'+(variance3>=0?"+":"")+variance3+'% ('+(variance3>=0?"Ahead":"Behind")+')</span></div>';
-  ph+='<div><span style="color:#64748b;display:inline-block;width:120px;">Report Date</span><span style="color:#cbd5e1;">'+today3+'</span></div>';
+  ph+='<div style="font-size:7.5pt;color:#D4A843;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:5px;">IC1 Road Improvements · Diriyah</div>';
+  ph+='<div style="font-size:18pt;font-weight:900;color:#0f172a;letter-spacing:-0.3px;">Project Progress Summary</div>';
+  ph+='<div style="width:44px;height:3px;background:#D4A843;border-radius:2px;margin-top:10px;"></div>';
+  ph+='</div>';
+  ph+='<div style="font-size:8pt;color:#94a3b8;">'+today3+'</div>';
   ph+='</div></div>';
 
-  // Signature block
-  ph+='<div>';
-  ph+='<div style="display:flex;justify-content:space-between;align-items:flex-end;">';
-  ph+='<div>';
-  ph+='<div style="height:40px;"></div>';
-  ph+='<div style="border-top:1px solid #D4A843;padding-top:8px;width:220px;">';
-  ph+='<div style="font-size:10pt;font-weight:700;color:#D4A843;letter-spacing:0.5px;">KAMEL DIMACHKIE</div>';
-  ph+='<div style="font-size:8pt;color:#94a3b8;margin-top:2px;">Head of Surveying Department</div>';
-  ph+='<div style="font-size:8pt;color:#64748b;">Khatib &amp; Alami · IC1 Diriyah</div>';
-  ph+='</div></div>';
+  // ── Main content ─────────────────────────────────────────
+  ph+='<div style="padding:24px 44px;flex:1;">';
+
+  // Big completion display
+  ph+='<div style="display:flex;align-items:center;gap:36px;margin-bottom:28px;padding:20px 24px;background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;">';
+  // Large donut
+  var r6=52; var circ6=2*3.14159*r6; var fill6=Math.round(circ6*ov/100);
+  ph+='<svg width="124" height="124" viewBox="0 0 124 124" style="flex-shrink:0;">';
+  ph+='<circle cx="62" cy="62" r="'+r6+'" fill="none" stroke="#e2e8f0" stroke-width="10"/>';
+  ph+='<circle cx="62" cy="62" r="'+r6+'" fill="none" stroke="#D4A843" stroke-width="10" stroke-dasharray="'+fill6+' '+circ6+'" stroke-linecap="round" transform="rotate(-90 62 62)"/>';
+  ph+='<text x="62" y="56" text-anchor="middle" font-family="Arial" font-weight="900" font-size="20" fill="#D4A843">'+ov+'%</text>';
+  ph+='<text x="62" y="72" text-anchor="middle" font-family="Arial" font-size="7.5" fill="#94a3b8" font-weight="600">COMPLETE</text>';
+  ph+='</svg>';
+  // Summary stats
+  ph+='<div style="flex:1;">';
+  ph+='<div style="font-size:11pt;font-weight:700;color:#0f172a;margin-bottom:12px;">Overall Completion as of '+today3+'</div>';
+  var sumStats=[
+    {lbl:"Time Elapsed",val:timePct3+'%',sub:elapsed3+' of '+totalDays3+' days',c:"#3B82F6"},
+    {lbl:"Days Remaining",val:remaining3,sub:"To handover Sep 2027",c:"#06C98F"},
+    {lbl:"Schedule Variance",val:(variance3>=0?"+":"")+variance3+'%',sub:variance3>=0?"Ahead of schedule":"Behind schedule",c:vCol3}
+  ];
+  ph+='<div style="display:flex;gap:12px;">';
+  for(var ss=0;ss<sumStats.length;ss++){
+    ph+='<div style="flex:1;background:#fff;border-radius:8px;border-top:3px solid '+sumStats[ss].c+';padding:9px 11px;">';
+    ph+='<div style="font-size:14pt;font-weight:900;color:'+sumStats[ss].c+';">'+sumStats[ss].val+'</div>';
+    ph+='<div style="font-size:6.5pt;color:#64748b;text-transform:uppercase;letter-spacing:0.3px;margin-top:2px;">'+sumStats[ss].lbl+'</div>';
+    ph+='<div style="font-size:6.5pt;color:#94a3b8;margin-top:1px;">'+sumStats[ss].sub+'</div>';
+    ph+='</div>';
+  }
+  ph+='</div></div></div>';
+
+  // Project scope summary table
+  ph+='<div style="margin-bottom:22px;">';
+  ph+='<div style="font-size:8pt;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;padding-left:2px;">Scope Summary</div>';
+  ph+='<table style="font-size:8pt;border-collapse:collapse;width:100%;">';
+  ph+='<tr style="background:#0f172a;"><th style="padding:7px 10px;text-align:left;color:#fff;font-size:7.5pt;border-radius:4px 0 0 0;">Component</th>';
+  ph+='<th style="padding:7px 10px;text-align:center;color:#fff;font-size:7.5pt;">Weight</th>';
+  ph+='<th style="padding:7px 10px;color:#fff;font-size:7.5pt;min-width:120px;">Progress</th>';
+  ph+='<th style="padding:7px 10px;text-align:center;color:#fff;font-size:7.5pt;">Earned</th>';
+  ph+='<th style="padding:7px 10px;text-align:center;color:#fff;font-size:7.5pt;border-radius:0 4px 0 0;">Status</th></tr>';
+  var sumRows=[
+    {nm:"Preliminary Works",wt:PRE_PCT,pct:PRE_PCT,c:"#06C98F",st:"Complete"},
+    {nm:"Bridge Works ("+BRIDGES.length+" bridges · 88 piers)",wt:BR_W,pct:brOnlyPct,c:"#D4A843",st:brOnlyPct>0?"In Progress":"Not Started"},
+    {nm:"Ibn Saud Road",wt:3,pct:ibnPct,c:"#3B82F6",st:ROADS.ibn.status||"Not Started"},
+    {nm:"Prince Sattam Road",wt:3,pct:satPct,c:"#3B82F6",st:ROADS.sattam.status||"Not Started"},
+    {nm:"TOTAL",wt:100,pct:ov,c:"#D4A843",st:""}
+  ];
+  for(var sr=0;sr<sumRows.length;sr++){
+    var sRow=sumRows[sr]; var isT2=sRow.nm==="TOTAL";
+    var sEarn=Math.round(sRow.pct/100*sRow.wt*10)/10;
+    var sCls=sRow.st==="Complete"?"background:#dcfce7;color:#166534":sRow.st==="In Progress"?"background:#dbeafe;color:#1d4ed8":"background:#f1f5f9;color:#475569";
+    ph+='<tr style="'+(isT2?"font-weight:700;background:#fffbeb;":"")+'border-bottom:1px solid #f1f5f9;">';
+    ph+='<td style="padding:6px 10px;color:'+(isT2?"#0f172a":"#334155")+';">'+sRow.nm+'</td>';
+    ph+='<td style="padding:6px 10px;text-align:center;font-weight:700;color:#0f172a;">'+sRow.wt+'%</td>';
+    ph+='<td style="padding:6px 10px;">';
+    if(!isT2){
+      ph+='<div style="display:flex;align-items:center;gap:5px;">';
+      ph+='<div style="flex:1;height:6px;background:#e2e8f0;border-radius:3px;"><div style="width:'+sRow.pct+'%;height:6px;background:'+sRow.c+';border-radius:3px;"></div></div>';
+      ph+='<span style="font-size:7.5pt;font-weight:700;color:'+sRow.c+';min-width:28px;">'+sRow.pct+'%</span></div>';
+    } else { ph+='<b style="color:#D4A843;">'+sRow.pct+'%</b>'; }
+    ph+='</td>';
+    ph+='<td style="padding:6px 10px;text-align:center;font-weight:700;color:#D4A843;">'+sEarn+'%</td>';
+    ph+='<td style="padding:6px 10px;text-align:center;">'+(sRow.st?'<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:6.5pt;font-weight:700;'+sCls+'">'+sRow.st+'</span>':"—")+'</td>';
+    ph+='</tr>';
+  }
+  ph+='</table></div>';
+
+  // QR code row
+  ph+='<div style="display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-bottom:8px;">';
   ph+='<div style="text-align:right;">';
-  ph+='<div style="font-size:7pt;color:#475569;margin-bottom:6px;letter-spacing:0.5px;">CONFIDENTIAL · FOR INTERNAL USE</div>';
-  ph+='<div style="font-size:8pt;color:#D4A843;font-weight:700;letter-spacing:1px;">SITESYNC · KHATIB &amp; ALAMI</div>';
-  ph+='</div></div>';
-  ph+='<div style="margin-top:20px;font-size:6.5pt;color:#334155;border-top:1px solid #1e2d3d;padding-top:8px;">';
-  ph+='Generated by SiteSync · '+today3+' · IC1 Bridges Progress Tracker · Khatib &amp; Alami</div>';
+  ph+='<div style="font-size:7.5pt;color:#64748b;font-weight:600;margin-bottom:4px;">Scan to open the live app</div>';
+  ph+='<div style="font-size:7pt;color:#94a3b8;">ahmeddimachkie.github.io/ic1-bridges</div>';
   ph+='</div>';
-  ph+='<div style="height:4px;background:linear-gradient(90deg,#D4A843,#f0c866,#D4A843);position:absolute;bottom:0;left:0;right:0;"></div>';
+  var qrU3='https://api.qrserver.com/v1/create-qr-code/?size=90x90&data='+encodeURIComponent('https://ahmeddimachkie.github.io/ic1-bridges/');
+  ph+='<img src="'+qrU3+'" width="90" height="90" style="border:2px solid #e2e8f0;border-radius:6px;display:block;flex-shrink:0;">';
   ph+='</div>';
+
+  ph+='</div>';
+
+  // ── Professional footer ───────────────────────────────────
+  ph+='<div style="border-top:2px solid #e2e8f0;padding:14px 44px;display:flex;align-items:center;justify-content:space-between;background:#f8fafc;">';
+  ph+='<div>';
+  ph+='<div style="font-size:8.5pt;font-weight:700;color:#0f172a;">KAMEL DIMACHKIE</div>';
+  ph+='<div style="font-size:7.5pt;color:#64748b;margin-top:1px;">Head of Surveying Department · Khatib &amp; Alami</div>';
+  ph+='</div>';
+  ph+='<div style="width:1px;height:32px;background:#e2e8f0;"></div>';
+  ph+='<div style="text-align:center;">';
+  ph+='<div style="font-size:7.5pt;font-weight:700;color:#D4A843;letter-spacing:1px;">SITESYNC</div>';
+  ph+='<div style="font-size:6.5pt;color:#94a3b8;margin-top:1px;">Construction Progress Management</div>';
+  ph+='</div>';
+  ph+='<div style="width:1px;height:32px;background:#e2e8f0;"></div>';
+  ph+='<div style="text-align:right;">';
+  ph+='<div style="font-size:7.5pt;color:#64748b;">Generated: '+today3+'</div>';
+  ph+='<div style="font-size:6.5pt;color:#94a3b8;margin-top:1px;">CONFIDENTIAL · FOR INTERNAL USE</div>';
+  ph+='</div>';
+  ph+='</div>';
+
+  ph+='<div style="height:4px;background:linear-gradient(90deg,#D4A843,#f0c866,#D4A843);"></div>';
+  ph+='</div>';
+
 
   ph+='</body></html>';
 
-  var blob=new Blob([ph],{type:"text/html;charset=utf-8"});
+  // ── Wrap report in a print-ready shell with toolbar ──────
+  var shell='<!DOCTYPE html><html><head><meta charset="UTF-8">';
+  shell+='<meta name="viewport" content="width=device-width,initial-scale=1">';
+  shell+='<title>IC1 Progress Report — '+today3+'</title>';
+  shell+='<style>';
+  shell+='*{box-sizing:border-box;margin:0;padding:0}';
+  shell+='body{font-family:Arial,sans-serif;background:#1a1a2e}';
+  shell+='.toolbar{position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(90deg,#0d1520,#1a2540);border-bottom:2px solid #D4A843;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;box-shadow:0 2px 12px #0006}';
+  shell+='.toolbar-left{display:flex;align-items:center;gap:10px}';
+  shell+='.toolbar-title{color:#D4A843;font-weight:900;font-size:13pt;letter-spacing:0.5px}';
+  shell+='.toolbar-sub{color:#64748b;font-size:8pt;margin-top:1px}';
+  shell+='.btn{padding:9px 18px;border-radius:8px;font-weight:700;font-size:11pt;cursor:pointer;border:none;font-family:Arial,sans-serif;display:inline-flex;align-items:center;gap:6px;text-decoration:none}';
+  shell+='.btn-gold{background:#D4A843;color:#000}';
+  shell+='.btn-outline{background:transparent;color:#D4A843;border:2px solid #D4A843}';
+  shell+='.btn-gray{background:#1e293b;color:#94a3b8;border:1px solid #334155}';
+  shell+='.report-wrap{margin-top:64px;padding:10px;display:flex;justify-content:center}';
+  shell+='.report-inner{max-width:820px;width:100%;background:#fff;border-radius:4px;box-shadow:0 4px 32px #0008}';
+  shell+='@media print{.toolbar{display:none!important}.report-wrap{margin:0;padding:0}.report-inner{box-shadow:none;border-radius:0;max-width:100%}}';
+  shell+='</style></head><body>';
+
+  // Toolbar
+  shell+='<div class="toolbar">';
+  shell+='<div class="toolbar-left">';
+  shell+='<svg width="32" height="32" viewBox="0 0 48 48" fill="none"><path d="M3 36 Q13 9 24 9 Q35 9 45 36" stroke="#D4A843" stroke-width="3" fill="none" stroke-linecap="round"/><line x1="15" y1="23" x2="15" y2="36" stroke="#D4A843" stroke-width="2.5" stroke-linecap="round"/><line x1="33" y1="23" x2="33" y2="36" stroke="#D4A843" stroke-width="2.5" stroke-linecap="round"/><rect x="2" y="36" width="44" height="6" rx="2" fill="#D4A843" opacity="0.3"/></svg>';
+  shell+='<div><div class="toolbar-title">IC1 Progress Report</div><div class="toolbar-sub">'+today3+' &nbsp;·&nbsp; Khatib &amp; Alami</div></div>';
+  shell+='</div>';
+  shell+='<div style="display:flex;gap:8px;">';
+  shell+='<button class="btn btn-gold" onclick="window.print()">🖨️ Print / Save PDF</button>';
+  shell+='<button class="btn btn-outline" onclick="saveHTML()">💾 Save HTML</button>';
+  shell+='<button class="btn btn-gray" onclick="window.close()">✕ Close</button>';
+  shell+='</div></div>';
+
+  // Report content wrapped
+  shell+='<div class="report-wrap"><div class="report-inner">';
+  shell+=ph;
+  shell+='</div></div>';
+
+  // Save HTML function
+  shell+='<script>';
+  shell+='function saveHTML(){';
+  shell+='  var b=new Blob([document.querySelector(".report-inner").innerHTML],{type:"text/html;charset=utf-8"});';
+  shell+='  var a=document.createElement("a");';
+  shell+='  a.href=URL.createObjectURL(b);';
+  shell+='  a.download="IC1_Report_'+today3+'.html";';
+  shell+='  a.click();';
+  shell+='}';
+  shell+='<\/script>';
+  shell+='</body></html>';
+
+  var blob=new Blob([shell],{type:"text/html;charset=utf-8"});
   var url=URL.createObjectURL(blob);
   var a=document.createElement("a");
-  a.href=url; a.target='_blank'; a.rel='noopener'; a.click();
-  setTimeout(function(){URL.revokeObjectURL(url);},15000);
+  a.href=url; a.target="_blank"; a.rel="noopener"; a.click();
+  setTimeout(function(){URL.revokeObjectURL(url);},30000);
 }
 
 function rIs(){
@@ -3026,23 +3242,28 @@ function rGnSCurve(hPrefix){
   var planFill=planPath+" L"+(PAD+chartW)+" "+(H-PAD)+" L"+PAD+" "+(H-PAD)+" Z";
   h+='<path d="'+planFill+'" fill="#D4A84312"/>';
 
-  // Actual curve (solid blue/green)
-  var actPts=[];
+  // Actual curve — always starts at project start (0,0)
+  var actPts=[{x:px(0),y:py(0)}];
   for(var ai2=0;ai2<actual.length;ai2++){
     if(actual[ai2]!==null) actPts.push({x:px(ai2),y:py(actual[ai2])});
   }
-  // Add current overall as latest point
+  // Always add current overall as latest point
   var todayMIdx=Math.min(months.length-1, Math.floor((new Date()-new Date("2025-06-01"))/(30*86400000)));
-  actPts.push({x:px(todayMIdx),y:py(ov)});
+  // Avoid duplicate if today already in actPts
+  var lastAct=actPts[actPts.length-1];
+  if(lastAct.x!==px(todayMIdx)||lastAct.y!==py(ov)){
+    actPts.push({x:px(todayMIdx),y:py(ov)});
+  }
 
-  if(actPts.length>1){
+  // Draw actual line (always — starts from project start)
+  if(actPts.length>=1){
     var actPath="M"+actPts[0].x+" "+actPts[0].y;
     for(var ap=1;ap<actPts.length;ap++) actPath+=" L"+actPts[ap].x+" "+actPts[ap].y;
-    h+='<path d="'+actPath+'" stroke="#06D6A0" stroke-width="2" fill="none" stroke-linecap="round"/>';
-    // Dot at latest
+    h+='<path d="'+actPath+'" stroke="#06D6A0" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>';
+    // Dot + label at latest point
     var last=actPts[actPts.length-1];
-    h+='<circle cx="'+last.x+'" cy="'+last.y+'" r="4" fill="#06D6A0"/>';
-    h+='<text x="'+(last.x+6)+'" y="'+(last.y+4)+'" font-size="8" font-weight="700" fill="#06D6A0">'+ov+'%</text>';
+    h+='<circle cx="'+last.x+'" cy="'+last.y+'" r="4.5" fill="#06D6A0"/>';
+    h+='<text x="'+(last.x+7)+'" y="'+(last.y+4)+'" font-size="9" font-weight="900" fill="#06D6A0">'+ov+'%</text>';
   }
 
   // TODAY line
