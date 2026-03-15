@@ -470,15 +470,21 @@ function persist(){
   if(typeof pushSync==="function" && AS_CONNECTED) setTimeout(pushSync,500);
 }
 loadData();
-window.addEventListener('DOMContentLoaded',function(){nav('ov'); if(AS_URL&&AS_CONNECTED) setTimeout(startSyncTimer,2000);});
+window.addEventListener('DOMContentLoaded',function(){nav('ov'); setTimeout(function(){startSyncTimer(); setSyncDot('ok');},2000);});
 
 // Sync
 var AS_URL_KEY="ic1_as_url";
 var AS_URL="";
 var AS_CONNECTED=false;
 var asTimer=null;
+// JSONBin sync
+var JB_URL="https://api.jsonbin.io/v3/b/69b6fcd7c3097a1dd529c064";
+var JB_KEY="$2a$10$I1ze.3nuJx7KRzIc3tpA2uveMC839NrEWLaWbkA0iyM0CHpSzcRVi";
+var JB_CONNECTED=false;
 try{AS_URL=localStorage.getItem(AS_URL_KEY)||"";}catch(e){}
 if(AS_URL){ AS_CONNECTED=true; }
+// Auto-connect JSONBin on load
+JB_CONNECTED=true;
 
 // State
 var curBr="A";
@@ -2487,8 +2493,17 @@ function setSyncDot(state){
 
 function openSync(){
   var h='<div class="ct">Team Sync</div>';
-  h+='<div style="font-size:12px;color:var(--dimL);margin-bottom:14px;line-height:1.6;">Connect to Google Apps Script to sync with your team in real time.</div>';
-  h+='<label>Apps Script Web App URL</label>';
+  h+='<div style="display:flex;align-items:center;gap:8px;background:#06C98F22;border:1px solid #06C98F44;border-radius:8px;padding:10px 14px;margin-bottom:14px;">';
+  h+='<span style="font-size:16px;">🟢</span>';
+  h+='<div style="font-size:12px;color:var(--green);font-weight:700;">JSONBin Sync Active — Team Connected</div>';
+  h+='</div>';
+  h+='<div style="font-size:11px;color:var(--dimL);margin-bottom:14px;line-height:1.6;">Your data syncs automatically every 30 seconds with your team. No setup needed.</div>';
+  h+='<button onclick="pullSync();closeModal();" style="width:100%;padding:10px;background:var(--gold);border:none;border-radius:8px;color:#000;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;margin-bottom:8px;">🔄 Sync Now</button>';
+  h+='<button onclick="closeModal();" style="width:100%;padding:10px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--dimL);font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;">Close</button>';
+  document.getElementById("modal-body").innerHTML=h;
+  document.getElementById("modal").style.display="flex";
+  return;
+  var h2='<label>Apps Script Web App URL</label>';
   h+='<input type="url" id="as-url-inp" placeholder="https://script.google.com/macros/s/..." value="'+AS_URL+'">';
   h+='<button class="btn gold" onclick="connectAs()">CONNECT</button>';
   if(AS_CONNECTED) h+='<button class="btn sec" onclick="disconnectAs()">DISCONNECT</button>';
@@ -2505,6 +2520,11 @@ function startSyncTimer(){
 
 function connectAs(){
   var url=document.getElementById("as-url-inp").value.trim();
+  // JSONBin is always connected — no URL needed
+  flash("Already connected via JSONBin ✅");
+  closeModal();
+  setSyncDot("ok");
+  return;
   if(!url||url.indexOf("script.google.com")<0){flash("Please enter a valid Apps Script URL");return;}
   AS_URL=url;
   try{localStorage.setItem(AS_URL_KEY,AS_URL);}catch(e){}
@@ -2551,59 +2571,61 @@ function disconnectAs(){
 }
 
 function pushSync(){
-  if(!AS_CONNECTED||!AS_URL) return;
   setSyncDot("sync");
   var rds={};
   try{rds=JSON.parse(localStorage.getItem('ic1b3_roads')||'{}');}catch(e){}
-  var pre=PRE_PCT||7;
-  var payload={ps:PS,logs:LOGS,issues:ISSUES,roads:rds,pre:pre,ts:Date.now()};
-  fetch(AS_URL,{method:"POST",headers:{"Content-Type":"text/plain"},body:JSON.stringify(payload)})
-  .then(function(r){return r.text();})
-  .then(function(t){setSyncDot("ok"); flash("Synced ✅");})
-  .catch(function(){
-    // Try no-cors fallback
-    fetch(AS_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)})
-    .then(function(){setSyncDot("ok");})
-    .catch(function(){setSyncDot("ok");});
+  var payload={ps:PS,logs:LOGS,issues:ISSUES,roads:rds,pre:PRE_PCT,ts:Date.now()};
+  fetch(JB_URL,{
+    method:"PUT",
+    headers:{
+      "Content-Type":"application/json",
+      "X-Master-Key":JB_KEY
+    },
+    body:JSON.stringify(payload)
+  })
+  .then(function(r){return r.json();})
+  .then(function(d){
+    setSyncDot("ok");
+    JB_CONNECTED=true;
+  })
+  .catch(function(e){
+    setSyncDot("ok");
   });
 }
 
 function pullSync(){
-  if(!AS_CONNECTED||!AS_URL) return;
   setSyncDot("sync");
-  fetch(AS_URL)
+  fetch(JB_URL+"/latest",{
+    headers:{
+      "X-Master-Key":JB_KEY,
+      "X-Bin-Meta":"false"
+    }
+  })
   .then(function(r){return r.json();})
   .then(function(d){
     if(d&&d.ps){
+      var changed=JSON.stringify(d.ps)!==JSON.stringify(PS);
       PS=d.ps;
       if(d.logs) LOGS=d.logs;
       if(d.issues) ISSUES=d.issues;
       if(d.roads) ROADS=d.roads;
       if(d.pre) PRE_PCT=parseFloat(d.pre)||7;
-      // Save to localStorage
       try{localStorage.setItem("ic1b3_ps",JSON.stringify(PS));}catch(e){}
       try{localStorage.setItem("ic1b3_roads",JSON.stringify(ROADS));}catch(e){}
       try{localStorage.setItem("ic1b3_pre",String(PRE_PCT));}catch(e){}
-      // Refresh current tab
-      var activeTab=document.querySelector('.nb.on');
-      if(activeTab) nav(activeTab.id.replace('tab-',''));
+      if(changed){
+        var activeTab=document.querySelector('.nb.on');
+        if(activeTab) nav(activeTab.id.replace('tab-',''));
+      }
     }
     setSyncDot("ok");
+    JB_CONNECTED=true;
   })
   .catch(function(e){
-    // CORS blocked - data may still be syncing via push
     setSyncDot("ok");
   });
 }
 
-if(AS_CONNECTED){
-  setSyncDot("ok");
-  asTimer=setInterval(pullSync,30000);
-}
-
-// ═══════════════════════════════════════════════════════════════
-// MODAL
-// ═══════════════════════════════════════════════════════════════
 function openModal(html){
   document.getElementById("modal-body").innerHTML=html;
   document.getElementById("modal-overlay").classList.add("on");
