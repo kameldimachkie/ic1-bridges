@@ -2639,15 +2639,22 @@ function testSync(){
     setSyncDot("ok");
     if(el) el.textContent="✅ Connected! Response: "+t.substring(0,80)+"...";
     try{
-      var d=JSON.parse(t);
-      if(d&&d.ps){
-        PS=d.ps;
-        if(d.roads) ROADS=d.roads;
-        if(d.pre) PRE_PCT=parseFloat(d.pre)||7;
+      var resp2=JSON.parse(t);
+      var d2=resp2.record||resp2;
+      if(d2&&d2.ps){
+        PS=d2.ps;
+        if(d2.roads) ROADS=d2.roads;
+        if(d2.pre) PRE_PCT=parseFloat(d2.pre)||7;
         persist();
         flash("Sync OK — data received ✅");
+        var activeTab2=document.querySelector('.nb.on');
+        if(activeTab2) nav(activeTab2.id.replace('tab-',''));
+      } else {
+        if(el) el.textContent="✅ Connected but no pier data yet — push first";
       }
-    }catch(e){}
+    }catch(e){
+      if(el) el.textContent="Parse error: "+e.message;
+    }
   })
   .catch(function(e){
     setSyncDot("");
@@ -2662,42 +2669,51 @@ function pullSync(){
     method:"GET",
     headers:{
       "X-Master-Key":JB_KEY,
-      "X-Bin-Meta":"false",
-      "Content-Type":"application/json"
+      "X-Bin-Meta":"false"
     }
   })
   .then(function(r){return r.json();})
-  .then(function(d){
+  .then(function(resp){
+    // JSONBin wraps data in resp.record OR returns data directly
+    var d=resp.record||resp;
     if(d&&d.ps){
       var oldSnap=JSON.stringify(PS);
       var newSnap=JSON.stringify(d.ps);
       var changed=oldSnap!==newSnap;
-      var syncedBy=d.syncedBy||"";
+      var syncedBy=d.syncedBy||"Team";
       var syncedAt=d.syncedAt||"";
+      // Apply all data
       PS=d.ps;
-      if(d.logs) LOGS=d.logs;
-      if(d.issues) ISSUES=d.issues;
-      if(d.roads) ROADS=d.roads;
+      if(d.logs&&d.logs.length) LOGS=d.logs;
+      if(d.issues&&d.issues.length) ISSUES=d.issues;
+      if(d.roads&&Object.keys(d.roads).length) ROADS=d.roads;
       if(d.pre) PRE_PCT=parseFloat(d.pre)||7;
+      // Save to localStorage
       try{localStorage.setItem("ic1b3_ps",JSON.stringify(PS));}catch(e){}
+      try{localStorage.setItem("ic1b3_lg",JSON.stringify(LOGS));}catch(e){}
       try{localStorage.setItem("ic1b3_roads",JSON.stringify(ROADS));}catch(e){}
       try{localStorage.setItem("ic1b3_pre",String(PRE_PCT));}catch(e){}
-      // Update last sync time display
+      // Update last sync label
       var lsEl=document.getElementById("last-sync-lbl");
-      var now=new Date(); var h=now.getHours(); var m=now.getMinutes();
-      var timeStr=(h<10?"0"+h:h)+":"+(m<10?"0"+m:m);
-      if(lsEl) lsEl.textContent="Last sync: "+timeStr;
+      var now=new Date(); var hh=now.getHours(); var mm=now.getMinutes();
+      var ts=(hh<10?"0"+hh:hh)+":"+(mm<10?"0"+mm:mm);
+      if(lsEl){lsEl.textContent="Synced: "+ts; lsEl.style.display="inline";}
       if(changed){
-        // Show notification banner
         showSyncAlert(syncedBy,syncedAt);
+        // Refresh current tab to show new data
         var activeTab=document.querySelector('.nb.on');
-        if(activeTab) nav(activeTab.id.replace('tab-',''));
+        if(activeTab){
+          var tid=activeTab.id.replace('tab-','');
+          nav(tid);
+        }
       }
     }
     setSyncDot("ok");
     JB_CONNECTED=true;
   })
-  .catch(function(e){setSyncDot("ok");});
+  .catch(function(e){
+    setSyncDot("ok");
+  });
 }
 
 function openModal(html){
