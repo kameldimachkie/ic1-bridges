@@ -226,7 +226,7 @@ body{display:flex;flex-direction:column;}
       <div id="cld"></div>
       <div class="hdr-btns">
         <div id="sync-dot"></div>
-        <button class="btn-sm" onclick="openSync()">⚙ Sync</button>
+        <span id="last-sync-lbl" style="font-size:9px;color:var(--dimL);display:none;"></span><button class="btn-sm" onclick="openSync()">⚙ Sync</button>
         <button class="btn-sm btn-gold" id="install-btn" onclick="installApp()" style="display:none;">⬇ Install</button>
       </div>
     </div>
@@ -470,7 +470,7 @@ function persist(){
   if(typeof pushSync==="function" && AS_CONNECTED) setTimeout(pushSync,500);
 }
 loadData();
-window.addEventListener('DOMContentLoaded',function(){nav('ov'); setTimeout(function(){startSyncTimer(); setSyncDot('ok');},2000);});
+window.addEventListener('DOMContentLoaded',function(){nav('ov'); setTimeout(function(){startSyncTimer(); setSyncDot('ok'); var lbl=document.getElementById('last-sync-lbl'); if(lbl) lbl.style.display='inline';},2000);});
 
 // Sync
 var AS_URL_KEY="ic1_as_url";
@@ -2574,7 +2574,9 @@ function pushSync(){
   setSyncDot("sync");
   var rds={};
   try{rds=JSON.parse(localStorage.getItem('ic1b3_roads')||'{}');}catch(e){}
-  var payload={ps:PS,logs:LOGS,issues:ISSUES,roads:rds,pre:PRE_PCT,ts:Date.now()};
+  var now2=new Date();
+  var timeStr2=(now2.getHours()<10?"0"+now2.getHours():now2.getHours())+":"+(now2.getMinutes()<10?"0"+now2.getMinutes():now2.getMinutes());
+  var payload={ps:PS,logs:LOGS,issues:ISSUES,roads:rds,pre:PRE_PCT,ts:Date.now(),syncedBy:"K. Dimachkie",syncedAt:timeStr2};
   var pushProxy="https://corsproxy.io/?"+encodeURIComponent(JB_URL);
   fetch(pushProxy,{
     method:"PUT",
@@ -2594,20 +2596,38 @@ function pushSync(){
   });
 }
 
+
+function showSyncAlert(by,at){
+  // Remove existing alert
+  var existing=document.getElementById("sync-alert");
+  if(existing) existing.remove();
+  // Create notification banner
+  var div=document.createElement("div");
+  div.id="sync-alert";
+  div.style.cssText="position:fixed;top:70px;left:50%;transform:translateX(-50%);background:#0f172a;border:1px solid #D4A843;border-radius:10px;padding:10px 18px;z-index:9999;display:flex;align-items:center;gap:10px;box-shadow:0 4px 20px #0008;max-width:320px;width:90%;";
+  div.innerHTML='<span style="font-size:18px;">🔄</span>'
+    +'<div style="flex:1;">'
+    +'<div style="font-size:11px;font-weight:700;color:#D4A843;">Data Updated by Team</div>'
+    +'<div style="font-size:10px;color:#94a3b8;margin-top:2px;">'+(by?by+" · ":"")+''+(at?"at "+at:"just now")+'</div>'
+    +'</div>'
+    +'<button onclick="this.parentElement.remove()" style="background:none;border:none;color:#475569;font-size:16px;cursor:pointer;padding:0 4px;">✕</button>';
+  document.body.appendChild(div);
+  // Auto remove after 6 seconds
+  setTimeout(function(){if(div.parentElement)div.remove();},6000);
+}
+
 function pullSync(){
   setSyncDot("sync");
-  // Use CORS proxy to bypass browser restrictions
   var proxyUrl="https://corsproxy.io/?"+encodeURIComponent(JB_URL+"/latest");
-  fetch(proxyUrl,{
-    headers:{
-      "X-Master-Key":JB_KEY,
-      "X-Bin-Meta":"false"
-    }
-  })
+  fetch(proxyUrl,{headers:{"X-Master-Key":JB_KEY,"X-Bin-Meta":"false"}})
   .then(function(r){return r.json();})
   .then(function(d){
     if(d&&d.ps){
-      var changed=JSON.stringify(d.ps)!==JSON.stringify(PS);
+      var oldSnap=JSON.stringify(PS);
+      var newSnap=JSON.stringify(d.ps);
+      var changed=oldSnap!==newSnap;
+      var syncedBy=d.syncedBy||"";
+      var syncedAt=d.syncedAt||"";
       PS=d.ps;
       if(d.logs) LOGS=d.logs;
       if(d.issues) ISSUES=d.issues;
@@ -2616,7 +2636,14 @@ function pullSync(){
       try{localStorage.setItem("ic1b3_ps",JSON.stringify(PS));}catch(e){}
       try{localStorage.setItem("ic1b3_roads",JSON.stringify(ROADS));}catch(e){}
       try{localStorage.setItem("ic1b3_pre",String(PRE_PCT));}catch(e){}
+      // Update last sync time display
+      var lsEl=document.getElementById("last-sync-lbl");
+      var now=new Date(); var h=now.getHours(); var m=now.getMinutes();
+      var timeStr=(h<10?"0"+h:h)+":"+(m<10?"0"+m:m);
+      if(lsEl) lsEl.textContent="Last sync: "+timeStr;
       if(changed){
+        // Show notification banner
+        showSyncAlert(syncedBy,syncedAt);
         var activeTab=document.querySelector('.nb.on');
         if(activeTab) nav(activeTab.id.replace('tab-',''));
       }
@@ -2624,9 +2651,7 @@ function pullSync(){
     setSyncDot("ok");
     JB_CONNECTED=true;
   })
-  .catch(function(e){
-    setSyncDot("ok");
-  });
+  .catch(function(e){setSyncDot("ok");});
 }
 
 function openModal(html){
