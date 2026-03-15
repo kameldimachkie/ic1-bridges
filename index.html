@@ -1745,16 +1745,16 @@ function dlPDF(){
   ph+='<div class="page" style="background:#fff;position:relative;overflow:hidden;display:flex;flex-direction:column;">';
 
   // ── FULL-HEIGHT LEFT DARK PANEL (40% width) ──────────────
-  ph+='<div style="position:absolute;top:0;left:0;width:42%;height:100%;background:linear-gradient(175deg,#0d1117 0%,#161d2e 50%,#1a2440 100%);z-index:1;"></div>';
+  ph+='<div style="position:absolute;top:0;left:0;width:28%;height:100%;background:linear-gradient(175deg,#0d1117 0%,#161d2e 50%,#1a2440 100%);z-index:1;"></div>';
 
   // ── GOLD DIAGONAL SLASH divider ──────────────────────────
   ph+='<svg style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:2;pointer-events:none;" viewBox="0 0 595 842" preserveAspectRatio="none">';
-  ph+='<polygon points="250,0 290,0 270,842 230,842" fill="#D4A843"/>';
-  ph+='<polygon points="258,0 268,0 248,842 238,842" fill="#f0c866" opacity="0.4"/>';
+  ph+='<polygon points="165,0 198,0 178,842 145,842" fill="#D4A843"/>';
+  ph+='<polygon points="172,0 182,0 162,842 152,842" fill="#f0c866" opacity="0.4"/>';
   ph+='</svg>';
 
   // ── DECORATIVE ELEMENTS on dark panel ────────────────────
-  ph+='<svg style="position:absolute;top:0;left:0;width:42%;height:100%;z-index:3;pointer-events:none;overflow:hidden;" viewBox="0 0 250 842">';
+  ph+='<svg style="position:absolute;top:0;left:0;width:28%;height:100%;z-index:3;pointer-events:none;overflow:hidden;" viewBox="0 0 250 842">';
   // Concentric arcs
   ph+='<path d="M-30 500 Q125 200 280 500" stroke="#D4A843" stroke-width="0.8" fill="none" opacity="0.15"/>';
   ph+='<path d="M-30 560 Q125 260 280 560" stroke="#D4A843" stroke-width="0.8" fill="none" opacity="0.12"/>';
@@ -1782,7 +1782,7 @@ function dlPDF(){
   ph+='<div style="position:relative;z-index:10;display:flex;height:100%;">';
 
   // LEFT PANEL content
-  ph+='<div style="width:42%;padding:36px 28px;display:flex;flex-direction:column;justify-content:space-between;color:#fff;">';
+  ph+='<div style="width:28%;padding:32px 20px;display:flex;flex-direction:column;justify-content:space-between;color:#fff;">';
   // Top: Logo
   ph+='<div>';
   ph+='<svg width="44" height="44" viewBox="0 0 48 48" fill="none" style="display:block;margin-bottom:12px;"><path d="M3 36 Q13 9 24 9 Q35 9 45 36" stroke="#D4A843" stroke-width="3" fill="none" stroke-linecap="round"/><line x1="15" y1="23" x2="15" y2="36" stroke="#D4A843" stroke-width="2.5" stroke-linecap="round"/><line x1="33" y1="23" x2="33" y2="36" stroke="#D4A843" stroke-width="2.5" stroke-linecap="round"/><rect x="2" y="36" width="44" height="6" rx="2" fill="#D4A843" opacity="0.35"/></svg>';
@@ -1807,16 +1807,16 @@ function dlPDF(){
   ph+='</div>';
 
   // RIGHT PANEL content
-  ph+='<div style="flex:1;padding:44px 36px 36px 52px;display:flex;flex-direction:column;justify-content:space-between;">';
+  ph+='<div style="flex:1;padding:40px 36px 32px 44px;display:flex;flex-direction:column;justify-content:space-between;">';
 
   // Top: Main title
   ph+='<div>';
-  ph+='<div style="font-size:8pt;font-weight:700;color:#D4A843;letter-spacing:3px;text-transform:uppercase;margin-bottom:14px;">IC1 · Interchange 1</div>';
-  ph+='<div style="font-size:30pt;font-weight:900;color:#0f172a;line-height:1.05;letter-spacing:-1px;">King Khalid<br>Road</div>';
-  ph+='<div style="font-size:16pt;font-weight:400;color:#64748b;margin-top:4px;letter-spacing:-0.3px;">Improvements</div>';
+  ph+='<div style="font-size:7.5pt;font-weight:700;color:#D4A843;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">IC1 · Interchange 1</div>';
+  ph+='<div style="font-size:26pt;font-weight:900;color:#0f172a;line-height:1.05;letter-spacing:-1px;">Interchange 1 Road<br><span style="color:#D4A843;">Improvement</span></div>';
+  ph+='<div style="font-size:11pt;font-weight:500;color:#64748b;margin-top:6px;letter-spacing:0.5px;">Project</div>';
   ph+='<div style="display:flex;align-items:center;gap:8px;margin-top:16px;">';
   ph+='<div style="width:36px;height:3px;background:#D4A843;border-radius:2px;"></div>';
-  ph+='<div style="font-size:7.5pt;color:#94a3b8;letter-spacing:1px;">DIRIYAH · KINGDOM OF SAUDI ARABIA</div>';
+  ph+='<div style="font-size:7.5pt;color:#64748b;letter-spacing:0.5px;">Diriyah · Kingdom of Saudi Arabia</div>';
   ph+='</div>';
   ph+='</div>';
 
