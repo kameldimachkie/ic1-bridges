@@ -2515,7 +2515,7 @@ function openSync(){
 function startSyncTimer(){
   if(asTimer) clearInterval(asTimer);
   pullSync();
-  asTimer=setInterval(function(){pullSync();},30000);
+  asTimer=setInterval(function(){pullSync();},15000);
 }
 
 function connectAs(){
@@ -2577,12 +2577,12 @@ function pushSync(){
   var now2=new Date();
   var timeStr2=(now2.getHours()<10?"0"+now2.getHours():now2.getHours())+":"+(now2.getMinutes()<10?"0"+now2.getMinutes():now2.getMinutes());
   var payload={ps:PS,logs:LOGS,issues:ISSUES,roads:rds,pre:PRE_PCT,ts:Date.now(),syncedBy:"K. Dimachkie",syncedAt:timeStr2};
-  var pushProxy="https://corsproxy.io/?"+encodeURIComponent(JB_URL);
-  fetch(pushProxy,{
+  fetch(JB_URL,{
     method:"PUT",
     headers:{
       "Content-Type":"application/json",
-      "X-Master-Key":JB_KEY
+      "X-Master-Key":JB_KEY,
+      "X-Bin-Versioning":"false"
     },
     body:JSON.stringify(payload)
   })
@@ -2618,8 +2618,14 @@ function showSyncAlert(by,at){
 
 function pullSync(){
   setSyncDot("sync");
-  var proxyUrl="https://corsproxy.io/?"+encodeURIComponent(JB_URL+"/latest");
-  fetch(proxyUrl,{headers:{"X-Master-Key":JB_KEY,"X-Bin-Meta":"false"}})
+  fetch(JB_URL+"/latest",{
+    method:"GET",
+    headers:{
+      "X-Master-Key":JB_KEY,
+      "X-Bin-Meta":"false",
+      "Content-Type":"application/json"
+    }
+  })
   .then(function(r){return r.json();})
   .then(function(d){
     if(d&&d.ps){
