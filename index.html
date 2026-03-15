@@ -2497,8 +2497,10 @@ function openSync(){
   h+='<span style="font-size:16px;">🟢</span>';
   h+='<div style="font-size:12px;color:var(--green);font-weight:700;">JSONBin Sync Active — Team Connected</div>';
   h+='</div>';
-  h+='<div style="font-size:11px;color:var(--dimL);margin-bottom:14px;line-height:1.6;">Your data syncs automatically every 30 seconds with your team. No setup needed.</div>';
-  h+='<button onclick="pullSync();closeModal();" style="width:100%;padding:10px;background:var(--gold);border:none;border-radius:8px;color:#000;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;margin-bottom:8px;">🔄 Sync Now</button>';
+  h+='<div style="font-size:11px;color:var(--dimL);margin-bottom:14px;line-height:1.6;">Data syncs every 15 seconds automatically.</div>';
+  h+='<button onclick="testSync()" style="width:100%;padding:10px;background:var(--gold);border:none;border-radius:8px;color:#000;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;margin-bottom:8px;">🔄 Test Sync Now</button>';
+  h+='<div id="sync-test-result" style="font-size:11px;color:var(--dimL);padding:8px;background:var(--panel);border-radius:6px;margin-bottom:8px;min-height:32px;word-break:break-all;"></div>';
+  h+='<button onclick="pushSync();flash(\'Pushing data...\');" style="width:100%;padding:10px;background:var(--card);border:2px solid var(--gold);border-radius:8px;color:var(--gold);font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;margin-bottom:8px;">📤 Push My Data</button>';
   h+='<button onclick="closeModal();" style="width:100%;padding:10px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--dimL);font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;">Close</button>';
   document.getElementById("modal-body").innerHTML=h;
   document.getElementById("modal").style.display="flex";
@@ -2614,6 +2616,44 @@ function showSyncAlert(by,at){
   document.body.appendChild(div);
   // Auto remove after 6 seconds
   setTimeout(function(){if(div.parentElement)div.remove();},6000);
+}
+
+
+function testSync(){
+  var el=document.getElementById("sync-test-result");
+  if(el) el.textContent="Testing connection...";
+  setSyncDot("sync");
+  fetch(JB_URL+"/latest",{
+    method:"GET",
+    headers:{
+      "X-Master-Key":JB_KEY,
+      "X-Bin-Meta":"false",
+      "Content-Type":"application/json"
+    }
+  })
+  .then(function(r){
+    if(el) el.textContent="Status: "+r.status+" "+r.statusText;
+    return r.text();
+  })
+  .then(function(t){
+    setSyncDot("ok");
+    if(el) el.textContent="✅ Connected! Response: "+t.substring(0,80)+"...";
+    try{
+      var d=JSON.parse(t);
+      if(d&&d.ps){
+        PS=d.ps;
+        if(d.roads) ROADS=d.roads;
+        if(d.pre) PRE_PCT=parseFloat(d.pre)||7;
+        persist();
+        flash("Sync OK — data received ✅");
+      }
+    }catch(e){}
+  })
+  .catch(function(e){
+    setSyncDot("");
+    if(el) el.textContent="❌ Error: "+e.message+" — Check internet connection";
+    flash("Sync failed: "+e.message);
+  });
 }
 
 function pullSync(){
