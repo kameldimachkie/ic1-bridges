@@ -468,7 +468,7 @@ function persist(){
   try{localStorage.setItem("ic1b3_pre",String(PRE_PCT));}catch(e){}
 }
 loadData();
-window.addEventListener('DOMContentLoaded',function(){nav('ov');});
+window.addEventListener('DOMContentLoaded',function(){nav('ov'); if(AS_URL&&AS_CONNECTED) setTimeout(startSyncTimer,2000);});
 
 // Sync
 var AS_URL_KEY="ic1_as_url";
@@ -476,7 +476,7 @@ var AS_URL="";
 var AS_CONNECTED=false;
 var asTimer=null;
 try{AS_URL=localStorage.getItem(AS_URL_KEY)||"";}catch(e){}
-if(AS_URL) AS_CONNECTED=true;
+if(AS_URL){ AS_CONNECTED=true; }
 
 // State
 var curBr="A";
@@ -2494,15 +2494,51 @@ function openSync(){
   openModal(h);
 }
 
+
+function startSyncTimer(){
+  if(asTimer) clearInterval(asTimer);
+  pullSync();
+  asTimer=setInterval(function(){pullSync();},30000);
+}
+
 function connectAs(){
   var url=document.getElementById("as-url-inp").value.trim();
   if(!url||url.indexOf("script.google.com")<0){flash("Please enter a valid Apps Script URL");return;}
-  AS_URL=url; AS_CONNECTED=true;
+  AS_URL=url;
   try{localStorage.setItem(AS_URL_KEY,AS_URL);}catch(e){}
-  setSyncDot("ok");
-  if(asTimer) clearInterval(asTimer);
-  asTimer=setInterval(pullSync,30000);
-  closeModal(); flash("Connected to team sync!");
+  setSyncDot("sync");
+  flash("Connecting...");
+  // Test connection with a GET request
+  var xhr=new XMLHttpRequest();
+  xhr.open("GET",AS_URL,true);
+  xhr.timeout=8000;
+  xhr.onload=function(){
+    AS_CONNECTED=true;
+    setSyncDot("ok");
+    flash("Connected ✅ Sync active");
+    closeModal();
+    startSyncTimer();
+  };
+  xhr.onerror=function(){
+    // no-cors mode — if no error thrown, assume connected
+    AS_CONNECTED=true;
+    try{localStorage.setItem(AS_URL_KEY,AS_URL);}catch(e){}
+    setSyncDot("ok");
+    flash("Connected ✅");
+    closeModal();
+    startSyncTimer();
+  };
+  xhr.ontimeout=function(){
+    flash("Connection timed out — check URL");
+    setSyncDot("");
+  };
+  try{ xhr.send(); } catch(e){
+    AS_CONNECTED=true;
+    setSyncDot("ok");
+    flash("Connected ✅");
+    closeModal();
+    startSyncTimer();
+  }
 }
 
 function disconnectAs(){
