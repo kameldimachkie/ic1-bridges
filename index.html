@@ -2575,7 +2575,8 @@ function pushSync(){
   var rds={};
   try{rds=JSON.parse(localStorage.getItem('ic1b3_roads')||'{}');}catch(e){}
   var payload={ps:PS,logs:LOGS,issues:ISSUES,roads:rds,pre:PRE_PCT,ts:Date.now()};
-  fetch(JB_URL,{
+  var pushProxy="https://corsproxy.io/?"+encodeURIComponent(JB_URL);
+  fetch(pushProxy,{
     method:"PUT",
     headers:{
       "Content-Type":"application/json",
@@ -2595,7 +2596,9 @@ function pushSync(){
 
 function pullSync(){
   setSyncDot("sync");
-  fetch(JB_URL+"/latest",{
+  // Use CORS proxy to bypass browser restrictions
+  var proxyUrl="https://corsproxy.io/?"+encodeURIComponent(JB_URL+"/latest");
+  fetch(proxyUrl,{
     headers:{
       "X-Master-Key":JB_KEY,
       "X-Bin-Meta":"false"
