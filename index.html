@@ -467,7 +467,7 @@ function persist(){
   try{localStorage.setItem("ic1b3_roads",JSON.stringify(ROADS));}catch(e){}
   try{localStorage.setItem("ic1b3_pre",String(PRE_PCT));}catch(e){}
   // Auto-push to team on every change
-  if(typeof pushSync==="function" && AS_CONNECTED) setTimeout(pushSync,500);
+  if(typeof pushSync==="function") setTimeout(pushSync,500);
 }
 loadData();
 window.addEventListener('DOMContentLoaded',function(){nav('ov'); setTimeout(function(){startSyncTimer(); setSyncDot('ok'); var lbl=document.getElementById('last-sync-lbl'); if(lbl) lbl.style.display='inline';},2000);});
@@ -2583,16 +2583,30 @@ function pushSync(){
   try{rds=JSON.parse(localStorage.getItem('ic1b3_roads')||'{}');}catch(e){}
   var now2=new Date();
   var ts2=Date.now();
-  var timeStr2=(now2.getHours()<10?"0"+now2.getHours():now2.getHours())+":"+(now2.getMinutes()<10?"0"+now2.getMinutes():now2.getMinutes());
-  var payload={ps:PS,logs:LOGS,issues:ISSUES,roads:rds,pre:PRE_PCT,ts:ts2,syncedBy:"K. Dimachkie",syncedAt:timeStr2};
-  fetch(JB_URL,{
-    method:"PUT",
-    headers:{
-      "Content-Type":"application/json",
-      "X-Master-Key":JB_KEY,
-      "X-Bin-Versioning":"false"
-    },
-    body:JSON.stringify(payload)
+  var hh2=now2.getHours(); var mm2=now2.getMinutes();
+  var timeStr2=(hh2<10?"0"+hh2:hh2)+":"+(mm2<10?"0"+mm2:mm2);
+  // First GET latest to merge, then PUT merged result
+  fetch(JB_URL+"/latest",{
+    method:"GET",
+    headers:{"X-Master-Key":JB_KEY,"X-Bin-Meta":"false"}
+  })
+  .then(function(r){return r.json();})
+  .then(function(resp){
+    var remote=resp.record||resp;
+    var mergedPS=remote&&remote.ps?JSON.parse(JSON.stringify(remote.ps)):{};
+    // Apply local changes on top of remote
+    for(var pier in PS){
+      if(!mergedPS[pier]) mergedPS[pier]={};
+      for(var stage in PS[pier]){
+        mergedPS[pier][stage]=PS[pier][stage];
+      }
+    }
+    var payload={ps:mergedPS,logs:LOGS,issues:ISSUES,roads:rds,pre:PRE_PCT,ts:ts2,syncedBy:"K. Dimachkie",syncedAt:timeStr2};
+    return fetch(JB_URL,{
+      method:"PUT",
+      headers:{"Content-Type":"application/json","X-Master-Key":JB_KEY,"X-Bin-Versioning":"false"},
+      body:JSON.stringify(payload)
+    });
   })
   .then(function(r){return r.json();})
   .then(function(d){
@@ -2603,8 +2617,16 @@ function pushSync(){
     flash("Saved & Synced ✅");
   })
   .catch(function(e){
-    JB_PUSHING=false;
-    setSyncDot("ok");
+    // Fallback: push without merge
+    var rds2={};
+    try{rds2=JSON.parse(localStorage.getItem('ic1b3_roads')||'{}');}catch(e2){}
+    var payload2={ps:PS,logs:LOGS,issues:ISSUES,roads:rds2,pre:PRE_PCT,ts:ts2,syncedBy:"K. Dimachkie",syncedAt:timeStr2};
+    fetch(JB_URL,{
+      method:"PUT",
+      headers:{"Content-Type":"application/json","X-Master-Key":JB_KEY},
+      body:JSON.stringify(payload2)
+    }).then(function(){JB_PUSHING=false;setSyncDot("ok");flash("Synced ✅");})
+    .catch(function(){JB_PUSHING=false;setSyncDot("ok");});
   });
 }
 
@@ -2673,49 +2695,55 @@ function testSync(){
 }
 
 function pullSync(){
-  // Don't pull if we just pushed (prevent overwriting our own changes)
   if(JB_PUSHING) return;
   if(Date.now()-JB_LAST_PUSH < 5000) return;
-
   setSyncDot("sync");
   fetch(JB_URL+"/latest",{
     method:"GET",
-    headers:{
-      "X-Master-Key":JB_KEY,
-      "X-Bin-Meta":"false"
-    }
+    headers:{"X-Master-Key":JB_KEY,"X-Bin-Meta":"false"}
   })
   .then(function(r){return r.json();})
   .then(function(resp){
     var d=resp.record||resp;
     if(d&&d.ps&&d.ts){
-      // Only apply if remote data is NEWER than our last push
-      if(d.ts <= JB_LAST_PUSH) {
-        setSyncDot("ok");
-        return;
-      }
-      var oldSnap=JSON.stringify(PS);
-      var newSnap=JSON.stringify(d.ps);
-      var changed=oldSnap!==newSnap;
+      if(d.ts<=JB_LAST_PULL_TS){setSyncDot("ok");return;}
+      JB_LAST_PULL_TS=d.ts;
+      // MERGE pier data — don't replace, only add new entries
+      var remotePiers=d.ps;
+      var changed=false;
       var syncedBy=d.syncedBy||"Team";
       var syncedAt=d.syncedAt||"";
-      // Apply all data
-      PS=d.ps;
-      if(d.logs&&d.logs.length) LOGS=d.logs;
-      if(d.issues&&d.issues.length) ISSUES=d.issues;
-      if(d.roads&&Object.keys(d.roads).length) ROADS=d.roads;
-      if(d.pre) PRE_PCT=parseFloat(d.pre)||7;
-      // Save to localStorage
+      for(var pier in remotePiers){
+        if(!PS[pier]){
+          // New pier data from remote
+          PS[pier]=remotePiers[pier];
+          changed=true;
+        } else {
+          // Merge stage-by-stage
+          for(var stage in remotePiers[pier]){
+            if(PS[pier][stage]!==remotePiers[pier][stage]){
+              PS[pier][stage]=remotePiers[pier][stage];
+              changed=true;
+            }
+          }
+        }
+      }
+      // Merge roads if remote is newer
+      if(d.roads&&Object.keys(d.roads).length){
+        for(var rk in d.roads){
+          if(!ROADS[rk]) ROADS[rk]=d.roads[rk];
+        }
+      }
+      if(d.pre&&!PRE_PCT) PRE_PCT=parseFloat(d.pre)||7;
+      // Save merged data
       try{localStorage.setItem("ic1b3_ps",JSON.stringify(PS));}catch(e){}
-      try{localStorage.setItem("ic1b3_lg",JSON.stringify(LOGS));}catch(e){}
       try{localStorage.setItem("ic1b3_roads",JSON.stringify(ROADS));}catch(e){}
       try{localStorage.setItem("ic1b3_pre",String(PRE_PCT));}catch(e){}
-      JB_LAST_PULL_TS=d.ts;
-      // Update last sync label
+      // Update sync label
       var lsEl=document.getElementById("last-sync-lbl");
-      var now=new Date(); var hh=now.getHours(); var mm=now.getMinutes();
-      var ts=(hh<10?"0"+hh:hh)+":"+(mm<10?"0"+mm:mm);
-      if(lsEl){lsEl.textContent="Synced: "+ts; lsEl.style.display="inline";}
+      var now=new Date();
+      var ts=(now.getHours()<10?"0"+now.getHours():now.getHours())+":"+(now.getMinutes()<10?"0"+now.getMinutes():now.getMinutes());
+      if(lsEl){lsEl.textContent="Synced: "+ts;lsEl.style.display="inline";}
       if(changed){
         showSyncAlert(syncedBy,syncedAt);
         var activeTab=document.querySelector('.nb.on');
