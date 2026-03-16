@@ -236,8 +236,8 @@ body{display:flex;flex-direction:column;}
     <button class="nb"     id="tab-tr" onclick="nav('tr')"><svg width="16" height="14" viewBox="0 0 22 18" fill="none" style="vertical-align:-3px;margin-right:4px"><rect x="0" y="13" width="22" height="3" rx="1.5" fill="currentColor" opacity="0.8"/><path d="M1 13 Q5.5 2 11 2 Q16.5 2 21 13" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round"/><line x1="7" y1="8" x2="7" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="15" y1="8" x2="15" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Bridges</button>
     <button class="nb"     id="tab-rd" onclick="nav('rd')"><svg width="16" height="14" viewBox="0 0 22 18" fill="none" style="vertical-align:-3px;margin-right:4px"><path d="M3 17 L8 1 L14 1 L19 17Z" fill="currentColor" opacity="0.12"/><line x1="3" y1="17" x2="8" y2="1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="19" y1="17" x2="14" y2="1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="3" y1="17" x2="19" y2="17" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><line x1="10.5" y1="13" x2="11.5" y2="9.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/><line x1="10" y1="16" x2="12" y2="16" stroke="currentColor" stroke-width="1" opacity="0.4"/></svg>Roads</button>
     <button class="nb"     id="tab-lg" onclick="nav('lg')">Log</button>
-    <button class="nb"     id="tab-dr" onclick="nav('dr')">📄 Daily</button>
-    <button class="nb"     id="tab-wr" onclick="nav('wr')">📅 Weekly</button>
+    
+    
     
     
     
@@ -720,7 +720,7 @@ function countAllPiers(){
 // ═══════════════════════════════════════════════════════════════
 // NAVIGATION
 // ═══════════════════════════════════════════════════════════════
-var ALL_TABS=["ov","tr","rd","lg","dr","wr","rp","gn","mp"];
+var ALL_TABS=["ov","tr","rd","lg","rp","gn","mp"];
 
 function nav(id){
   for(var i=0;i<ALL_TABS.length;i++){
