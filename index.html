@@ -1492,7 +1492,7 @@ function rTl(){
     var rc=rp===100?"var(--green)":rp>0?"var(--blue)":"var(--dim)";
     h+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">';
     h+='<div style="min-width:110px;"><div style="font-size:12px;font-weight:700;color:var(--blue);">🛣 '+rl+'</div>';
-    h+='<div style="font-size:10px;color:var(--dimL);">'+rs+' · wt:5%</div></div>';
+    h+='<div style="font-size:10px;color:var(--dimL);">'+rs+' · wt:3%</div></div>';
     h+='<div style="flex:1;"><div class="pbar-wrap"><div class="pbar" style="width:'+rp+'%;background:var(--blue);"></div></div></div>';
     h+='<div style="text-align:right;min-width:48px;">';
     h+='<div style="font-size:13px;font-weight:900;color:'+rc+';">'+rp+'%</div>';
@@ -2435,7 +2435,7 @@ function dlPDF(){
     var rr3=rds3[ri3]; var rCls3=rr3.st==="Complete"?"bg":rr3.st==="In Progress"?"bb":"bs";
     ph+='<tr><td style="font-weight:700;">'+rr3.nm+'</td><td style="text-align:center;">5%</td>';
     ph+='<td><div style="display:flex;align-items:center;gap:5px;"><div style="width:80px;height:5px;background:#E2E8F0;border-radius:2px;"><div style="width:'+rr3.pct+'%;height:5px;background:#3B82F6;border-radius:2px;"></div></div><span style="font-size:7pt;font-weight:700;color:#3B82F6;">'+rr3.pct+'%</span></div></td>';
-    ph+='<td style="text-align:center;font-weight:700;color:#D4A843;">'+Math.round(rr3.pct/100*5*10)/10+'%</td>';
+    ph+='<td style="text-align:center;font-weight:700;color:#D4A843;">'+Math.round(rr3.pct/100*3*10)/10+'%</td>';
     ph+='<td><span class="badge '+rCls3+'">'+rr3.st+'</span></td></tr>';
   }
   ph+='</table>';
@@ -3715,7 +3715,7 @@ function rRd(){
   h+='<div class="card" style="border-left:3px solid var(--blue);">';
   h+='<div class="ct">🛣 Road Works</div>';
   h+='<div style="font-size:11px;color:var(--dimL);">Imam Ibn Saud Road &amp; Prince Sattam Road — New curbs, sidewalks &amp; pavement layers</div>';
-  h+='<div style="font-size:11px;color:var(--dimL);margin-top:4px;">Combined weight: <b style="color:var(--gold);">10%</b> of total project value</div>';
+  h+='<div style="font-size:11px;color:var(--dimL);margin-top:4px;">Combined weight: <b style="color:var(--gold);">6%</b> of total project value</div>';
   h+='</div>';
 
   var roads=[
