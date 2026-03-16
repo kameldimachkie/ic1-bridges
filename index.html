@@ -328,7 +328,10 @@ var STAGES=[
   {id:"BRG",name:"Bearings",           ar:"بيرنغ",        col:"#9B5DE5",w:5},
   {id:"GRD",name:"Girder Supply",      ar:"توريد كمرات",  col:"#D4A843",w:14},
   {id:"ERE",name:"Girder Erection",    ar:"تركيب كمرات",  col:"#06D6A0",w:9},
-  {id:"DEC",name:"Deck Slab",          ar:"بلاطة الجسر",  col:"#80ED99",w:4}
+  {id:"DEC",name:"Deck Slab",          ar:"بلاطة الجسر",  col:"#80ED99",w:4},
+  {id:"BCK",name:"Backwall",           ar:"جدار خلفي",    col:"#FF6B6B",w:0},
+  {id:"WNG",name:"Wing Walls",         ar:"جدران جانبية", col:"#4ECDC4",w:0},
+  {id:"APS",name:"Approach Slab",      ar:"بلاطة مداخل",  col:"#45B7D1",w:0}
 ];
 
 // Direct foundations (no piling)
@@ -523,7 +526,34 @@ function p2(n){return n<10?"0"+n:""+n;}
 
 function gps(pier,sid){return PS[pier]&&PS[pier][sid]?PS[pier][sid]:"Not Started";}
 
+
+function isABT(pier){
+  return pier.indexOf('-ABT') > -1;
+}
+
+function getStagesForPier(pier){
+  var isDr=DIRECT.indexOf(pier)>-1;
+  var abt=isABT(pier);
+  if(abt){
+    var abtIds=["EXC","BLD","FRC","STR","BRG","BCK","WNG","APS"];
+    var result=[];
+    for(var i=0;i<STAGES.length;i++){
+      if(abtIds.indexOf(STAGES[i].id)>-1) result.push(STAGES[i]);
+    }
+    return result;
+  }
+  var result2=[];
+  for(var j=0;j<STAGES.length;j++){
+    if(STAGES[j].id==="PIL"&&isDr) continue;
+    if(STAGES[j].id==="BCK"||STAGES[j].id==="WNG"||STAGES[j].id==="APS") continue;
+    result2.push(STAGES[j]);
+  }
+  return result2;
+}
+
 function stageWeight(sid,isDirect){
+  // ABT-only stages have w:0 — no weight impact
+  if(sid==="BCK"||sid==="WNG"||sid==="APS") return 0;
   if(sid==="PIL"&&isDirect) return 0;
   var base=0;
   for(var i=0;i<STAGES.length;i++){if(STAGES[i].id===sid){base=STAGES[i].w;break;}}
@@ -872,12 +902,12 @@ function rTr(){
       if(isDr) h+='<div style="font-size:7px;color:var(--dim);">DIR</div>';
       // Stage dots
       h+='<div style="display:flex;flex-wrap:wrap;gap:2px;justify-content:center;margin-top:3px;">';
-      for(var m=0;m<STAGES.length;m++){
-        if(STAGES[m].id==="PIL"&&isDr) continue;
-        var sv=gps(pier,STAGES[m].id);
+      var pStages=getStagesForPier(pier);
+      for(var m=0;m<pStages.length;m++){
+        var sv=gps(pier,pStages[m].id);
         var done=sv==="Complete"||sv==="Inspected";
         var ip=sv==="In Progress";
-        var dc2=done?STAGES[m].col:ip?STAGES[m].col+"66":"#1a2233";
+        var dc2=done?pStages[m].col:ip?pStages[m].col+"66":"#1a2233";
         h+='<div style="width:7px;height:7px;border-radius:2px;background:'+dc2+'"></div>';
       }
       h+='</div>';
@@ -896,21 +926,22 @@ function rTr(){
   if(curPier){
     var isDr2=DIRECT.indexOf(curPier)>-1;
     var doneC=0;
-    for(var n=0;n<STAGES.length;n++){
-      if(STAGES[n].id==="PIL"&&isDr2) continue;
-      var sv2=gps(curPier,STAGES[n].id);
+    var cPierStages=getStagesForPier(curPier);
+    for(var n=0;n<cPierStages.length;n++){
+      var sv2=gps(curPier,cPierStages[n].id);
       if(sv2==="Complete"||sv2==="Inspected") doneC++;
     }
     h+='<div class="card">';
     h+='<div style="margin-bottom:14px;">';
     h+='<div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.12em;">Selected</div>';
     h+='<div style="font-size:22px;font-weight:800;color:var(--gold);">Pier '+curPier+'</div>';
-    h+='<div style="font-size:11px;color:var(--dim);">Bridge '+curBr+' &mdash; '+(isDr2?"Direct Foundation":"Piled")+'  &mdash; '+doneC+'/'+(isDr2?STAGES.length-1:STAGES.length)+' stages done</div>';
+    h+='<div style="font-size:11px;color:var(--dim);">Bridge '+curBr+' &mdash; '+(isDr2?"Direct Foundation":"Piled")+'  &mdash; '+doneC+'/'+cPierStages.length+' stages done</div>';
     h+='</div>';
 
-    for(var q=0;q<STAGES.length;q++){
-      var s=STAGES[q];
-      var dis=isDr2&&s.id==="PIL";
+    var qPierStages=getStagesForPier(curPier);
+    for(var q=0;q<qPierStages.length;q++){
+      var s=qPierStages[q];
+      var dis=false;
       var sv3=gps(curPier,s.id);
       var sc3=SCOL[sv3]||"#888";
       var sbg3=SBGC[sv3]||"#10161e";
