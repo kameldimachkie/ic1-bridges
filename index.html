@@ -1910,7 +1910,168 @@ function dlPDF(){
   ph+='</div>';
 
   // ══════════════════════════════════════════════
-  // PAGE 2 — EXECUTIVE NARRATIVE SUMMARY
+  // PAGE 2 — SCHEMATIC SITE MAP
+  // ══════════════════════════════════════════════
+  ph+='<div class="page sp" style="background:#fff;">';
+  ph+='<div style="position:absolute;top:0;left:0;right:0;height:5px;background:linear-gradient(90deg,#D4A843,#f0c866,#D4A843);"></div>';
+
+  // Page header
+  ph+='<div style="border-bottom:2px solid #e2e8f0;padding-bottom:10px;margin-bottom:18px;display:flex;align-items:flex-end;justify-content:space-between;">';
+  ph+='<div>';
+  ph+='<div style="font-size:7.5pt;color:#D4A843;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">IC1 · Interchange 1 Road Improvements</div>';
+  ph+='<div style="font-size:16pt;font-weight:900;color:#0f172a;">Schematic Site Map</div>';
+  ph+='<div style="width:40px;height:3px;background:#D4A843;border-radius:2px;margin-top:8px;"></div>';
+  ph+='</div>';
+  ph+='<div style="text-align:right;font-size:7.5pt;color:#94a3b8;">'+today3+'</div>';
+  ph+='</div>';
+
+  // Build bridge data for map
+  var mapBridges=[
+    {id:"A",piers:12,x:52},
+    {id:"B",piers:11,x:105},
+    {id:"C",piers:13,x:160},
+    {id:"D",piers:9,x:212},
+    {id:"E",piers:17,x:268},
+    {id:"G",piers:9,x:322},
+    {id:"K",piers:7,x:372},
+    {id:"L",piers:2,x:412},
+    {id:"M",piers:6,x:452},
+    {id:"N",piers:4,x:495}
+  ];
+
+  // SVG map
+  var SW=560; var SH=320;
+  ph+='<svg viewBox="0 0 '+SW+' '+SH+'" style="width:100%;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;display:block;margin-bottom:14px;">';
+
+  // Background grid
+  for(var gi2=0;gi2<SW;gi2+=40){
+    ph+='<line x1="'+gi2+'" y1="0" x2="'+gi2+'" y2="'+SH+'" stroke="#e2e8f0" stroke-width="0.5" opacity="0.5"/>';
+  }
+  for(var gj2=0;gj2<SH;gj2+=40){
+    ph+='<line x1="0" y1="'+gj2+'" x2="'+SW+'" y2="'+gj2+'" stroke="#e2e8f0" stroke-width="0.5" opacity="0.5"/>';
+  }
+
+  // ── Prince Sattam Road (top) ──────────────────────────────
+  var satPct2=ROADS.sattam?ROADS.sattam.pct||0:0;
+  var satCol2=satPct2>=50?"#06C98F":satPct2>0?"#D4A843":"#CBD5E1";
+  ph+='<rect x="20" y="42" width="520" height="22" rx="4" fill="#1e293b" opacity="0.08"/>';
+  ph+='<rect x="20" y="42" width="'+Math.round(520*satPct2/100)+'" height="22" rx="4" fill="'+satCol2+'" opacity="0.35"/>';
+  ph+='<rect x="20" y="42" width="520" height="22" rx="4" fill="none" stroke="#94a3b8" stroke-width="1"/>';
+  ph+='<text x="30" y="57" font-family="Arial" font-size="8" font-weight="700" fill="#475569">Prince Sattam Road</text>';
+  ph+='<text x="530" y="57" text-anchor="end" font-family="Arial" font-size="8" font-weight="700" fill="'+satCol2+'">'+satPct2+'%</text>';
+
+  // ── King Khalid Road (center) — dual carriageway ──────────
+  ph+='<rect x="20" y="128" width="520" height="44" rx="4" fill="#1e293b" opacity="0.85"/>';
+  // Road markings
+  ph+='<line x1="20" y1="150" x2="540" y2="150" stroke="#D4A843" stroke-width="1.5" stroke-dasharray="12,8" opacity="0.7"/>';
+  for(var rm=40;rm<540;rm+=30){
+    ph+='<line x1="'+rm+'" y1="134" x2="'+rm+'" y2="168" stroke="#ffffff" stroke-width="0.5" opacity="0.1"/>';
+  }
+  ph+='<text x="280" y="145" text-anchor="middle" font-family="Arial" font-size="8" font-weight="900" fill="#D4A843" letter-spacing="2">KING KHALID ROAD</text>';
+  ph+='<text x="280" y="162" text-anchor="middle" font-family="Arial" font-size="6.5" fill="#94a3b8">IC1 — Interchange 1 Road Improvements</text>';
+
+  // Road direction arrows
+  ph+='<text x="50" y="146" font-family="Arial" font-size="10" fill="#D4A843" opacity="0.5">→</text>';
+  ph+='<text x="490" y="164" font-family="Arial" font-size="10" fill="#D4A843" opacity="0.5">←</text>';
+
+  // ── Ibn Saud Road (bottom) ────────────────────────────────
+  var ibnPct2=ROADS.ibn?ROADS.ibn.pct||0:0;
+  var ibnCol2=ibnPct2>=50?"#06C98F":ibnPct2>0?"#D4A843":"#CBD5E1";
+  ph+='<rect x="20" y="236" width="520" height="22" rx="4" fill="#1e293b" opacity="0.08"/>';
+  ph+='<rect x="20" y="236" width="'+Math.round(520*ibnPct2/100)+'" height="22" rx="4" fill="'+ibnCol2+'" opacity="0.35"/>';
+  ph+='<rect x="20" y="236" width="520" height="22" rx="4" fill="none" stroke="#94a3b8" stroke-width="1"/>';
+  ph+='<text x="30" y="251" font-family="Arial" font-size="8" font-weight="700" fill="#475569">Ibn Saud Road</text>';
+  ph+='<text x="530" y="251" text-anchor="end" font-family="Arial" font-size="8" font-weight="700" fill="'+ibnCol2+'">'+ibnPct2+'%</text>';
+
+  // ── Cross connectors (vertical roads) ────────────────────
+  var crossX=[120,200,280,360,440];
+  for(var ci=0;ci<crossX.length;ci++){
+    ph+='<line x1="'+crossX[ci]+'" y1="64" x2="'+crossX[ci]+'" y2="128" stroke="#94a3b8" stroke-width="2" stroke-dasharray="4,3" opacity="0.4"/>';
+    ph+='<line x1="'+crossX[ci]+'" y1="172" x2="'+crossX[ci]+'" y2="236" stroke="#94a3b8" stroke-width="2" stroke-dasharray="4,3" opacity="0.4"/>';
+  }
+
+  // ── Bridges as circles ────────────────────────────────────
+  for(var bi6=0;bi6<mapBridges.length;bi6++){
+    var mb=mapBridges[bi6];
+    var bpct=calcBrPct(mb.id);
+    var bpct2=Math.round(bpct);
+    // Color based on progress
+    var bFill=bpct2>=75?"#06C98F":bpct2>=25?"#D4A843":bpct2>0?"#F59E0B":"#CBD5E1";
+    var bStroke=bpct2>=75?"#059669":bpct2>=25?"#B8860B":bpct2>0?"#D97706":"#94a3b8";
+    var bText=bpct2>=25?"#fff":"#475569";
+    // Circle radius proportional to pier count
+    var brad=Math.max(16,Math.min(22,10+mb.piers));
+    var bcy=150;
+
+    // Vertical span line
+    ph+='<line x1="'+mb.x+'" y1="'+(bcy-brad)+'" x2="'+mb.x+'" y2="'+(bcy+brad)+'" stroke="'+bStroke+'" stroke-width="1.5" opacity="0.6"/>';
+
+    // Bridge circle
+    ph+='<circle cx="'+mb.x+'" cy="'+bcy+'" r="'+brad+'" fill="'+bFill+'" stroke="'+bStroke+'" stroke-width="2"/>';
+
+    // Bridge ID
+    ph+='<text x="'+mb.x+'" y="'+(bcy-3)+'" text-anchor="middle" font-family="Arial" font-weight="900" font-size="10" fill="'+bText+'">'+mb.id+'</text>';
+
+    // Progress %
+    ph+='<text x="'+mb.x+'" y="'+(bcy+9)+'" text-anchor="middle" font-family="Arial" font-size="7" fill="'+bText+'" opacity="0.9">'+bpct2+'%</text>';
+
+    // Pier count below
+    ph+='<text x="'+mb.x+'" y="'+(bcy+brad+12)+'" text-anchor="middle" font-family="Arial" font-size="6.5" fill="#64748b">'+mb.piers+' piers</text>';
+  }
+
+  // ── North arrow ───────────────────────────────────────────
+  ph+='<g transform="translate(525,25)">';
+  ph+='<circle cx="0" cy="0" r="14" fill="#0f172a" opacity="0.8"/>';
+  ph+='<polygon points="0,-10 -4,2 0,0 4,2" fill="#D4A843"/>';
+  ph+='<polygon points="0,10 -4,-2 0,0 4,-2" fill="#fff" opacity="0.4"/>';
+  ph+='<text x="0" y="4" text-anchor="middle" font-family="Arial" font-size="7" font-weight="900" fill="#D4A843">N</text>';
+  ph+='</g>';
+
+  // ── Overall progress bar at bottom ───────────────────────
+  ph+='<rect x="20" y="285" width="520" height="12" rx="6" fill="#e2e8f0"/>';
+  ph+='<rect x="20" y="285" width="'+Math.round(520*ov/100)+'" height="12" rx="6" fill="url(#ovGrad)"/>';
+  ph+='<defs><linearGradient id="ovGrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" style="stop-color:#D4A843"/><stop offset="100%" style="stop-color:#f0c866"/></linearGradient></defs>';
+  ph+='<text x="20" y="308" font-family="Arial" font-size="7.5" font-weight="700" fill="#64748b">Overall Project Progress</text>';
+  ph+='<text x="540" y="308" text-anchor="end" font-family="Arial" font-size="7.5" font-weight="900" fill="#D4A843">'+ov+'%</text>';
+
+  ph+='</svg>';
+
+  // ── Legend ────────────────────────────────────────────────
+  ph+='<div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-bottom:14px;">';
+  var lgMap=[
+    {col:"#06C98F",stroke:"#059669",lbl:"≥75% Complete"},
+    {col:"#D4A843",stroke:"#B8860B",lbl:"25–74% In Progress"},
+    {col:"#F59E0B",stroke:"#D97706",lbl:"1–24% Started"},
+    {col:"#CBD5E1",stroke:"#94a3b8",lbl:"0% Not Started"}
+  ];
+  for(var li2=0;li2<lgMap.length;li2++){
+    ph+='<div style="display:flex;align-items:center;gap:6px;">';
+    ph+='<svg width="18" height="18"><circle cx="9" cy="9" r="7" fill="'+lgMap[li2].col+'" stroke="'+lgMap[li2].stroke+'" stroke-width="1.5"/></svg>';
+    ph+='<span style="font-size:7.5pt;color:#475569;">'+lgMap[li2].lbl+'</span>';
+    ph+='</div>';
+  }
+  ph+='</div>';
+
+  // ── Bridge summary strip ──────────────────────────────────
+  ph+='<div style="display:flex;gap:4px;flex-wrap:wrap;">';
+  for(var bi7=0;bi7<mapBridges.length;bi7++){
+    var mb2=mapBridges[bi7];
+    var bp2=Math.round(calcBrPct(mb2.id));
+    var bc2=bp2>=75?"#06C98F":bp2>=25?"#D4A843":bp2>0?"#F59E0B":"#CBD5E1";
+    var btc=bp2>=25?"#fff":"#475569";
+    ph+='<div style="flex:1;min-width:42px;text-align:center;background:'+bc2+';border-radius:6px;padding:5px 3px;">';
+    ph+='<div style="font-size:9pt;font-weight:900;color:'+btc+';">'+mb2.id+'</div>';
+    ph+='<div style="font-size:7pt;color:'+btc+';opacity:0.85;">'+bp2+'%</div>';
+    ph+='</div>';
+  }
+  ph+='</div>';
+
+  ph+='<div class="pn">Page 6</div>';
+  ph+='<div style="position:absolute;bottom:0;left:0;right:0;height:4px;background:linear-gradient(90deg,transparent,#D4A843,transparent);"></div>';
+  ph+='</div>';
+
+  // ══════════════════════════════════════════════
+  // PAGE 3 — EXECUTIVE NARRATIVE SUMMARY
   // ══════════════════════════════════════════════
   ph+='<div class="page sp" style="background:#fff;">';
   ph+='<div style="position:absolute;top:0;left:0;right:0;height:5px;background:linear-gradient(90deg,#D4A843,#f0c866,#D4A843);"></div>';
@@ -1987,7 +2148,7 @@ function dlPDF(){
   ph+='</div>';
 
   // ══════════════════════════════════════════════
-  // PAGE 3 — EXECUTIVE SUMMARY + S-CURVE
+  // PAGE 4 — EXECUTIVE SUMMARY + S-CURVE
   // ══════════════════════════════════════════════
   ph+='<div class="page sp">';
   ph+='<div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#D4A843,transparent);"></div>';
@@ -1995,7 +2156,7 @@ function dlPDF(){
   ph+='<svg style="position:absolute;top:10px;right:20px;opacity:0.04" width="180" height="100" viewBox="0 0 180 100"><path d="M0 80 Q45 15 90 15 Q135 15 180 80" stroke="#0f172a" stroke-width="3" fill="none"/><line x1="45" y1="45" x2="45" y2="80" stroke="#0f172a" stroke-width="2"/><line x1="135" y1="45" x2="135" y2="80" stroke="#0f172a" stroke-width="2"/><rect x="0" y="80" width="180" height="6" fill="#0f172a"/></svg>';
 
   ph+='<div class="sec-hdr"><div class="sec-title">Executive Summary</div><div class="sec-date">Report Date: '+today3+'</div></div>';
-  ph+='<div class="pn">Page 5</div>';
+  ph+='<div class="pn">Page 6</div>';
 
   // KPIs
   ph+='<div style="display:flex;gap:9px;margin-bottom:14px;">';
@@ -2161,14 +2322,14 @@ function dlPDF(){
   ph+='</div>';
 
   // ══════════════════════════════════════════════
-  // PAGE 4 — DASHBOARD + BRIDGE SUMMARY
+  // PAGE 5 — DASHBOARD + BRIDGE SUMMARY
   // ══════════════════════════════════════════════
   ph+='<div class="page sp">';
   ph+='<div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#D4A843,transparent);"></div>';
   ph+='<svg style="position:absolute;bottom:20px;right:10px;opacity:0.04" width="200" height="120" viewBox="0 0 200 120"><path d="M0 100 Q50 20 100 20 Q150 20 200 100" stroke="#0f172a" stroke-width="3" fill="none"/><line x1="50" y1="55" x2="50" y2="100" stroke="#0f172a" stroke-width="2"/><line x1="150" y1="55" x2="150" y2="100" stroke="#0f172a" stroke-width="2"/></svg>';
 
   ph+='<div class="sec-hdr"><div class="sec-title">Project Dashboard</div><div class="sec-date">As of '+today3+'</div></div>';
-  ph+='<div class="pn">Page 5</div>';
+  ph+='<div class="pn">Page 6</div>';
 
   // Dashboard: mini donuts row
   ph+='<div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">';
@@ -2262,7 +2423,7 @@ function dlPDF(){
   ph+='</div>';
 
   // ══════════════════════════════════════════════
-  // PAGE 5 — PROJECT SUMMARY (closing) (white, clean)
+  // PAGE 6 — PROJECT SUMMARY (closing) (white, clean)
   // ══════════════════════════════════════════════
   ph+='<div class="page" style="background:#ffffff!important;color:#1e293b;position:relative;overflow:hidden;display:flex;flex-direction:column;">';
   // Gold top bar
