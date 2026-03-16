@@ -483,8 +483,8 @@ window.addEventListener('DOMContentLoaded',function(){
     setSyncDot('ok');
     var lbl=document.getElementById('last-sync-lbl');
     if(lbl) lbl.style.display='inline';
-    // Get initial location silently
     getMyLocation(null);
+    startHeartbeat();
   },2000);
 });
 
@@ -2915,6 +2915,68 @@ function getGoogleMapsUrl(lat,lng){
   return "https://www.google.com/maps?q="+lat+","+lng;
 }
 
+
+function sendHeartbeat(){
+  if(!JB_CONNECTED) return;
+  getMyLocation(function(loc){
+    var now3=new Date();
+    var ts3=Date.now();
+    var hh3=now3.getHours(); var mm3=now3.getMinutes();
+    var timeStr3=(hh3<10?"0"+hh3:hh3)+":"+(mm3<10?"0"+mm3:mm3);
+    // Update my location in TEAM_LOCS
+    TEAM_LOCS[MY_NAME]={
+      name:MY_NAME,
+      lat:loc?loc.lat:MY_LOC.lat,
+      lng:loc?loc.lng:MY_LOC.lng,
+      acc:loc?loc.acc:MY_LOC.acc,
+      ts:ts3,
+      online:true,
+      lastSeen:timeStr3,
+      lastAction:"Online"
+    };
+    // Push heartbeat — GET current data, merge my location, PUT back
+    fetch(JB_URL+"/latest",{
+      method:"GET",
+      headers:{"X-Master-Key":JB_KEY,"X-Bin-Meta":"false"}
+    })
+    .then(function(r){return r.json();})
+    .then(function(resp){
+      var d=resp.record||resp;
+      var tl=d.teamLocs||{};
+      tl[MY_NAME]={
+        name:MY_NAME,
+        lat:loc?loc.lat:MY_LOC.lat,
+        lng:loc?loc.lng:MY_LOC.lng,
+        acc:loc?loc.acc:MY_LOC.acc,
+        ts:ts3,
+        online:true,
+        lastSeen:timeStr3,
+        lastAction:d.teamLocs&&d.teamLocs[MY_NAME]?d.teamLocs[MY_NAME].lastAction||"Online":"Online"
+      };
+      // Only update teamLocs — don't change pier data
+      var payload=JSON.parse(JSON.stringify(d));
+      payload.teamLocs=tl;
+      payload.myLoc=tl[MY_NAME];
+      return fetch(JB_URL,{
+        method:"PUT",
+        headers:{"Content-Type":"application/json","X-Master-Key":JB_KEY,"X-Bin-Versioning":"false"},
+        body:JSON.stringify(payload)
+      });
+    })
+    .catch(function(){});
+  });
+}
+
+function isOnline(ts){
+  // Online if last seen within 5 minutes
+  return ts&&(Date.now()-ts)<300000;
+}
+
+function startHeartbeat(){
+  sendHeartbeat();
+  setInterval(sendHeartbeat,120000); // every 2 minutes
+}
+
 function pullSync(){
   if(JB_PUSHING) return;
   if(Date.now()-JB_LAST_PUSH < 5000) return;
@@ -4316,32 +4378,49 @@ function rMp(){
   }
   h+='</div>';
 
-  // Team members locations
+  // Team members locations — with online/offline status
   var teamKeys=Object.keys(TEAM_LOCS);
+  var onlineCount=0;
+  for(var tc=0;tc<teamKeys.length;tc++){
+    if(TEAM_LOCS[teamKeys[tc]]&&isOnline(TEAM_LOCS[teamKeys[tc]].ts)) onlineCount++;
+  }
   if(teamKeys.length>0){
     h+='<div>';
-    h+='<div style="font-size:11px;font-weight:700;color:var(--dimL);margin-bottom:8px;">👥 Team Members ('+teamKeys.length+')</div>';
+    h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">';
+    h+='<div style="font-size:11px;font-weight:700;color:var(--dimL);">👥 Team Members ('+teamKeys.length+')</div>';
+    h+='<div style="background:#06C98F22;border:1px solid #06C98F44;border-radius:12px;padding:3px 10px;font-size:10px;font-weight:700;color:var(--green);">'+onlineCount+' Online Now</div>';
+    h+='</div>';
     for(var ti=0;ti<teamKeys.length;ti++){
       var tm=TEAM_LOCS[teamKeys[ti]];
       if(!tm||!tm.lat) continue;
+      var tmOnline=isOnline(tm.ts);
       var tmUrl=getGoogleMapsUrl(tm.lat,tm.lng);
       var tmTime=new Date(tm.ts);
       var tmTs=(tmTime.getHours()<10?"0"+tmTime.getHours():tmTime.getHours())+":"+(tmTime.getMinutes()<10?"0"+tmTime.getMinutes():tmTime.getMinutes());
       var tmAgo=Math.round((Date.now()-tm.ts)/60000);
       var tmAgoStr=tmAgo<1?"just now":tmAgo<60?tmAgo+"m ago":Math.round(tmAgo/60)+"h ago";
-      h+='<div style="background:var(--panel);border-radius:8px;padding:8px 12px;margin-bottom:6px;border-left:3px solid var(--blue);">';
-      h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">';
-      h+='<span style="font-size:11px;font-weight:700;color:var(--text);">'+teamKeys[ti]+'</span>';
-      h+='<span style="font-size:9px;color:var(--dimL);">'+tmAgoStr+'</span>';
+      var tmBorderCol=tmOnline?"var(--green)":"var(--border)";
+      var tmStatusDot=tmOnline?'<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#06C98F;margin-right:4px;box-shadow:0 0 6px #06C98F88;"></span>':'<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#555;margin-right:4px;"></span>';
+      h+='<div style="background:var(--panel);border-radius:10px;padding:10px 14px;margin-bottom:8px;border-left:3px solid '+tmBorderCol+';">';
+      h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">';
+      h+='<div style="display:flex;align-items:center;">'+tmStatusDot+'<span style="font-size:12px;font-weight:700;color:var(--text);">'+teamKeys[ti]+'</span></div>';
+      h+='<span style="font-size:9px;font-weight:700;color:'+(tmOnline?"var(--green)":"var(--dimL)")+';">'+(tmOnline?"🟢 Online":"⚫ "+tmAgoStr)+'</span>';
       h+='</div>';
-      h+='<div style="font-size:10px;color:var(--dimL);">'+tm.lat+', '+tm.lng+'</div>';
-      if(tm.lastAction) h+='<div style="font-size:10px;color:var(--dimL);">Last: '+tm.lastAction+'</div>';
-      h+='<a href="'+tmUrl+'" target="_blank" style="display:inline-block;margin-top:4px;font-size:10px;color:var(--blue);font-weight:700;">🗺️ Open in Google Maps</a>';
+      h+='<div style="font-size:10px;color:var(--dimL);margin-bottom:3px;">📍 '+tm.lat+', '+tm.lng+' (±'+tm.acc+'m)</div>';
+      if(tm.lastAction) h+='<div style="font-size:10px;color:var(--dimL);margin-bottom:5px;">Last action: '+tm.lastAction+'</div>';
+      h+='<div style="display:flex;gap:8px;">';
+      h+='<a href="'+tmUrl+'" target="_blank" style="flex:1;text-align:center;padding:5px;background:var(--gold);border-radius:6px;font-size:10px;font-weight:700;color:#000;text-decoration:none;">🗺️ Google Maps</a>';
+      h+='<button onclick="rMp();" style="flex:1;padding:5px;background:var(--card);border:1px solid var(--border);border-radius:6px;font-size:10px;font-weight:700;color:var(--dimL);cursor:pointer;font-family:inherit;">🔄 Refresh</button>';
+      h+='</div>';
       h+='</div>';
     }
     h+='</div>';
   } else {
-    h+='<div style="font-size:11px;color:var(--dimL);text-align:center;padding:8px;">No team members connected yet</div>';
+    h+='<div style="text-align:center;padding:16px;">';
+    h+='<div style="font-size:24px;margin-bottom:8px;">👥</div>';
+    h+='<div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px;">No team members yet</div>';
+    h+='<div style="font-size:11px;color:var(--dimL);">Share the app link with colleagues to see them here</div>';
+    h+='</div>';
   }
 
   h+='</div>';
