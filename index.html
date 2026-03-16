@@ -466,11 +466,27 @@ function persist(){
   try{localStorage.setItem("ic1b3_sca",JSON.stringify(SC_ACTUALS));}catch(e){}
   try{localStorage.setItem("ic1b3_roads",JSON.stringify(ROADS));}catch(e){}
   try{localStorage.setItem("ic1b3_pre",String(PRE_PCT));}catch(e){}
-  // Auto-push to team on every change
-  if(typeof pushSync==="function") setTimeout(pushSync,500);
+  // Record location and auto-push on every change
+  if(typeof pushSync==="function"){
+    if(navigator.geolocation){
+      getMyLocation(function(loc){setTimeout(pushSync,300);});
+    } else {
+      setTimeout(pushSync,500);
+    }
+  }
 }
 loadData();
-window.addEventListener('DOMContentLoaded',function(){nav('ov'); setTimeout(function(){startSyncTimer(); setSyncDot('ok'); var lbl=document.getElementById('last-sync-lbl'); if(lbl) lbl.style.display='inline';},2000);});
+window.addEventListener('DOMContentLoaded',function(){
+  nav('ov');
+  setTimeout(function(){
+    startSyncTimer();
+    setSyncDot('ok');
+    var lbl=document.getElementById('last-sync-lbl');
+    if(lbl) lbl.style.display='inline';
+    // Get initial location silently
+    getMyLocation(null);
+  },2000);
+});
 
 // Sync
 var AS_URL_KEY="ic1_as_url";
@@ -484,6 +500,10 @@ var JB_CONNECTED=false;
 var JB_PUSHING=false;
 var JB_LAST_PUSH=0;
 var JB_LAST_PULL_TS=0;
+// Location tracking
+var MY_LOC={lat:null,lng:null,acc:null,ts:null};
+var TEAM_LOCS={};
+var MY_NAME="K. Dimachkie";
 try{AS_URL=localStorage.getItem(AS_URL_KEY)||"";}catch(e){}
 if(AS_URL){ AS_CONNECTED=true; }
 // Auto-connect JSONBin on load
@@ -2762,7 +2782,11 @@ function pushSync(){
         mergedPS[pier][stage]=PS[pier][stage];
       }
     }
-    var payload={ps:mergedPS,logs:LOGS,issues:ISSUES,roads:rds,pre:PRE_PCT,ts:ts2,syncedBy:"K. Dimachkie",syncedAt:timeStr2};
+    var payload={ps:mergedPS,logs:LOGS,issues:ISSUES,roads:rds,pre:PRE_PCT,ts:ts2,
+    syncedBy:MY_NAME,syncedAt:timeStr2,
+    teamLocs:TEAM_LOCS,
+    myLoc:{name:MY_NAME,lat:MY_LOC.lat,lng:MY_LOC.lng,acc:MY_LOC.acc,ts:ts2,lastAction:"Updated data"}
+  };
     return fetch(JB_URL,{
       method:"PUT",
       headers:{"Content-Type":"application/json","X-Master-Key":JB_KEY,"X-Bin-Versioning":"false"},
@@ -2855,6 +2879,42 @@ function testSync(){
   });
 }
 
+
+function getMyLocation(callback){
+  if(!navigator.geolocation){
+    if(callback) callback(null);
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    function(pos){
+      MY_LOC={
+        lat:Math.round(pos.coords.latitude*100000)/100000,
+        lng:Math.round(pos.coords.longitude*100000)/100000,
+        acc:Math.round(pos.coords.accuracy),
+        ts:Date.now()
+      };
+      if(callback) callback(MY_LOC);
+    },
+    function(err){if(callback) callback(null);},
+    {enableHighAccuracy:true,timeout:8000,maximumAge:60000}
+  );
+}
+
+function updateMyLocation(){
+  getMyLocation(function(loc){
+    if(loc) pushSync();
+  });
+}
+
+function getLocLabel(loc){
+  if(!loc||!loc.lat) return "Location unavailable";
+  return ""+loc.lat+", "+loc.lng+" (±"+loc.acc+"m)";
+}
+
+function getGoogleMapsUrl(lat,lng){
+  return "https://www.google.com/maps?q="+lat+","+lng;
+}
+
 function pullSync(){
   if(JB_PUSHING) return;
   if(Date.now()-JB_LAST_PUSH < 5000) return;
@@ -2869,6 +2929,11 @@ function pullSync(){
     if(d&&d.ps&&d.ts){
       if(d.ts<=JB_LAST_PULL_TS){setSyncDot("ok");return;}
       JB_LAST_PULL_TS=d.ts;
+      // Update team locations
+      if(d.teamLocs) TEAM_LOCS=d.teamLocs;
+      if(d.myLoc&&d.myLoc.name&&d.myLoc.name!==MY_NAME){
+        TEAM_LOCS[d.myLoc.name]=d.myLoc;
+      }
       // MERGE pier data — don't replace, only add new entries
       var remotePiers=d.ps;
       var changed=false;
@@ -4220,6 +4285,67 @@ function rMp(){
   }
   h+='</div>';
   h+='</div>';
+
+  
+  // ── Team Location Panel ───────────────────────────────────
+  h+='<div class="card" style="margin-top:12px;">';
+  h+='<div class="ct" style="margin-bottom:10px;">📍 Team Locations</div>';
+
+  // My location
+  h+='<div style="margin-bottom:10px;">';
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">';
+  h+='<span style="font-size:11px;font-weight:700;color:var(--gold);">📌 My Location</span>';
+  h+='<button onclick="updateMyLocation();rMp();" style="padding:4px 10px;background:var(--gold);border:none;border-radius:6px;color:#000;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;">Update</button>';
+  h+='</div>';
+
+  if(MY_LOC.lat){
+    var myMapsUrl=getGoogleMapsUrl(MY_LOC.lat,MY_LOC.lng);
+    var myTime=new Date(MY_LOC.ts);
+    var myTs=(myTime.getHours()<10?"0"+myTime.getHours():myTime.getHours())+":"+(myTime.getMinutes()<10?"0"+myTime.getMinutes():myTime.getMinutes());
+    h+='<div style="background:var(--panel);border-radius:8px;padding:8px 12px;border-left:3px solid var(--gold);">';
+    h+='<div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:3px;">'+MY_NAME+'</div>';
+    h+='<div style="font-size:10px;color:var(--dimL);">'+MY_LOC.lat+', '+MY_LOC.lng+'</div>';
+    h+='<div style="font-size:10px;color:var(--dimL);">Accuracy: ±'+MY_LOC.acc+'m &nbsp;·&nbsp; Updated: '+myTs+'</div>';
+    h+='<a href="'+myMapsUrl+'" target="_blank" style="display:inline-block;margin-top:5px;font-size:10px;color:var(--gold);font-weight:700;">🗺️ Open in Google Maps</a>';
+    h+='</div>';
+  } else {
+    h+='<div style="background:var(--panel);border-radius:8px;padding:10px 12px;text-align:center;">';
+    h+='<div style="font-size:11px;color:var(--dimL);margin-bottom:6px;">Location not yet recorded</div>';
+    h+='<button onclick="getMyLocation(function(){rMp();});" style="padding:6px 14px;background:var(--gold);border:none;border-radius:6px;color:#000;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">📍 Get My Location</button>';
+    h+='</div>';
+  }
+  h+='</div>';
+
+  // Team members locations
+  var teamKeys=Object.keys(TEAM_LOCS);
+  if(teamKeys.length>0){
+    h+='<div>';
+    h+='<div style="font-size:11px;font-weight:700;color:var(--dimL);margin-bottom:8px;">👥 Team Members ('+teamKeys.length+')</div>';
+    for(var ti=0;ti<teamKeys.length;ti++){
+      var tm=TEAM_LOCS[teamKeys[ti]];
+      if(!tm||!tm.lat) continue;
+      var tmUrl=getGoogleMapsUrl(tm.lat,tm.lng);
+      var tmTime=new Date(tm.ts);
+      var tmTs=(tmTime.getHours()<10?"0"+tmTime.getHours():tmTime.getHours())+":"+(tmTime.getMinutes()<10?"0"+tmTime.getMinutes():tmTime.getMinutes());
+      var tmAgo=Math.round((Date.now()-tm.ts)/60000);
+      var tmAgoStr=tmAgo<1?"just now":tmAgo<60?tmAgo+"m ago":Math.round(tmAgo/60)+"h ago";
+      h+='<div style="background:var(--panel);border-radius:8px;padding:8px 12px;margin-bottom:6px;border-left:3px solid var(--blue);">';
+      h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">';
+      h+='<span style="font-size:11px;font-weight:700;color:var(--text);">'+teamKeys[ti]+'</span>';
+      h+='<span style="font-size:9px;color:var(--dimL);">'+tmAgoStr+'</span>';
+      h+='</div>';
+      h+='<div style="font-size:10px;color:var(--dimL);">'+tm.lat+', '+tm.lng+'</div>';
+      if(tm.lastAction) h+='<div style="font-size:10px;color:var(--dimL);">Last: '+tm.lastAction+'</div>';
+      h+='<a href="'+tmUrl+'" target="_blank" style="display:inline-block;margin-top:4px;font-size:10px;color:var(--blue);font-weight:700;">🗺️ Open in Google Maps</a>';
+      h+='</div>';
+    }
+    h+='</div>';
+  } else {
+    h+='<div style="font-size:11px;color:var(--dimL);text-align:center;padding:8px;">No team members connected yet</div>';
+  }
+
+  h+='</div>';
+
 
   document.getElementById("pg-mp").innerHTML=h;
 }
