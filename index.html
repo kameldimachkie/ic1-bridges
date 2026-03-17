@@ -247,6 +247,7 @@ body{display:flex;flex-direction:column;}
     
     <button class="nb"     id="tab-gn" onclick="nav('gn')"><svg width="16" height="14" viewBox="0 0 22 18" fill="none" style="vertical-align:-3px;margin-right:4px"><rect x="1" y="14" width="20" height="3" rx="1.5" fill="currentColor" opacity="0.75"/><path d="M2 14 Q6 2 11 2 Q16 2 20 14" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round"/><line x1="7.5" y1="9" x2="7.5" y2="14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="14.5" y1="9" x2="14.5" y2="14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="2" y1="9" x2="20" y2="9" stroke="currentColor" stroke-width="1" stroke-dasharray="2,2" opacity="0.35"/></svg>Scope</button>
     <button class="nb"     id="tab-mp" onclick="nav('mp')"><svg width="16" height="14" viewBox="0 0 22 18" fill="none" style="vertical-align:-3px;margin-right:4px"><line x1="1" y1="9" x2="21" y2="9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" opacity="0.75"/><line x1="8" y1="1" x2="8" y2="17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/><line x1="16" y1="1" x2="16" y2="17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/><path d="M3 9 Q7 4 11 4 Q15 4 19 9" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="11" cy="9" r="2.8" fill="currentColor" opacity="0.9"/><circle cx="11" cy="9" r="1.2" fill="#07090d"/></svg>Map</button>
+    <button class="nb" id="tab-ch" onclick="nav('ch')">💬 Chat</button>
   </div>
 </div>
 
@@ -268,6 +269,7 @@ body{display:flex;flex-direction:column;}
   <div class="pg"    id="pg-is"></div>
 <div class="pg"    id="pg-gn"></div>
 <div class="pg"    id="pg-mp"></div>
+  <div class="pg" id="pg-ch"></div>
 </div>
 </div>
 
@@ -442,6 +444,7 @@ var ANTHROPIC_KEY="";
 var CONTACTS=[];
 var ROADS={ibn:{pct:0,status:"Not Started"},sattam:{pct:0,status:"Not Started"}};
 var FILL_SLOPE={lm_r:false,lm_l:false,mn_r:false,mn_l:false};
+var MESSAGES=[];
 var PRE_PCT=7;
 
 // Convert raw bridge % to project-level % (includes preliminary baseline)
@@ -465,6 +468,7 @@ function loadData(){
   try{ROADS=JSON.parse(localStorage.getItem("ic1b3_roads")||'{"ibn":{"pct":0,"status":"Not Started"},"sattam":{"pct":0,"status":"Not Started"}}');}catch(e){ROADS={ibn:{pct:0,status:"Not Started"},sattam:{pct:0,status:"Not Started"}};}
   try{PRE_PCT=parseFloat(localStorage.getItem("ic1b3_pre")||"7");}catch(e){PRE_PCT=7;}
   try{FILL_SLOPE=JSON.parse(localStorage.getItem("ic1b3_fs")||'{"lm_r":false,"lm_l":false,"mn_r":false,"mn_l":false}');}catch(e){FILL_SLOPE={lm_r:false,lm_l:false,mn_r:false,mn_l:false};}
+  try{MESSAGES=JSON.parse(localStorage.getItem('ic1b3_msg')||'[]');}catch(e){MESSAGES=[];}
   try{ANTHROPIC_KEY=localStorage.getItem("ic1_ak")||"";}catch(e){}
 }
 function persist(){
@@ -475,6 +479,7 @@ function persist(){
   try{localStorage.setItem("ic1b3_roads",JSON.stringify(ROADS));}catch(e){}
   try{localStorage.setItem("ic1b3_pre",String(PRE_PCT));}catch(e){}
   try{localStorage.setItem("ic1b3_fs",JSON.stringify(FILL_SLOPE));}catch(e){}
+  try{localStorage.setItem('ic1b3_msg',JSON.stringify(MESSAGES.slice(-20)));}catch(e){}
   // Record location and auto-push on every change
   if(typeof pushSync==="function"){
     if(navigator.geolocation){
@@ -741,7 +746,7 @@ function countAllPiers(){
 // ═══════════════════════════════════════════════════════════════
 // NAVIGATION
 // ═══════════════════════════════════════════════════════════════
-var ALL_TABS=["ov","tr","rd","fs","lg","rp","gn","mp"];
+var ALL_TABS=["ov","tr","rd","fs","lg","rp","gn","mp","ch"];
 
 function nav(id){
   for(var i=0;i<ALL_TABS.length;i++){
@@ -765,6 +770,7 @@ function nav(id){
   else if(id==="wr") rWr();
   else if(id==="mr") rMr();
   else if(id==="fs") rFs();
+  else if(id==="ch") rCh();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -2941,7 +2947,7 @@ function pushSync(){
         mergedPS[pier][stage]=PS[pier][stage];
       }
     }
-    var payload={ps:mergedPS,logs:LOGS,issues:ISSUES,roads:rds,pre:PRE_PCT,ts:ts2,
+    var payload={ps:mergedPS,logs:LOGS,issues:ISSUES,roads:rds,pre:PRE_PCT,messages:MESSAGES.slice(-20),ts:ts2,
     syncedBy:MY_NAME,syncedAt:timeStr2,
     teamLocs:TEAM_LOCS,
     myLoc:{name:MY_NAME,lat:MY_LOC.lat,lng:MY_LOC.lng,acc:MY_LOC.acc,ts:ts2,lastAction:"Updated data"}
@@ -3149,6 +3155,23 @@ function pullSync(){
     var d=resp.record||resp;
       // ── Always update locations regardless of timestamp ──
       if(d.teamLocs) TEAM_LOCS=d.teamLocs;
+      // ── Always update messages ───────────────────────────
+      if(d.messages&&d.messages.length){
+        var oldLen=MESSAGES.length;
+        MESSAGES=d.messages;
+        try{localStorage.setItem('ic1b3_msg',JSON.stringify(MESSAGES));}catch(e){}
+        // Notify if new messages arrived
+        if(MESSAGES.length>oldLen){
+          var lastMsg=MESSAGES[MESSAGES.length-1];
+          if(lastMsg.sender!==MY_NAME) showMsgAlert(lastMsg);
+          // Update chat tab badge
+          var chTab=document.getElementById('tab-ch');
+          if(chTab&&document.querySelector('#tab-ch.on')===null){
+            chTab.innerHTML='💬 Chat <span style="background:#E53E3E;color:#fff;border-radius:10px;padding:1px 6px;font-size:9px;margin-left:3px;">'+
+              (MESSAGES.length-oldLen)+'</span>';
+          }
+        }
+      }
       if(d.myLoc&&d.myLoc.name&&d.myLoc.name!==MY_NAME){
         TEAM_LOCS[d.myLoc.name]=d.myLoc;
       }
@@ -3188,6 +3211,7 @@ function pullSync(){
       try{localStorage.setItem("ic1b3_roads",JSON.stringify(ROADS));}catch(e){}
       try{localStorage.setItem("ic1b3_pre",String(PRE_PCT));}catch(e){}
   try{localStorage.setItem("ic1b3_fs",JSON.stringify(FILL_SLOPE));}catch(e){}
+  try{localStorage.setItem('ic1b3_msg',JSON.stringify(MESSAGES.slice(-20)));}catch(e){}
       // Update sync label
       var lsEl=document.getElementById("last-sync-lbl");
       var now=new Date();
@@ -3873,6 +3897,93 @@ var GANTT_STAGES=[
 var PROJECT_START=new Date("2025-06-01");
 var PROJECT_END=new Date("2027-09-30");
 
+
+
+function showMsgAlert(msg){
+  var existing=document.getElementById('msg-alert');
+  if(existing) existing.remove();
+  var div=document.createElement('div');
+  div.id='msg-alert';
+  div.style.cssText='position:fixed;top:70px;left:50%;transform:translateX(-50%);background:#0f172a;border:1px solid #58A6FF;border-radius:10px;padding:10px 16px;z-index:9999;display:flex;align-items:center;gap:10px;box-shadow:0 4px 20px #0008;max-width:320px;width:90%;cursor:pointer;';
+  div.onclick=function(){nav('ch');this.remove();};
+  div.innerHTML='<span style="font-size:18px;">💬</span>'
+    +'<div style="flex:1;">'
+    +'<div style="font-size:11px;font-weight:700;color:#58A6FF;">New message from '+msg.sender+'</div>'
+    +'<div style="font-size:10px;color:#94a3b8;margin-top:2px;">'+msg.text.substring(0,50)+(msg.text.length>50?'...':'')+'</div>'
+    +'</div>'
+    +'<button onclick="event.stopPropagation();this.parentElement.remove();" style="background:none;border:none;color:#475569;font-size:16px;cursor:pointer;">✕</button>';
+  document.body.appendChild(div);
+  setTimeout(function(){if(div.parentElement)div.remove();},6000);
+}
+
+function sendMsg(){
+  var inp=document.getElementById('ch-inp');
+  if(!inp) return;
+  var txt=inp.value.trim();
+  if(!txt) return;
+  var now=new Date();
+  var ts=(now.getHours()<10?'0'+now.getHours():now.getHours())+':'+(now.getMinutes()<10?'0'+now.getMinutes():now.getMinutes());
+  var msg={sender:MY_NAME,text:txt,time:ts,ts:Date.now()};
+  MESSAGES.push(msg);
+  if(MESSAGES.length>20) MESSAGES=MESSAGES.slice(-20);
+  inp.value='';
+  // Reset tab badge
+  var chTab=document.getElementById('tab-ch');
+  if(chTab) chTab.innerHTML='💬 Chat';
+  persist();
+  pushSync();
+  rCh();
+}
+
+function rCh(){
+  // Reset badge when tab opened
+  var chTab=document.getElementById('tab-ch');
+  if(chTab) chTab.innerHTML='💬 Chat';
+
+  var h='';
+  // Header
+  h+='<div class="card" style="border-left:3px solid var(--blue);">';
+  h+='<div class="ct">💬 Team Chat</div>';
+  h+='<div style="font-size:11px;color:var(--dimL);">Broadcast messages to your entire team in real time</div>';
+  h+='</div>';
+
+  // Messages area
+  h+='<div class="card" style="margin-top:12px;">';
+  if(MESSAGES.length===0){
+    h+='<div style="text-align:center;padding:32px 16px;">';
+    h+='<div style="font-size:28px;margin-bottom:10px;">💬</div>';
+    h+='<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:5px;">No messages yet</div>';
+    h+='<div style="font-size:11px;color:var(--dimL);">Send the first message to your team below</div>';
+    h+='</div>';
+  } else {
+    for(var i=0;i<MESSAGES.length;i++){
+      var msg=MESSAGES[i];
+      var isMe=msg.sender===MY_NAME;
+      var msgCol=isMe?'var(--gold)':'var(--blue)';
+      var msgBg=isMe?'var(--gold)11':'var(--blue)11';
+      var msgBorder=isMe?'var(--gold)':'var(--blue)';
+      h+='<div style="margin-bottom:10px;padding:10px 12px;border-radius:10px;border-left:3px solid '+msgBorder+';background:'+msgBg+';">';
+      h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">';
+      h+='<span style="font-size:11px;font-weight:700;color:'+msgCol+';">'+msg.sender+'</span>';
+      h+='<span style="font-size:9px;color:var(--dimL);">'+msg.time+'</span>';
+      h+='</div>';
+      h+='<div style="font-size:12px;color:var(--text);line-height:1.5;">'+msg.text+'</div>';
+      h+='</div>';
+    }
+  }
+  h+='</div>';
+
+  // Compose box
+  h+='<div class="card" style="margin-top:12px;">';
+  h+='<div style="font-size:11px;font-weight:700;color:var(--dimL);margin-bottom:8px;">New Message</div>';
+  h+='<textarea id="ch-inp" placeholder="Type your message here..." ';
+  h+='style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:12px;font-family:inherit;resize:none;height:70px;outline:none;line-height:1.5;"></textarea>';
+  h+='<button onclick="sendMsg();" ';
+  h+='style="width:100%;margin-top:8px;padding:11px;background:var(--blue);border:none;border-radius:8px;color:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;">📤 Send to Team</button>';
+  h+='</div>';
+
+  document.getElementById('pg-ch').innerHTML=h;
+}
 
 function setFs(key, status){
   FILL_SLOPE[key]=status;
