@@ -696,6 +696,17 @@ function buildTicker(){
     var bp=brPct(BRIDGES[i].id);
     if(bp>0) items.push({t:"BR-"+BRIDGES[i].id+": "+bp+"%",c:"#D4A843"});
   }
+  // Road fill slope status
+  var fillIbn=ROADS["ibn.act.10"]==="done";
+  var fillSat=ROADS["sattam.act.10"]==="done";
+  if(fillIbn||fillSat){
+    items.push({
+      t:"FILL SLOPE: "+(fillIbn&&fillSat?"Both Roads ✅":fillIbn?"Ibn Saud ✅":"Sattam ✅"),
+      c:"#4ECDC4"
+    });
+  } else {
+    items.push({t:"FILL SLOPE: Pending ⏳",c:"#FF6B6B"});
+  }
   // Recent logs
   for(var j=LOGS.length-1;j>=Math.max(0,LOGS.length-3);j--){
     var stgN="";
@@ -3752,16 +3763,17 @@ function rRd(){
 
   // ── Weighted activities definition ─────────────────────────
   var ROAD_ACTS=[
-    {name:"Demolition & Clearing",   w:3},
-    {name:"Earthworks",              w:7},
-    {name:"Sub-base",                w:8},
-    {name:"Base Course",             w:13},
-    {name:"Asphalt Binder Course",   w:11},
-    {name:"Asphalt Wearing Course",  w:12},
-    {name:"Curb & Kerb",             w:15},
-    {name:"Sidewalk Concrete",       w:19},
-    {name:"Drainage",                w:4},
-    {name:"Road Markings & Lighting",w:8}
+    {name:"Demolition & Clearing",        w:3},
+    {name:"Earthworks",                   w:7},
+    {name:"Sub-base",                     w:8},
+    {name:"Base Course",                  w:12.8},
+    {name:"Asphalt Binder Course",        w:11},
+    {name:"Asphalt Wearing Course",       w:12},
+    {name:"Curb & Kerb",                  w:14.8},
+    {name:"Sidewalk Concrete",            w:18.7},
+    {name:"Drainage",                     w:4},
+    {name:"Road Markings & Lighting",     w:8},
+    {name:"Fill Slope Between Abutments", w:0.7}
   ];
 
   var roads=[
