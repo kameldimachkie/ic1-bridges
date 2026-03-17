@@ -374,11 +374,11 @@ function calcBrPct(brId){
 }
 
 function calcOverallPct(){
-  // Project = Preliminary(7%) + Bridges(83%) + Roads(10%)
+  // Project = Preliminary(7%) + Bridges(86.3%) + Roads(6%) + FillSlope(0.7%) = 100%
   // Preliminary is fixed baseline (fully done)
-  var BR_WEIGHT=87; var ROAD_WEIGHT=6; var PRE_WEIGHT=PRE_PCT;
-  // Adjust bridge weight if pre changes
-  BR_WEIGHT=100-ROAD_WEIGHT-PRE_WEIGHT;
+  var BR_WEIGHT=86.3; var ROAD_WEIGHT=6; var FS_WEIGHT=0.7; var PRE_WEIGHT=PRE_PCT;
+  // Adjust bridge weight if pre changes (deduct roads + Fill Slope + preliminary)
+  BR_WEIGHT=100-ROAD_WEIGHT-FS_WEIGHT-PRE_WEIGHT;
   // Bridges earned
   var brEarned=0,brTotal=0;
   for(var b=0;b<BRIDGES.length;b++){
@@ -446,7 +446,7 @@ var PRE_PCT=7;
 
 // Convert raw bridge % to project-level % (includes preliminary baseline)
 function projPct(bridgeRawPct){
-  var brW=100-6-PRE_PCT;
+  var brW=100-6-0.7-PRE_PCT;
   return Math.round((PRE_PCT + (bridgeRawPct/100)*brW)*10)/10;
 }
 // Format for display: show both bridge % and project %
@@ -1471,9 +1471,9 @@ function rSc(){
   for(var i=0;i<SC_MONTHS.length;i++){
     var pvRaw=SC_PLANNED[i];
     // Shift planned curve: PRE_PCT already earned, bridge work = remaining 83%
-    var pv=pvRaw>0?Math.min(100,Math.round((PRE_PCT+(pvRaw/100)*(100-6-PRE_PCT))*10)/10):0;
+    var pv=pvRaw>0?Math.min(100,Math.round((PRE_PCT+(pvRaw/100)*(100-6-0.7-PRE_PCT))*10)/10):0;
     var avRaw=SC_ACTUALS[i]!==undefined?SC_ACTUALS[i]:null;
-    var av=avRaw!==null?Math.min(100,Math.round((PRE_PCT+(avRaw/100)*(100-6-PRE_PCT))*10)/10):null;
+    var av=avRaw!==null?Math.min(100,Math.round((PRE_PCT+(avRaw/100)*(100-6-0.7-PRE_PCT))*10)/10):null;
     var ph=Math.round(pv/100*110);
     var ah=av!==null?Math.round(av/100*110):0;
     h+='<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:0;">';
@@ -1777,7 +1777,7 @@ function dlPDF(){
   }
   var brOnlyPct=bT>0?Math.round(bE/bT*1000)/10:0;
   var ibnPct=ROADS.ibn.pct||0; var satPct=ROADS.sattam.pct||0;
-  var BR_W=100-6-PRE_PCT;
+  var BR_W=100-6-0.7-PRE_PCT;
   var today3=td();
   var now=new Date(); var ps=new Date("2025-06-01"); var pe=new Date("2027-09-30");
   var totalDays3=Math.round((pe-ps)/86400000);
@@ -1986,7 +1986,8 @@ function dlPDF(){
     {lbl:"Preliminary",pct:PRE_PCT,wt:PRE_PCT,c:"#06C98F"},
     {lbl:"Bridges",pct:brOnlyPct,wt:BR_W,c:"#D4A843"},
     {lbl:"Ibn Saud Rd",pct:ibnPct,wt:3,c:"#3B82F6"},
-    {lbl:"Sattam Rd",pct:satPct,wt:3,c:"#3B82F6"}
+    {lbl:"Sattam Rd",pct:satPct,wt:3,c:"#3B82F6"},
+    {lbl:"Fill Slope",pct:Math.round(calcFsEarned()/0.7*100),wt:0.7,c:"#4ECDC4"}
   ];
   for(var cw=0;cw<cpWt.length;cw++){
     var earn7=Math.round(cpWt[cw].pct/100*cpWt[cw].wt*10)/10;
@@ -2413,6 +2414,7 @@ function dlPDF(){
     {nm:"Bridge Works ("+BRIDGES.length+" bridges)",wt:BR_W,pct:brOnlyPct,earned:brEarned3,st:brOnlyPct>0?"In Progress":"Not Started",c:"#D4A843"},
     {nm:"Ibn Saud Road",wt:3,pct:ibnPct,earned:Math.round(ibnPct/100*3*10)/10,st:ROADS.ibn.status||"Not Started",c:"#3B82F6"},
     {nm:"Prince Sattam Road",wt:3,pct:satPct,earned:Math.round(satPct/100*3*10)/10,st:ROADS.sattam.status||"Not Started",c:"#3B82F6"},
+    {nm:"Fill Slope",wt:0.7,pct:Math.round(calcFsEarned()/0.7*100),earned:Math.round(calcFsEarned()*100)/100,st:calcFsEarned()>=0.7?"Complete":calcFsEarned()>0?"In Progress":"Not Started",c:"#4ECDC4"},
     {nm:"TOTAL",wt:100,pct:ov,earned:Math.round(ov*10)/10,st:"—",c:"#D4A843"}
   ];
   for(var wj3=0;wj3<wt3.length;wj3++){
@@ -2633,6 +2635,7 @@ function dlPDF(){
     {nm:"Bridge Works ("+BRIDGES.length+" bridges · 90 piers)",wt:BR_W,pct:brOnlyPct,c:"#D4A843",st:brOnlyPct>0?"In Progress":"Not Started"},
     {nm:"Ibn Saud Road",wt:3,pct:ibnPct,c:"#3B82F6",st:ROADS.ibn.status||"Not Started"},
     {nm:"Prince Sattam Road",wt:3,pct:satPct,c:"#3B82F6",st:ROADS.sattam.status||"Not Started"},
+    {nm:"Fill Slope (L–M, M–N)",wt:0.7,pct:Math.round(calcFsEarned()/0.7*100),c:"#4ECDC4",st:calcFsEarned()>=0.7?"Complete":calcFsEarned()>0?"In Progress":"Not Started"},
     {nm:"TOTAL",wt:100,pct:ov,c:"#D4A843",st:""}
   ];
   for(var sr=0;sr<sumRows.length;sr++){
@@ -4264,9 +4267,10 @@ function rGnDash(hPrefix){
   var ibnPct2=ROADS.ibn.pct||0; var satPct2=ROADS.sattam.pct||0;
   var wItems=[
     {lbl:"Preliminary",wt:PRE_PCT,pct:100,c:"var(--green)",done:true},
-    {lbl:"Bridges",wt:Math.round(100-6-PRE_PCT),pct:brOvPct,c:"var(--gold)",done:false},
+    {lbl:"Bridges",wt:Math.round(100-6-0.7-PRE_PCT),pct:brOvPct,c:"var(--gold)",done:false},
     {lbl:"Ibn Saud Rd",wt:3,pct:ibnPct2,c:"var(--blue)",done:false},
-    {lbl:"Sattam Rd",wt:3,pct:satPct2,c:"var(--blue)",done:false}
+    {lbl:"Sattam Rd",wt:3,pct:satPct2,c:"var(--blue)",done:false},
+    {lbl:"Fill Slope",wt:0.7,pct:Math.round(calcFsEarned()/0.7*100),c:"#4ECDC4",done:false}
   ];
   for(var wi=0;wi<wItems.length;wi++){
     var w=wItems[wi];
