@@ -846,7 +846,7 @@ function rOv(){
   h+='<span style="font-size:11px;font-weight:700;color:var(--dimL);">🛣️ Ibn Saud Road</span>';
   h+='<span id="qlbl-ibn" style="font-size:13px;font-weight:900;color:#3B82F6;">'+qibn+'%</span>';
   h+='</div>';
-  h+='<input type="range" min="0" max="100" value="'+qibn+'" style="width:100%;accent-color:#3B82F6;" oninput="qUpdIbn(this.value)">';
+  h+='<div style="font-size:10px;color:var(--dimL);padding:6px 0;">Auto-calculated from road activities in Roads tab</div>';
   h+='</div>';
 
   // Prince Sattam
@@ -856,7 +856,7 @@ function rOv(){
   h+='<span style="font-size:11px;font-weight:700;color:var(--dimL);">🛣️ Prince Sattam Road</span>';
   h+='<span id="qlbl-sat" style="font-size:13px;font-weight:900;color:#3B82F6;">'+qsat+'%</span>';
   h+='</div>';
-  h+='<input type="range" min="0" max="100" value="'+qsat+'" style="width:100%;accent-color:#3B82F6;" oninput="qUpdSat(this.value)">';
+  h+='<div style="font-size:10px;color:var(--dimL);padding:6px 0;">Auto-calculated from road activities in Roads tab</div>';
   h+='</div>';
 
   h+='<div style="margin-top:10px;display:flex;gap:8px;">';
@@ -3742,27 +3742,54 @@ var PROJECT_END=new Date("2027-09-30");
 
 function rRd(){
   var h='';
-  // Header card
+
+  // ── Header ────────────────────────────────────────────────
   h+='<div class="card" style="border-left:3px solid var(--blue);">';
   h+='<div class="ct">🛣 Road Works</div>';
   h+='<div style="font-size:11px;color:var(--dimL);">Imam Ibn Saud Road &amp; Prince Sattam Road — New curbs, sidewalks &amp; pavement layers</div>';
   h+='<div style="font-size:11px;color:var(--dimL);margin-top:4px;">Combined weight: <b style="color:var(--gold);">6%</b> of total project value</div>';
   h+='</div>';
 
+  // ── Weighted activities definition ─────────────────────────
+  var ROAD_ACTS=[
+    {name:"Demolition & Clearing",   w:3},
+    {name:"Earthworks",              w:7},
+    {name:"Sub-base",                w:8},
+    {name:"Base Course",             w:13},
+    {name:"Asphalt Binder Course",   w:11},
+    {name:"Asphalt Wearing Course",  w:12},
+    {name:"Curb & Kerb",             w:15},
+    {name:"Sidewalk Concrete",       w:19},
+    {name:"Drainage",                w:4},
+    {name:"Road Markings & Lighting",w:8}
+  ];
+
   var roads=[
-    {key:"ibn",label:"Imam Ibn Saud Road",icon:"🛣",weight:3,
-     activities:["Demolition & Clearing","Earthworks","Curb & Kerb","Sidewalk Concrete","Sub-base","Base Course","Wearing Course","Drainage","Road Markings","Lighting"]},
-    {key:"sattam",label:"Prince Sattam Road",icon:"🛤",weight:3,
-     activities:["Demolition & Clearing","Earthworks","Curb & Kerb","Sidewalk Concrete","Sub-base","Base Course","Wearing Course","Drainage","Road Markings","Lighting"]}
+    {key:"ibn",   label:"Imam Ibn Saud Road",   icon:"🛣", weight:3},
+    {key:"sattam",label:"Prince Sattam Road",    icon:"🛤", weight:3}
   ];
 
   for(var ri=0;ri<roads.length;ri++){
     var rd=roads[ri];
-    var rData=ROADS[rd.key];
-    var rPct=rData.pct||0;
-    var rSt=rData.status||"Not Started";
-    var rCol=rSt==="Complete"?"var(--green)":rSt==="In Progress"?"var(--blue)":rSt==="On Hold"?"var(--red)":"var(--dim)";
+    var rData=ROADS[rd.key]||{pct:0,status:"Not Started"};
+
+    // ── Calculate pct from completed activities ──────────────
+    var earned=0;
+    for(var ai=0;ai<ROAD_ACTS.length;ai++){
+      var actKey=rd.key+".act."+ai;
+      if(ROADS[actKey]==="done") earned+=ROAD_ACTS[ai].w;
+    }
+    // Update ROADS pct to match activity completion
+    ROADS[rd.key].pct=earned;
+    // Auto-set status
+    var autoStatus=earned===0?"Not Started":earned===100?"Complete":"In Progress";
+    ROADS[rd.key].status=autoStatus;
+    var rPct=earned;
+    var rCol=earned===100?"var(--green)":earned>0?"var(--blue)":"var(--dim)";
+
     h+='<div class="card" style="margin-top:12px;">';
+
+    // ── Road header ──────────────────────────────────────────
     h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">';
     h+='<div>';
     h+='<div style="font-size:16px;font-weight:900;color:var(--gold);">'+rd.icon+' '+rd.label+'</div>';
@@ -3770,65 +3797,74 @@ function rRd(){
     h+='</div>';
     h+='<div style="text-align:right;">';
     h+='<div style="font-size:28px;font-weight:900;color:'+rCol+';">'+rPct+'%</div>';
-    h+='<div style="font-size:11px;color:'+rCol+';background:'+rCol+'22;padding:2px 8px;border-radius:10px;">'+rSt+'</div>';
+    h+='<div style="font-size:11px;color:'+rCol+';background:'+rCol+'22;padding:2px 8px;border-radius:10px;">'+autoStatus+'</div>';
     h+='</div></div>';
 
-    // Progress bar
-    h+='<div style="height:8px;background:var(--panel);border-radius:4px;margin-bottom:12px;">';
+    // ── Progress bar ─────────────────────────────────────────
+    h+='<div style="height:8px;background:var(--panel);border-radius:4px;margin-bottom:14px;">';
     h+='<div style="width:'+rPct+'%;height:100%;background:var(--blue);border-radius:4px;transition:width 0.3s;"></div></div>';
 
-    // % slider
-    h+='<div style="margin-bottom:12px;">';
-    h+='<label style="font-size:11px;color:var(--dimL);font-weight:700;">Overall Progress:</label>';
-    h+='<div style="display:flex;align-items:center;gap:10px;margin-top:6px;">';
-    h+='<input type="range" min="0" max="100" value="'+rPct+'" ';
-    h+='oninput="this.nextSibling.textContent=this.value+\'%\'" ';
-    h+='onchange="ROADS[\''+rd.key+'\'].pct=parseInt(this.value);persist();rRd();" ';
-    h+='style="flex:1;accent-color:var(--blue);">';
-    h+='<span style="font-weight:700;color:var(--blue);min-width:36px;">'+rPct+'%</span>';
-    h+='</div></div>';
+    // ── Earned weight display ─────────────────────────────────
+    var earnedWt=Math.round(rPct/100*rd.weight*10)/10;
+    h+='<div style="display:flex;justify-content:space-between;margin-bottom:12px;padding:7px 12px;background:var(--panel);border-radius:8px;">';
+    h+='<span style="font-size:11px;color:var(--dimL);">Earned project weight</span>';
+    h+='<span style="font-size:12px;font-weight:900;color:var(--gold);">'+earnedWt+'% / '+rd.weight+'%</span>';
+    h+='</div>';
 
-    // Status buttons
-    h+='<div style="margin-bottom:12px;">';
-    h+='<div style="font-size:11px;color:var(--dimL);font-weight:700;margin-bottom:6px;">Status:</div>';
-    h+='<div style="display:flex;gap:8px;flex-wrap:wrap;">';
-    var statuses=["Not Started","In Progress","On Hold","Complete"];
-    var sCols=["var(--dim)","var(--blue)","var(--red)","var(--green)"];
-    for(var si=0;si<statuses.length;si++){
-      var isSel=rSt===statuses[si];
-      h+='<button onclick="ROADS[\''+rd.key+'\'].status=\''+statuses[si]+'\';persist();rRd();" ';
-      h+='style="padding:6px 12px;border-radius:8px;border:2px solid '+sCols[si]+';background:'+(isSel?sCols[si]:'transparent')+';color:'+(isSel?'#000':'var(--dimL)')+';font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">'+statuses[si]+'</button>';
-    }
-    h+='</div></div>';
-
-    // Activities checklist
+    // ── Activities checklist with weights ─────────────────────
     h+='<div>';
-    h+='<div style="font-size:11px;color:var(--dimL);font-weight:700;margin-bottom:6px;">Activities:</div>';
-    h+='<div style="display:flex;flex-wrap:wrap;gap:6px;">';
-    for(var ai=0;ai<rd.activities.length;ai++){
-      var actKey=rd.key+"_act_"+ai;
-      var actDone=ROADS[rd.key+".act."+ai]==="done";
-      h+='<div onclick="ROADS[\''+rd.key+'.act.'+ai+'\']=ROADS[\''+rd.key+'.act.'+ai+'\']===\'done\'?\'ns\':\'done\';persist();rRd();" ';
-      h+='style="padding:5px 10px;border-radius:8px;border:1px solid '+(actDone?'var(--green)':'var(--border)')+';background:'+(actDone?'var(--green)22':'transparent')+';color:'+(actDone?'var(--green)':'var(--dimL)')+';font-size:11px;cursor:pointer;">'+rd.activities[ai]+'</div>';
+    h+='<div style="font-size:11px;color:var(--dimL);font-weight:700;margin-bottom:8px;">Activities — tap to toggle:</div>';
+    h+='<div style="display:flex;flex-direction:column;gap:5px;">';
+
+    for(var ai2=0;ai2<ROAD_ACTS.length;ai2++){
+      var act=ROAD_ACTS[ai2];
+      var aKey=rd.key+".act."+ai2;
+      var isDone=ROADS[aKey]==="done";
+      var aCol=isDone?"var(--green)":"var(--dim)";
+      var aBg=isDone?"var(--green)22":"var(--panel)";
+      var aBorder=isDone?"var(--green)":"var(--border)";
+      var aIcon=isDone?"✅":"⬜";
+      // onclick: toggle done/not done, persist, recalc, refresh
+      var toggleFn="ROADS['"+aKey+"']=ROADS['"+aKey+"']==='done'?'':'done';persist();rRd();rOv();";
+
+      h+='<div onclick="'+toggleFn+'" style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-radius:8px;border:1px solid '+aBorder+';background:'+aBg+';cursor:pointer;">';
+      h+='<div style="display:flex;align-items:center;gap:8px;">';
+      h+='<span style="font-size:14px;">'+aIcon+'</span>';
+      h+='<span style="font-size:12px;font-weight:'+(isDone?'700':'400')+';color:'+(isDone?'var(--fg)':'var(--dimL)')+';">'+act.name+'</span>';
+      h+='</div>';
+      h+='<div style="display:flex;align-items:center;gap:6px;">';
+      h+='<span style="font-size:10px;font-weight:700;color:'+aCol+';background:'+aCol+'22;padding:2px 8px;border-radius:10px;">'+act.w+'%</span>';
+      if(isDone) h+='<span style="font-size:10px;color:var(--green);font-weight:700;">+'+act.w+'%</span>';
+      h+='</div>';
+      h+='</div>';
     }
-    h+='</div></div>';
+
+    h+='</div>';
+
+    // ── Activities summary ────────────────────────────────────
+    var doneCount=0;
+    for(var ac3=0;ac3<ROAD_ACTS.length;ac3++){
+      if(ROADS[rd.key+".act."+ac3]==="done") doneCount++;
+    }
+    h+='<div style="margin-top:10px;display:flex;justify-content:space-between;font-size:11px;color:var(--dimL);">';
+    h+='<span>'+doneCount+' / '+ROAD_ACTS.length+' activities complete</span>';
+    h+='<span style="color:var(--gold);font-weight:700;">'+rPct+'% earned</span>';
+    h+='</div>';
+
+    h+='</div>';
     h+='</div>';
   }
 
-  // Preliminary works card
-  h+='<div class="card" style="margin-top:12px;border-left:3px solid #888;">';
-  h+='<div style="display:flex;align-items:center;justify-content:space-between;">';
+  // ── Preliminary Works card ────────────────────────────────
+  h+='<div class="card" style="margin-top:12px;border-left:3px solid var(--green);">';
+  h+='<div style="display:flex;justify-content:space-between;align-items:center;">';
   h+='<div>';
-  h+='<div style="font-size:15px;font-weight:900;color:var(--dimL);">⚙️ Preliminary Works</div>';
-  h+='<div style="font-size:10px;color:var(--dimL);">Tree removal · Shop drawings · Site clearance · Access roads · Jersey barriers · Hoarding</div>';
-  h+='<div style="font-size:10px;color:var(--dimL);margin-top:2px;">Completed before 20 Jun 2025</div>';
+  h+='<div style="font-size:14px;font-weight:700;color:var(--green);">✅ Preliminary Works</div>';
+  h+='<div style="font-size:10px;color:var(--dimL);">Completed: Jun 2025 – Feb 2026</div>';
   h+='</div>';
-  h+='<div style="text-align:right;">';
   h+='<div style="font-size:28px;font-weight:900;color:var(--green);">'+PRE_PCT+'%</div>';
-  h+='<div style="font-size:11px;color:var(--green);background:#06D6A022;padding:2px 8px;border-radius:10px;">✓ Complete</div>';
-  h+='</div></div>';
-  h+='<div style="margin-top:10px;display:flex;align-items:center;gap:10px;">';
-  h+='<label style="font-size:11px;color:var(--dimL);">Baseline weight (%):</label>';
+  h+='</div>';
+  h+='<div style="margin-top:8px;font-size:11px;color:var(--dimL);font-weight:700;">Baseline weight (%):</label>';
   h+='<input type="number" value="'+PRE_PCT+'" min="0" max="30" ';
   h+='onchange="PRE_PCT=parseFloat(this.value)||7;persist();rRd();rOv();" ';
   h+='style="width:60px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:13px;text-align:center;">';
