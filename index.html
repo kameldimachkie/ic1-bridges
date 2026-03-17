@@ -1835,34 +1835,56 @@ function dlPDF(){
   var ph='<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">';
   ph+='<title>IC1 Progress Report — '+today3+'</title>';
   ph+='<style>';
+  // ── Reset & base ──────────────────────────────────────────
   ph+='@page{size:A4;margin:0}';
   ph+='*{box-sizing:border-box;margin:0;padding:0}';
-  ph+='body{font-family:Arial,Helvetica,sans-serif;font-size:9pt;color:#1e293b;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}';
+  ph+='body{font-family:"Segoe UI",Arial,Helvetica,sans-serif;font-size:8.5pt;color:#2D3748;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;line-height:1.5}';
   ph+='.page{width:210mm;min-height:297mm;padding:0;page-break-after:always;position:relative;overflow:hidden}';
   ph+='.page:last-child{page-break-after:auto}';
-  ph+='.sp{padding:14mm 13mm 10mm}';
-  ph+='.sec-hdr{border-bottom:3px solid #D4A843;padding-bottom:7px;margin-bottom:14px;display:flex;align-items:flex-end;justify-content:space-between;position:relative}';
-  ph+='.sec-hdr::before{content:"";position:absolute;bottom:-3px;left:0;width:40px;height:3px;background:#0f172a}';
-  ph+='.sec-title{font-size:14pt;font-weight:900;color:#0f172a;letter-spacing:-0.3px}';
-  ph+='.sec-date{font-size:7.5pt;color:#94a3b8}';
-  ph+='.pn{position:absolute;bottom:7mm;right:13mm;font-size:7pt;color:#94a3b8;display:flex;align-items:center;gap:5px}';
-  ph+='.pn::before{content:"";display:inline-block;width:16px;height:1px;background:#D4A843}';
-  ph+='.kpi{flex:1;background:#f8fafc;border-radius:8px;padding:11px 13px;border-top:3px solid;position:relative;overflow:hidden}';
-  ph+='.kpi::after{content:"";position:absolute;right:-10px;bottom:-10px;width:50px;height:50px;border-radius:50%;background:currentColor;opacity:0.04}';
-  ph+='.kpi-val{font-size:20pt;font-weight:900;line-height:1.1}';
-  ph+='.kpi-lbl{font-size:6.5pt;color:#64748b;margin-top:3px;text-transform:uppercase;letter-spacing:0.5px}';
-  ph+='.kpi-sub{font-size:7.5pt;color:#94a3b8;margin-top:3px}';
-  ph+='.stitle{font-size:10pt;font-weight:700;color:#334155;margin:12px 0 7px;display:flex;align-items:center;gap:7px}';
-  ph+='.stitle::before{content:"";display:inline-block;width:3px;height:16px;background:#D4A843;border-radius:2px;flex-shrink:0}';
+
+  // ── Section pages ──────────────────────────────────────────
+  ph+='.sp{padding:13mm 13mm 16mm}';
+
+  // ── Section header — double rule ──────────────────────────
+  ph+='.sec-hdr{padding-bottom:9px;margin-bottom:16px;position:relative;display:flex;align-items:flex-end;justify-content:space-between;}';
+  ph+='.sec-hdr::after{content:"";position:absolute;bottom:0;left:0;right:0;height:1px;background:#E2E8F0}';
+  ph+='.sec-hdr::before{content:"";position:absolute;bottom:-1px;left:0;width:56px;height:3px;background:linear-gradient(90deg,#C9A84C,#f0c866);border-radius:2px;z-index:1}';
+  ph+='.sec-title{font-size:14pt;font-weight:800;color:#0B1D35;letter-spacing:-0.5px}';
+  ph+='.sec-date{font-size:7.5pt;color:#718096;font-style:italic}';
+
+  // ── Page number footer ─────────────────────────────────────
+  ph+='.pn{position:absolute;bottom:8mm;left:0;right:0;text-align:center;font-size:6.5pt;color:#A0AEC0;letter-spacing:0.5px}';
+
+  // ── KPI cards ──────────────────────────────────────────────
+  ph+='.kpi{flex:1;background:#F4F7FB;border-radius:10px;padding:13px 14px 11px;border-left:4px solid;position:relative;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.06)}';
+  ph+='.kpi::after{content:"";position:absolute;right:-12px;bottom:-12px;width:54px;height:54px;border-radius:50%;background:currentColor;opacity:0.05}';
+  ph+='.kpi-val{font-size:22pt;font-weight:900;line-height:1;letter-spacing:-0.5px}';
+  ph+='.kpi-lbl{font-size:6.5pt;color:#4A5568;margin-top:4px;text-transform:uppercase;letter-spacing:0.8px;font-weight:600}';
+  ph+='.kpi-sub{font-size:7pt;color:#718096;margin-top:3px}';
+
+  // ── Section sub-title ──────────────────────────────────────
+  ph+='.stitle{font-size:9.5pt;font-weight:700;color:#1E3A5F;margin:13px 0 7px;display:flex;align-items:center;gap:7px;letter-spacing:-0.2px}';
+  ph+='.stitle::before{content:"";display:inline-block;width:3px;height:15px;background:linear-gradient(180deg,#C9A84C,#f0c866);border-radius:2px;flex-shrink:0}';
+
+  // ── Tables ─────────────────────────────────────────────────
   ph+='table{width:100%;border-collapse:collapse;font-size:7.5pt}';
-  ph+='th{background:#0f172a;color:#fff;padding:6px 7px;text-align:left;font-size:7pt;letter-spacing:0.3px;font-weight:600}';
-  ph+='td{padding:5px 7px;border-bottom:1px solid #f1f5f9;vertical-align:middle}';
-  ph+='tr:nth-child(even) td{background:#f8fafc}';
-  ph+='.badge{display:inline-block;padding:2px 7px;border-radius:10px;font-size:6.5pt;font-weight:700;white-space:nowrap}';
-  ph+='.bg{background:#dcfce7;color:#166534}.bb{background:#dbeafe;color:#1d4ed8}.br{background:#fee2e2;color:#991b1b}.bs{background:#f1f5f9;color:#475569}';
-  ph+='.bar-wrap{width:80px;height:6px;background:#E2E8F0;border-radius:3px;display:inline-block;vertical-align:middle}';
-  ph+='.bar-fill{height:6px;border-radius:3px}';
-  ph+='@media print{.page{page-break-after:always}.page:last-child{page-break-after:auto}}';
+  ph+='th{background:#1E3A5F;color:#fff;padding:7px 8px;text-align:left;font-size:6.5pt;letter-spacing:0.8px;text-transform:uppercase;font-weight:600}';
+  ph+='th:first-child{border-radius:4px 0 0 0}th:last-child{border-radius:0 4px 0 0}';
+  ph+='td{padding:6px 8px;border-bottom:1px solid #EDF2F7;vertical-align:middle;color:#2D3748}';
+  ph+='tr:nth-child(even) td{background:#FAFBFD}';
+  ph+='tr:last-child td{border-bottom:none}';
+
+  // ── Badges ─────────────────────────────────────────────────
+  ph+='.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:6.5pt;font-weight:700;letter-spacing:0.2px}';
+  ph+='.bg{background:#C6F6D5;color:#22543D}.bb{background:#BEE3F8;color:#2A4365}.br{background:#FED7D7;color:#742A2A}.bs{background:#EDF2F7;color:#4A5568}';
+  ph+='.bc{background:#FAF0D7;color:#744210}';
+
+  // ── Progress bars ──────────────────────────────────────────
+  ph+='.bar-wrap{display:inline-block;vertical-align:middle;border-radius:4px;overflow:hidden;background:#EDF2F7}';
+  ph+='.bar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#C9A84C,#f0c866)}';
+
+  // ── Print rules ────────────────────────────────────────────
+  ph+='@media print{.page{page-break-after:always}.page:last-child{page-break-after:auto}body,html{background:#fff!important}.report-wrap{margin:0;padding:0;background:#fff!important}.report-inner{box-shadow:none;border-radius:0;max-width:100%}}';
   ph+='</style></head><body>';
 
   // ══════════════════════════════════════════════
@@ -2182,7 +2204,7 @@ function dlPDF(){
   }
   ph+='</div>';
 
-  ph+='<div class="pn">Page 6</div>';
+  ph+='<div class="pn">IC1 ROAD IMPROVEMENTS · KHATIB &amp; ALAMI &nbsp;|&nbsp; Page 2 of 6</div>';
   ph+='<div style="position:absolute;bottom:0;left:0;right:0;height:4px;background:linear-gradient(90deg,transparent,#D4A843,transparent);"></div>';
   ph+='</div>';
 
@@ -2272,7 +2294,7 @@ function dlPDF(){
   ph+='<svg style="position:absolute;top:10px;right:20px;opacity:0.04" width="180" height="100" viewBox="0 0 180 100"><path d="M0 80 Q45 15 90 15 Q135 15 180 80" stroke="#0f172a" stroke-width="3" fill="none"/><line x1="45" y1="45" x2="45" y2="80" stroke="#0f172a" stroke-width="2"/><line x1="135" y1="45" x2="135" y2="80" stroke="#0f172a" stroke-width="2"/><rect x="0" y="80" width="180" height="6" fill="#0f172a"/></svg>';
 
   ph+='<div class="sec-hdr"><div class="sec-title">Executive Summary</div><div class="sec-date">Report Date: '+today3+'</div></div>';
-  ph+='<div class="pn">Page 6</div>';
+  ph+='<div class="pn">IC1 ROAD IMPROVEMENTS · KHATIB &amp; ALAMI &nbsp;|&nbsp; Page 4 of 6</div>';
 
   // KPIs
   ph+='<div style="display:flex;gap:9px;margin-bottom:14px;">';
@@ -2286,13 +2308,13 @@ function dlPDF(){
     var kp3=kpis3[ki3];
     ph+='<div class="kpi" style="border-color:'+kp3.c+';color:'+kp3.c+';">';
     ph+='<div class="kpi-val" style="color:'+kp3.c+';">'+kp3.val+'</div>';
-    ph+='<div class="kpi-lbl">'+kp3.lbl+'</div>';
+    ph+='<div class="kpi-lbl" style="margin-top:5px;">'+kp3.lbl+'</div>';
     ph+='<div class="kpi-sub">'+kp3.sub+'</div></div>';
   }
   ph+='</div>';
 
   // Variance strip
-  ph+='<div style="background:'+(variance3>=0?"#f0fdf4":"#fff1f2")+'";border-radius:8px;border-left:4px solid '+vCol3+';padding:9px 13px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;">';
+  ph+='<div style="background:'+(variance3>=0?"#F0FFF4":"#FFF5F5")+'";border-radius:10px;border-left:5px solid '+vCol3+';padding:11px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 1px 4px rgba(0,0,0,0.06);">';
   ph+='<div><div style="font-size:10pt;font-weight:700;color:'+vCol3+';">'+(variance3>=0?"▲ Ahead of Schedule":"▼ Behind Schedule")+'</div>';
   ph+='<div style="font-size:7.5pt;color:#64748b;margin-top:2px;">Progress: '+ov+'%&nbsp;&nbsp;·&nbsp;&nbsp;Time used: '+timePct3+'%&nbsp;&nbsp;·&nbsp;&nbsp;Variance: '+(variance3>=0?'+':'')+variance3+'%</div></div>';
   ph+='<div style="font-size:20pt;font-weight:900;color:'+vCol3+';">'+(variance3>=0?'+':'')+variance3+'%</div>';
@@ -2446,7 +2468,7 @@ function dlPDF(){
   ph+='<svg style="position:absolute;bottom:20px;right:10px;opacity:0.04" width="200" height="120" viewBox="0 0 200 120"><path d="M0 100 Q50 20 100 20 Q150 20 200 100" stroke="#0f172a" stroke-width="3" fill="none"/><line x1="50" y1="55" x2="50" y2="100" stroke="#0f172a" stroke-width="2"/><line x1="150" y1="55" x2="150" y2="100" stroke="#0f172a" stroke-width="2"/></svg>';
 
   ph+='<div class="sec-hdr"><div class="sec-title">Project Dashboard</div><div class="sec-date">As of '+today3+'</div></div>';
-  ph+='<div class="pn">Page 6</div>';
+  ph+='<div class="pn">IC1 ROAD IMPROVEMENTS · KHATIB &amp; ALAMI &nbsp;|&nbsp; Page 5 of 6</div>';
 
   // Dashboard: mini donuts row
   ph+='<div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">';
@@ -2504,9 +2526,9 @@ function dlPDF(){
     var bType3=DIRECT.indexOf(brJ3.piers[0])>-1?"Direct":"Piled";
 
     function miniBar3(pct,col){
-      return '<div style="display:flex;align-items:center;gap:3px;">'
-        +'<div style="width:40px;height:5px;background:#E2E8F0;border-radius:2px;">'
-        +'<div style="width:'+pct+'%;height:5px;background:'+col+';border-radius:2px;"></div></div>'
+      return '<div style="display:flex;align-items:center;gap:4px;">'
+        +'<div style="width:44px;height:6px;background:#EDF2F7;border-radius:4px;overflow:hidden;">'
+        +'<div style="width:'+pct+'%;height:6px;background:'+col+';border-radius:4px;"></div></div>'
         +'<span style="font-size:6.5pt;font-weight:700;color:'+col+';">'+pct+'%</span></div>';
     }
 
