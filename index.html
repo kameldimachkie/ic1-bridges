@@ -2947,7 +2947,21 @@ function pushSync(){
         mergedPS[pier][stage]=PS[pier][stage];
       }
     }
-    var payload={ps:mergedPS,logs:LOGS,issues:ISSUES,roads:rds,pre:PRE_PCT,messages:MESSAGES.slice(-20),ts:ts2,
+    // Merge messages — combine remote + local, deduplicate by ts
+    var remoteMsgs=remote&&remote.messages?remote.messages:[];
+    var mergedMsgs=remoteMsgs.slice();
+    for(var mi=0;mi<MESSAGES.length;mi++){
+      var exists=false;
+      for(var mj=0;mj<mergedMsgs.length;mj++){
+        if(mergedMsgs[mj].ts===MESSAGES[mi].ts){exists=true;break;}
+      }
+      if(!exists) mergedMsgs.push(MESSAGES[mi]);
+    }
+    mergedMsgs.sort(function(a,b){return a.ts-b.ts;});
+    mergedMsgs=mergedMsgs.slice(-20);
+    MESSAGES=mergedMsgs;
+    try{localStorage.setItem('ic1b3_msg',JSON.stringify(MESSAGES));}catch(e){}
+    var payload={ps:mergedPS,logs:LOGS,issues:ISSUES,roads:rds,pre:PRE_PCT,messages:mergedMsgs,ts:ts2,
     syncedBy:MY_NAME,syncedAt:timeStr2,
     teamLocs:TEAM_LOCS,
     myLoc:{name:MY_NAME,lat:MY_LOC.lat,lng:MY_LOC.lng,acc:MY_LOC.acc,ts:ts2,lastAction:"Updated data"}
@@ -3217,13 +3231,14 @@ function pullSync(){
       var now=new Date();
       var ts=(now.getHours()<10?"0"+now.getHours():now.getHours())+":"+(now.getMinutes()<10?"0"+now.getMinutes():now.getMinutes());
       if(lsEl){lsEl.textContent="Synced: "+ts;lsEl.style.display="inline";}
-      // Always refresh Map tab if currently open
+      // Refresh Map or Chat tab if currently open
       var activeTab=document.querySelector('.nb.on');
       if(activeTab&&activeTab.id==='tab-mp') nav('mp');
+      if(activeTab&&activeTab.id==='tab-ch') rCh();
       // Refresh other tabs + alert only when pier data changed
       if(changed){
         showSyncAlert(syncedBy,syncedAt);
-        if(activeTab&&activeTab.id!=='tab-mp') nav(activeTab.id.replace('tab-',''));
+        if(activeTab&&activeTab.id!=='tab-mp'&&activeTab.id!=='tab-ch') nav(activeTab.id.replace('tab-',''));
       }
     }
     setSyncDot("ok");
