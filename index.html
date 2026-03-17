@@ -512,7 +512,11 @@ var JB_LAST_PULL_TS=0;
 // Location tracking
 var MY_LOC={lat:null,lng:null,acc:null,ts:null};
 var TEAM_LOCS={};
-var MY_NAME="K. Dimachkie";
+var MY_NAME=localStorage.getItem('ic1_username')||'';
+if(!MY_NAME){
+  MY_NAME=prompt('SiteSync — Enter your name for team tracking:')||'User';
+  localStorage.setItem('ic1_username',MY_NAME);
+}
 try{AS_URL=localStorage.getItem(AS_URL_KEY)||"";}catch(e){}
 if(AS_URL){ AS_CONNECTED=true; }
 // Auto-connect JSONBin on load
@@ -3143,14 +3147,15 @@ function pullSync(){
   .then(function(r){return r.json();})
   .then(function(resp){
     var d=resp.record||resp;
-    if(d&&d.ps&&d.ts){
-      if(d.ts<=JB_LAST_PULL_TS){setSyncDot("ok");return;}
-      JB_LAST_PULL_TS=d.ts;
-      // Update team locations
+      // ── Always update locations regardless of timestamp ──
       if(d.teamLocs) TEAM_LOCS=d.teamLocs;
       if(d.myLoc&&d.myLoc.name&&d.myLoc.name!==MY_NAME){
         TEAM_LOCS[d.myLoc.name]=d.myLoc;
       }
+      // ── Pier data — only update if newer ────────────────
+      if(d&&d.ps&&d.ts){
+      if(d.ts<=JB_LAST_PULL_TS){setSyncDot("ok");return;}
+      JB_LAST_PULL_TS=d.ts;
       // MERGE pier data — don't replace, only add new entries
       var remotePiers=d.ps;
       var changed=false;
@@ -3188,10 +3193,13 @@ function pullSync(){
       var now=new Date();
       var ts=(now.getHours()<10?"0"+now.getHours():now.getHours())+":"+(now.getMinutes()<10?"0"+now.getMinutes():now.getMinutes());
       if(lsEl){lsEl.textContent="Synced: "+ts;lsEl.style.display="inline";}
+      // Always refresh Map tab if currently open
+      var activeTab=document.querySelector('.nb.on');
+      if(activeTab&&activeTab.id==='tab-mp') nav('mp');
+      // Refresh other tabs + alert only when pier data changed
       if(changed){
         showSyncAlert(syncedBy,syncedAt);
-        var activeTab=document.querySelector('.nb.on');
-        if(activeTab) nav(activeTab.id.replace('tab-',''));
+        if(activeTab&&activeTab.id!=='tab-mp') nav(activeTab.id.replace('tab-',''));
       }
     }
     setSyncDot("ok");
