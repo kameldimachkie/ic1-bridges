@@ -403,8 +403,9 @@ function calcOverallPct(){
   var brPctVal=brTotal>0?(brEarned/brTotal):0;
   // Roads earned
   var roadEarned=(ROADS.ibn.pct/100*3)+(ROADS.sattam.pct/100*3);
+  var fsEarned2=typeof calcFsEarned==='function'?calcFsEarned():0;
   // Total
-  var total=PRE_WEIGHT + (brPctVal*BR_WEIGHT) + roadEarned;
+  var total=PRE_WEIGHT + (brPctVal*BR_WEIGHT) + roadEarned + fsEarned2;
   return Math.round(total*10)/10;
 }
 
@@ -879,6 +880,52 @@ function rOv(){
   h+='<div style="margin-top:10px;display:flex;gap:8px;">';
   h+='<button onclick="rOv()" style="flex:1;padding:9px;background:var(--card);border:1px solid var(--gold);border-radius:8px;color:var(--gold);font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;">🔄 Refresh</button>';
   h+='<button onclick="nav(\'tr\')" style="flex:1;padding:9px;background:var(--gold);border:none;border-radius:8px;color:#000;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;">🌉 Edit Piers</button>';
+  h+='</div>';
+  h+='</div>';
+
+
+
+  // ── Fill Slope card ───────────────────────────────────────
+  var fsEarned=calcFsEarned();
+  var fsDone=0; var fsIp=0;
+  var fsKeys=["lm_r","lm_l","mn_r","mn_l"];
+  var fsLabels=["L–M Right","L–M Left","M–N Right","M–N Left"];
+  for(var fi=0;fi<fsKeys.length;fi++){
+    var fst=FILL_SLOPE[fsKeys[fi]]||"Not Started";
+    if(fst==="Complete") fsDone++;
+    else if(fst==="In Progress") fsIp++;
+  }
+  var fsOvSt=fsDone===4?"Complete":fsDone>0||fsIp>0?"In Progress":"Not Started";
+  var fsOvCol=fsOvSt==="Complete"?"var(--green)":fsOvSt==="In Progress"?"var(--blue)":"var(--dim)";
+  h+='<div class="card" style="margin-top:12px;border-left:3px solid #4ECDC4;">';
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">';
+  h+='<div>';
+  h+='<div style="font-size:13px;font-weight:700;color:#4ECDC4;">⛰️ Fill Slope</div>';
+  h+='<div style="font-size:10px;color:var(--dimL);">Between Abutments L–M &amp; M–N &nbsp;·&nbsp; Weight: 0.7%</div>';
+  h+='</div>';
+  h+='<div style="text-align:right;">';
+  h+='<div style="font-size:20px;font-weight:900;color:#4ECDC4;">'+Math.round(fsEarned/0.7*100)+'%</div>';
+  h+='<div style="font-size:10px;color:'+fsOvCol+';background:'+fsOvCol+'22;padding:2px 7px;border-radius:8px;">'+fsOvSt+'</div>';
+  h+='</div></div>';
+  // Progress bar
+  h+='<div style="height:6px;background:var(--panel);border-radius:3px;margin-bottom:8px;">';
+  h+='<div style="width:'+Math.round(fsEarned/0.7*100)+'%;height:6px;background:#4ECDC4;border-radius:3px;"></div></div>';
+  // Items row
+  h+='<div style="display:flex;gap:6px;">';
+  for(var fi2=0;fi2<fsKeys.length;fi2++){
+    var fst2=FILL_SLOPE[fsKeys[fi2]]||"Not Started";
+    var fc2=SCOL[fst2]||"var(--dim)";
+    var icon2=fst2==="Complete"?"✅":fst2==="In Progress"?"🔵":"⬜";
+    h+='<div onclick="nav(\'fs\')" style="flex:1;text-align:center;padding:5px 3px;background:var(--panel);border-radius:7px;cursor:pointer;">';
+    h+='<div style="font-size:11px;">'+icon2+'</div>';
+    h+='<div style="font-size:9px;color:var(--dimL);margin-top:2px;">'+fsLabels[fi2]+'</div>';
+    h+='<div style="font-size:9px;font-weight:700;color:#4ECDC4;">0.175%</div>';
+    h+='</div>';
+  }
+  h+='</div>';
+  h+='<div style="margin-top:8px;display:flex;justify-content:space-between;font-size:10px;color:var(--dimL);">';
+  h+='<span>'+fsDone+'/4 complete · '+fsIp+' in progress</span>';
+  h+='<span style="color:#4ECDC4;font-weight:700;">'+Math.round(fsEarned*1000)/1000+'% earned</span>';
   h+='</div>';
   h+='</div>';
 
@@ -2487,6 +2534,39 @@ function dlPDF(){
     ph+='<td><span class="badge '+rCls3+'">'+rr3.st+'</span></td></tr>';
   }
   ph+='</table>';
+  
+  // ── Fill Slope section ────────────────────────────────────
+  ph+='<div class="stitle" style="margin-top:12px;">Fill Slope — Between Abutments</div>';
+  ph+='<table><tr><th>Item</th><th style="text-align:center">Weight</th><th>Status</th><th style="text-align:center">Earned</th></tr>';
+  var fsItems=[
+    {key:"lm_r",label:"L–M Right"},
+    {key:"lm_l",label:"L–M Left"},
+    {key:"mn_r",label:"M–N Right"},
+    {key:"mn_l",label:"M–N Left"}
+  ];
+  var fsTotalEarned=0;
+  for(var fpi=0;fpi<fsItems.length;fpi++){
+    var fpItem=fsItems[fpi];
+    var fpSt=FILL_SLOPE[fpItem.key]||"Not Started";
+    var fpEarned=fpSt==="Complete"?0.175:fpSt==="In Progress"?0.0875:0;
+    fsTotalEarned+=fpEarned;
+    var fpCls=fpSt==="Complete"?"bg":fpSt==="In Progress"?"bb":"bs";
+    ph+='<tr>';
+    ph+='<td style="font-weight:600;">⛰️ '+fpItem.label+'</td>';
+    ph+='<td style="text-align:center;font-weight:700;">0.175%</td>';
+    ph+='<td><span class="badge '+fpCls+'">'+fpSt+'</span></td>';
+    ph+='<td style="text-align:center;font-weight:700;color:#4ECDC4;">'+Math.round(fpEarned*1000)/1000+'%</td>';
+    ph+='</tr>';
+  }
+  ph+='<tr style="font-weight:700;background:#fffbeb;">';
+  ph+='<td>FILL SLOPE TOTAL</td>';
+  ph+='<td style="text-align:center;">0.7%</td>';
+  ph+='<td></td>';
+  ph+='<td style="text-align:center;font-weight:700;color:#4ECDC4;">'+Math.round(fsTotalEarned*1000)/1000+'%</td>';
+  ph+='</tr>';
+  ph+='</table>';
+
+
   ph+='<div style="position:absolute;bottom:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,#D4A843,transparent);"></div>';
   ph+='</div>';
 
@@ -3759,84 +3839,112 @@ var PROJECT_START=new Date("2025-06-01");
 var PROJECT_END=new Date("2027-09-30");
 
 
-function tgFs(key){
-  FILL_SLOPE[key]=!FILL_SLOPE[key];
+function setFs(key, status){
+  FILL_SLOPE[key]=status;
   persist();
   rFs();
   rOv();
 }
 
+function calcFsEarned(){
+  var total=0;
+  var items=[
+    {key:"lm_r",w:0.175},{key:"lm_l",w:0.175},
+    {key:"mn_r",w:0.175},{key:"mn_l",w:0.175}
+  ];
+  for(var i=0;i<items.length;i++){
+    var st=FILL_SLOPE[items[i].key]||"Not Started";
+    if(st==="Complete") total+=items[i].w;
+    else if(st==="In Progress") total+=items[i].w*0.5;
+  }
+  return Math.round(total*1000)/1000;
+}
+
 function rFs(){
   var h='';
   var items=[
-    {key:"lm_r", label:"L–M Right", w:0.175},
-    {key:"lm_l", label:"L–M Left",  w:0.175},
-    {key:"mn_r", label:"M–N Right", w:0.175},
-    {key:"mn_l", label:"M–N Left",  w:0.175}
+    {key:"lm_r",label:"L–M Right",w:0.175},
+    {key:"lm_l",label:"L–M Left", w:0.175},
+    {key:"mn_r",label:"M–N Right",w:0.175},
+    {key:"mn_l",label:"M–N Left", w:0.175}
   ];
 
-  // Header
-  h+='<div class="card" style="border-left:3px solid #4ECDC4;">';
-  h+='<div class="ct">⛰️ Fill Slope</div>';
-  h+='<div style="font-size:11px;color:var(--dimL);">Embankment fill slope between bridge abutments L–M and M–N</div>';
-  h+='<div style="font-size:11px;color:var(--dimL);margin-top:3px;">Total weight: <b style="color:var(--gold);">0.7%</b> of total project (0.175% each)</div>';
-  h+='</div>';
-
-  // Tick boxes card
-  h+='<div class="card" style="margin-top:12px;">';
-
-  // Overall earned
-  var earned=0;
+  var earned=calcFsEarned();
+  var doneCount=0; var ipCount=0;
   for(var i=0;i<items.length;i++){
-    if(FILL_SLOPE[items[i].key]) earned+=items[i].w;
+    var st=FILL_SLOPE[items[i].key]||"Not Started";
+    if(st==="Complete") doneCount++;
+    else if(st==="In Progress") ipCount++;
   }
-  var earnedPct=Math.round(earned*10)/10;
-  var doneCount=0;
-  for(var i2=0;i2<items.length;i2++){if(FILL_SLOPE[items[i2].key]) doneCount++;}
+  var overallSt=doneCount===4?"Complete":doneCount>0||ipCount>0?"In Progress":"Not Started";
+  var stCol=overallSt==="Complete"?"var(--green)":overallSt==="In Progress"?"var(--blue)":"var(--dim)";
 
-  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">';
-  h+='<div style="font-size:12px;font-weight:700;color:var(--dimL);">Progress</div>';
-  h+='<div style="font-size:18px;font-weight:900;color:#4ECDC4;">'+earnedPct+'% <span style="font-size:11px;color:var(--dimL);">earned</span></div>';
+  // Header card
+  h+='<div class="card" style="border-left:3px solid #4ECDC4;">';
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;">';
+  h+='<div>';
+  h+='<div class="ct" style="margin-bottom:4px;">⛰️ Fill Slope</div>';
+  h+='<div style="font-size:11px;color:var(--dimL);">Embankment fill between bridge abutments L–M and M–N</div>';
+  h+='<div style="font-size:11px;color:var(--dimL);margin-top:3px;">Total weight: <b style="color:var(--gold);">0.7%</b> &nbsp;·&nbsp; Each: <b style="color:var(--gold);">0.175%</b></div>';
+  h+='</div>';
+  h+='<div style="text-align:right;">';
+  h+='<div style="font-size:24px;font-weight:900;color:#4ECDC4;">'+Math.round(earned/0.7*100)+'%</div>';
+  h+='<div style="font-size:11px;color:'+stCol+';background:'+stCol+'22;padding:2px 8px;border-radius:10px;">'+overallSt+'</div>';
+  h+='</div></div>';
+  // Progress bar
+  h+='<div style="height:7px;background:var(--panel);border-radius:4px;margin-top:10px;">';
+  h+='<div style="width:'+Math.round(earned/0.7*100)+'%;height:7px;background:#4ECDC4;border-radius:4px;transition:width 0.3s;"></div></div>';
   h+='</div>';
 
-  // Progress bar
-  h+='<div style="height:8px;background:var(--panel);border-radius:4px;margin-bottom:16px;">';
-  h+='<div style="width:'+(earned/0.7*100)+'%;height:8px;background:#4ECDC4;border-radius:4px;transition:width 0.3s;"></div></div>';
+  // Items card
+  h+='<div class="card" style="margin-top:12px;">';
+  h+='<div class="ct" style="margin-bottom:12px;">Fill Slope Items</div>';
 
-  // Tick items
   for(var j=0;j<items.length;j++){
     var item=items[j];
-    var done=FILL_SLOPE[item.key];
-    var col=done?"#4ECDC4":"var(--dimL)";
-    var bg=done?"#4ECDC422":"var(--panel)";
-    var border=done?"#4ECDC4":"var(--border)";
-    h+='<div onclick="tgFs(\''+item.key+'\')" style="display:flex;align-items:center;justify-content:space-between;padding:13px 14px;border-radius:10px;border:1.5px solid '+border+';background:'+bg+';cursor:pointer;margin-bottom:8px;transition:all 0.2s;">';
-    h+='<div style="display:flex;align-items:center;gap:12px;">';
-    h+='<div style="width:22px;height:22px;border-radius:6px;border:2px solid '+col+';background:'+(done?col:'transparent')+';display:flex;align-items:center;justify-content:center;">';
-    if(done) h+='<span style="color:#000;font-size:13px;font-weight:900;">✓</span>';
+    var itemSt=FILL_SLOPE[item.key]||"Not Started";
+    var iCol=SCOL[itemSt]||"var(--dim)";
+    var iBg=itemSt==="Complete"?"var(--green)11":itemSt==="In Progress"?"var(--blue)11":"var(--panel)";
+    var iBorder=itemSt==="Complete"?"var(--green)":itemSt==="In Progress"?"var(--blue)":"var(--border)";
+
+    h+='<div style="border:1px solid '+iBorder+';border-radius:10px;padding:11px 14px;margin-bottom:8px;background:'+iBg+';">';
+    // Row 1: label + weight badge
+    h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">';
+    h+='<div style="font-size:13px;font-weight:700;color:var(--fg);">⛰️ '+item.label+'</div>';
+    h+='<span style="font-size:11px;font-weight:700;color:#4ECDC4;background:#4ECDC422;padding:2px 10px;border-radius:10px;">'+item.w+'%</span>';
     h+='</div>';
-    h+='<div>';
-    h+='<div style="font-size:13px;font-weight:'+(done?'700':'400')+';color:'+(done?'var(--fg)':'var(--dimL)')+';">'+item.label+'</div>';
-    h+='<div style="font-size:10px;color:var(--dimL);margin-top:2px;">Bridges '+item.label.replace(' Right','').replace(' Left','')+'</div>';
-    h+='</div></div>';
-    h+='<div style="text-align:right;">';
-    h+='<div style="font-size:12px;font-weight:700;color:'+col+';background:'+col+'22;padding:3px 10px;border-radius:10px;">'+item.w+'%</div>';
-    if(done) h+='<div style="font-size:10px;color:#4ECDC4;margin-top:3px;">✅ Done</div>';
-    else h+='<div style="font-size:10px;color:var(--dimL);margin-top:3px;">Pending</div>';
+    // Row 2: status buttons
+    h+='<div style="display:flex;gap:6px;">';
+    var statuses=["Not Started","In Progress","Complete"];
+    var sCols2=["var(--dim)","var(--blue)","var(--green)"];
+    for(var si=0;si<statuses.length;si++){
+      var isSel=itemSt===statuses[si];
+      var btnKey=item.key; var btnSt=statuses[si];
+      h+='<button onclick="setFs(\''+btnKey+'\',\''+btnSt+'\');" ';
+      h+='style="flex:1;padding:5px 4px;border-radius:7px;border:2px solid '+sCols2[si]+';';
+      h+='background:'+(isSel?sCols2[si]:'transparent')+';';
+      h+='color:'+(isSel?'#000':'var(--dimL)')+';';
+      h+='font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;">'+statuses[si]+'</button>';
+    }
     h+='</div>';
+    // Earned contribution
+    var contrib=itemSt==="Complete"?item.w:itemSt==="In Progress"?item.w*0.5:0;
+    if(contrib>0){
+      h+='<div style="margin-top:6px;font-size:10px;color:'+iCol+';">✓ Contributing: +'+Math.round(contrib*1000)/1000+'% to overall</div>';
+    }
     h+='</div>';
   }
 
-  h+='<div style="margin-top:6px;padding:10px 12px;background:var(--panel);border-radius:8px;display:flex;justify-content:space-between;">';
-  var fsLabel=earned>=0.7?'All complete ✅':earned>0?Math.round(earned*100)/100+'% of 0.7% earned':'Not started';
-  h+='<span style="font-size:11px;color:var(--dimL);">'+fsLabel+'</span>';
-  h+='<span style="font-size:11px;font-weight:700;color:#4ECDC4;">'+Object.values(FILL_SLOPE).filter(Boolean).length+' / 4 done</span>';
+  // Summary row
+  h+='<div style="margin-top:4px;padding:9px 12px;background:var(--panel);border-radius:8px;display:flex;justify-content:space-between;align-items:center;">';
+  h+='<span style="font-size:11px;color:var(--dimL);">'+doneCount+' complete &nbsp;·&nbsp; '+ipCount+' in progress &nbsp;·&nbsp; '+(4-doneCount-ipCount)+' pending</span>';
+  h+='<span style="font-size:12px;font-weight:700;color:#4ECDC4;">'+Math.round(earned*1000)/1000+'% earned</span>';
   h+='</div>';
-
   h+='</div>';
 
   document.getElementById("pg-fs").innerHTML=h;
 }
+
 
 function rRd(){
   var h='';
