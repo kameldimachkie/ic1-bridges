@@ -118,9 +118,9 @@ textarea{min-height:100px;resize:vertical;line-height:1.5;}
 #ticker-inner{
   display:flex; align-items:center;
   height:52px; white-space:nowrap;
-  animation:scroll-left 80s linear infinite;
+  will-change:transform;
 }
-@keyframes scroll-left{0%{transform:translateX(200vw);}100%{transform:translateX(-200%);}}
+100%{transform:translateX(-200%);}}
 .t-badge{
   background:var(--gold); color:#000; font-size:12px;
   font-weight:900; padding:4px 10px; border-radius:4px;
@@ -502,6 +502,7 @@ loadData();
 window.addEventListener('DOMContentLoaded',function(){
   nav('ov');
   buildTicker();
+  startTickerScroll();
   setTimeout(function(){
     startSyncTimer();
     setSyncDot('ok');
@@ -712,6 +713,30 @@ function updateClock(){
 }
 setInterval(updateClock,1000); updateClock();
 
+
+var _tickerX=0;
+var _tickerRAF=null;
+var _tickerSpeed=1.2; // pixels per frame
+
+function startTickerScroll(){
+  if(_tickerRAF) cancelAnimationFrame(_tickerRAF);
+  var el=document.getElementById("ticker-inner");
+  if(!el) return;
+  // Reset position
+  _tickerX=window.innerWidth;
+  el.style.transform="translateX("+_tickerX+"px)";
+
+  function step(){
+    _tickerX-=_tickerSpeed;
+    var elWidth=el.scrollWidth;
+    // When fully scrolled off left, reset to right
+    if(_tickerX < -elWidth) _tickerX=window.innerWidth;
+    el.style.transform="translateX("+_tickerX+"px)";
+    _tickerRAF=requestAnimationFrame(step);
+  }
+  _tickerRAF=requestAnimationFrame(step);
+}
+
 function buildTicker(){
   var items=[];
 
@@ -769,7 +794,9 @@ function buildTicker(){
     if(k>0) h+='<span class="t-sep">◆</span>';
     h+='<span class="t-item" style="color:'+items[k].c+';">'+items[k].t+'</span>';
   }
-  document.getElementById("ticker-inner").innerHTML=h;
+  var el=document.getElementById("ticker-inner");
+  el.innerHTML=h;
+  startTickerScroll();
 }
 
 
