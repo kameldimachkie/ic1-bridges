@@ -501,6 +501,7 @@ function persist(){
 loadData();
 window.addEventListener('DOMContentLoaded',function(){
   nav('ov');
+  buildTicker();
   setTimeout(function(){
     startSyncTimer();
     setSyncDot('ok');
@@ -713,31 +714,56 @@ setInterval(updateClock,1000); updateClock();
 
 function buildTicker(){
   var items=[];
-  items.push({t:"TOTAL "+countAllPiers()+" PIERS",c:"#D4A843"});
-  items.push({t:overall().pct+"% OVERALL PROGRESS",c:"#06D6A0"});
-  items.push({t:activP()+" ACTIVE PIERS",c:"#58A6FF"});
+
+  // ── Time elapsed % ────────────────────────────────────────
+  var startD=new Date("2025-06-01");
+  var endD=new Date("2027-09-01");
+  var todayD=new Date();
+  var timePct2=Math.round(Math.max(0,Math.min(100,(todayD-startD)/(endD-startD)*100))*10)/10;
+
+  // ── Overall progress with variance arrow ─────────────────
+  var ov2=calcOverallPct();
+  var variance2=Math.round((ov2-timePct2)*10)/10;
+  var ovArrow=variance2>0?"🟢▲":variance2<0?"🔴▼":"⚪";
+  var ovCol=variance2>0?"#06D6A0":variance2<0?"#EF4444":"#94a3b8";
+  items.push({t:ovArrow+" "+ov2+"% OVERALL  "+(variance2>=0?"+":"")+variance2+"% vs PLAN",c:ovCol});
+
+  // ── Active piers ──────────────────────────────────────────
+  items.push({t:"⚙ "+activP()+" ACTIVE PIERS",c:"#58A6FF"});
+
+  // ── Total piers ───────────────────────────────────────────
+  items.push({t:"🏗 "+countAllPiers()+" TOTAL PIERS",c:"#D4A843"});
+
+  // ── Each bridge with arrow ────────────────────────────────
   for(var i=0;i<BRIDGES.length;i++){
     var bp=brPct(BRIDGES[i].id);
-    if(bp>0) items.push({t:"BR-"+BRIDGES[i].id+": "+bp+"%",c:"#D4A843"});
+    var bArrow=bp>=50?"🟢▲":bp>0?"🟡▲":"⚪";
+    var bCol=bp>=50?"#06D6A0":bp>0?"#D4A843":"#4a5568";
+    items.push({t:bArrow+" BR-"+BRIDGES[i].id+": "+bp+"%",c:bCol});
   }
-  // Road fill slope status
-  var fillIbn=ROADS["ibn.act.10"]==="done";
-  var fillSat=ROADS["sattam.act.10"]==="done";
-  if(fillIbn||fillSat){
-    items.push({
-      t:"FILL SLOPE: "+(fillIbn&&fillSat?"Both Roads ✅":fillIbn?"Ibn Saud ✅":"Sattam ✅"),
-      c:"#4ECDC4"
-    });
-  } else {
-    items.push({t:"FILL SLOPE: Pending ⏳",c:"#FF6B6B"});
-  }
-  // Recent logs
+
+  // ── Roads ─────────────────────────────────────────────────
+  var ibnP=Math.round(ROADS.ibn.pct*10)/10;
+  var satP=Math.round(ROADS.sattam.pct*10)/10;
+  var rArrow1=ibnP>=50?"🟢▲":ibnP>0?"🟡▲":"⚪";
+  var rArrow2=satP>=50?"🟢▲":satP>0?"🟡▲":"⚪";
+  items.push({t:rArrow1+" IBN SAUD: "+ibnP+"%",c:ibnP>0?"#3B82F6":"#4a5568"});
+  items.push({t:rArrow2+" PR. SATTAM: "+satP+"%",c:satP>0?"#3B82F6":"#4a5568"});
+
+  // ── Fill Slope ────────────────────────────────────────────
+  var fsE=Math.round(calcFsEarned()/0.7*100);
+  var fsArrow=fsE>=100?"🟢▲":fsE>0?"🟡▲":"⚪";
+  items.push({t:fsArrow+" FILL SLOPE: "+fsE+"%",c:fsE>0?"#4ECDC4":"#4a5568"});
+
+  // ── Recent logs ───────────────────────────────────────────
   for(var j=LOGS.length-1;j>=Math.max(0,LOGS.length-3);j--){
     var stgN="";
     for(var s=0;s<STAGES.length;s++){if(STAGES[s].id===LOGS[j].stage){stgN=STAGES[s].name;break;}}
     if(LOGS[j].stage==="EMB") stgN="Road Widening";
-    items.push({t:"Pier "+LOGS[j].pier+" (Br-"+LOGS[j].bridge+") "+stgN+" "+LOGS[j].status,c:"#8892a4"});
+    var lArrow=LOGS[j].status==="Complete"?"🟢✓":LOGS[j].status==="In Progress"?"🟡►":"⚪";
+    items.push({t:lArrow+" Pier "+LOGS[j].pier+" (Br-"+LOGS[j].bridge+") "+stgN+" — "+LOGS[j].status,c:"#8892a4"});
   }
+
   var h='<span class="t-badge">📡 SITESYNC</span>';
   for(var k=0;k<items.length;k++){
     if(k>0) h+='<span class="t-sep">◆</span>';
@@ -745,6 +771,7 @@ function buildTicker(){
   }
   document.getElementById("ticker-inner").innerHTML=h;
 }
+
 
 function countAllPiers(){
   var n=0;
@@ -3178,7 +3205,7 @@ function pullSync(){
       // ── Always update locations regardless of timestamp ──
       if(d.teamLocs) TEAM_LOCS=d.teamLocs;
       // ── Always update messages ───────────────────────────
-      if(d.messages&&d.messages.length){
+      if(d.messages!==undefined&&d.messages!==null){
         var oldLen=MESSAGES.length;
         MESSAGES=d.messages;
         try{localStorage.setItem('ic1b3_msg',JSON.stringify(MESSAGES));}catch(e){}
@@ -3959,11 +3986,35 @@ function sendMsg(){
 }
 
 function clearChat(){
-  if(!confirm('Clear all chat messages? This will clear for the entire team.')) return;
+  if(!confirm('Clear all chat messages for the entire team?')) return;
   MESSAGES=[];
-  persist();
-  pushSync();
-  rCh();
+  try{localStorage.setItem('ic1b3_msg','[]');}catch(e){}
+  setSyncDot("sync");
+  // GET current data → wipe messages only → PUT back (bypass merge)
+  fetch(JB_URL+"/latest",{
+    method:"GET",
+    headers:{"X-Master-Key":JB_KEY,"X-Bin-Meta":"false"}
+  })
+  .then(function(r){return r.json();})
+  .then(function(resp){
+    var d=resp.record||resp;
+    d.messages=[];
+    d.clearTs=Date.now();
+    return fetch(JB_URL,{
+      method:"PUT",
+      headers:{"Content-Type":"application/json","X-Master-Key":JB_KEY,"X-Bin-Versioning":"false"},
+      body:JSON.stringify(d)
+    });
+  })
+  .then(function(){
+    setSyncDot("ok");
+    flash("Chat cleared for all team ✅");
+    rCh();
+  })
+  .catch(function(){
+    setSyncDot("ok");
+    rCh();
+  });
 }
 
 function rCh(){
