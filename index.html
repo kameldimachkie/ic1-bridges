@@ -33,7 +33,7 @@ html,body{
 #hdr{
   background:linear-gradient(135deg,#07090d,#0d1420);
   border-bottom:1px solid var(--border);
-  padding:env(safe-area-inset-top,0) 14px 0;
+  padding:calc(52px + env(safe-area-inset-top,0)) 14px 0;
   flex-shrink:0;
 }
 .hdr-top{display:flex;align-items:flex-start;justify-content:space-between;padding:10px 0 8px;}
@@ -66,7 +66,7 @@ html,body{
 /* MAIN */
 #main{
   flex:1; overflow-y:auto; overflow-x:hidden;
-  padding:12px 12px calc(60px + env(safe-area-inset-bottom,0));
+  padding:12px 12px calc(16px + env(safe-area-inset-bottom,0));
   -webkit-overflow-scrolling:touch;
 }
 .pg{display:none;}
@@ -109,25 +109,25 @@ textarea{min-height:100px;resize:vertical;line-height:1.5;}
 
 /* TICKER */
 #ticker{
-  position:fixed; bottom:0; left:0; right:0;
-  height:calc(48px + env(safe-area-inset-bottom,0));
+  position:fixed; top:0; left:0; right:0;
+  height:52px;
   background:linear-gradient(90deg,#07090d,#0d1420,#07090d);
-  border-top:1px solid var(--border);
-  overflow:hidden; z-index:100;
+  border-bottom:2px solid var(--gold);
+  overflow:hidden; z-index:200;
 }
 #ticker-inner{
   display:flex; align-items:center;
-  height:48px; white-space:nowrap;
+  height:52px; white-space:nowrap;
   animation:scroll-left 80s linear infinite;
 }
 @keyframes scroll-left{0%{transform:translateX(200vw);}100%{transform:translateX(-200%);}}
 .t-badge{
-  background:var(--gold); color:#000; font-size:10px;
-  font-weight:900; padding:3px 8px; border-radius:4px;
-  margin-right:12px; letter-spacing:.1em; flex-shrink:0;
+  background:var(--gold); color:#000; font-size:12px;
+  font-weight:900; padding:4px 10px; border-radius:4px;
+  margin-right:14px; letter-spacing:.1em; flex-shrink:0;
 }
-.t-item{font-size:13px;color:var(--gold);margin-right:6px;flex-shrink:0;}
-.t-sep{color:var(--dim);margin:0 10px;font-size:16px;flex-shrink:0;}
+.t-item{font-size:18px;color:var(--gold);margin-right:8px;flex-shrink:0;font-weight:600;}
+.t-sep{color:var(--dim);margin:0 12px;font-size:18px;flex-shrink:0;}
 
 /* LAYOUT */
 body{display:flex;flex-direction:column;}
