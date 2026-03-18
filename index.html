@@ -180,11 +180,40 @@ body{display:flex;flex-direction:column;}
 
 /* RESPONSIVE */
 @media(min-width:768px){
+  /* ── Layout ─────────────────────────────────────────────── */
   #app{flex-direction:row;}
-  #hdr{width:200px;min-height:100vh;flex-direction:column;border-right:1px solid var(--border);border-bottom:none;}
-  #nav{flex-direction:column;overflow-y:auto;overflow-x:hidden;padding:10px 10px;}
-  .nb{text-align:left;}
-  #main{flex:1;}
+  #hdr{
+    width:240px;min-height:100vh;flex-direction:column;
+    border-right:1px solid var(--border);border-bottom:none;
+    padding-top:52px!important;
+  }
+  #nav{flex-direction:column;overflow-y:auto;overflow-x:hidden;padding:12px 10px;}
+
+  /* ── Nav tabs ───────────────────────────────────────────── */
+  .nb{text-align:left;font-size:14px!important;padding:10px 16px!important;min-height:42px!important;}
+
+  /* ── Main content area ──────────────────────────────────── */
+  #main{flex:1;max-width:960px;padding:20px 28px;}
+
+  /* ── Cards ─────────────────────────────────────────────── */
+  .card{padding:20px;}
+  .ct{font-size:14px!important;margin-bottom:12px!important;}
+
+  /* ── Better contrast for LCD/desktop monitors ───────────── */
+  --card:#111827;
+  --border:#2a3f5a;
+  --text:#f1f5f9;
+  --dimL:#94a3b8;
+
+  /* ── Typography ─────────────────────────────────────────── */
+  .kpi-val{font-size:28px!important;}
+  .kpi-lbl{font-size:9px!important;}
+  label{font-size:13px!important;margin-top:12px!important;}
+  input,select,textarea{font-size:14px!important;padding:10px 14px!important;}
+
+  /* ── Section headings ───────────────────────────────────── */
+  .hdr-brand .title{font-size:20px!important;}
+  .hdr-brand .sub{font-size:11px!important;}
 }
 
 @media(max-width:767px){
@@ -199,7 +228,16 @@ body{display:flex;flex-direction:column;}
     padding:0 8px 12px;
   }
 }
-</style>
+
+@media(min-width:768px){
+  :root{
+    --card:#111827;
+    --border:#2a3f5a;
+    --text:#f1f5f9;
+    --dimL:#94a3b8;
+  }
+  body{font-size:14px;}
+}</style>
 
 
 </head>
