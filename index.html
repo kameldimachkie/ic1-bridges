@@ -1463,7 +1463,7 @@ function navDisc(id){ nav(id); }
 var UTIL_NETWORKS = {
   water: {
     id: 'water', icon: '💧', name: 'Water Network',
-    col: '#38BDF8', weight: 0, // set by user in Setup
+    col: '#38BDF8', weight: 0, active: true, // active by default like Roads
     acts: [
       {name:'Trenching',               w:20},
       {name:'Bedding',                 w:10},
@@ -1477,7 +1477,7 @@ var UTIL_NETWORKS = {
   },
   sewer: {
     id: 'sewer', icon: '🚰', name: 'Sewer Network',
-    col: '#A78BFA', weight: 0,
+    col: '#A78BFA', weight: 0, active: true,
     acts: [
       {name:'Trenching',            w:20},
       {name:'Bedding',              w:10},
@@ -1491,7 +1491,7 @@ var UTIL_NETWORKS = {
   },
   storm: {
     id: 'storm', icon: '🌧', name: 'Stormwater Network',
-    col: '#60A5FA', weight: 0,
+    col: '#60A5FA', weight: 0, active: true,
     acts: [
       {name:'Trenching',               w:20},
       {name:'Bedding',                 w:10},
@@ -1505,7 +1505,7 @@ var UTIL_NETWORKS = {
   },
   elec: {
     id: 'elec', icon: '⚡', name: 'Electricity Network',
-    col: '#FCD34D', weight: 0,
+    col: '#FCD34D', weight: 0, active: true,
     acts: [
       {name:'Trenching',               w:20},
       {name:'Duct Bank Installation',  w:25},
@@ -1518,7 +1518,7 @@ var UTIL_NETWORKS = {
   },
   tel: {
     id: 'tel', icon: '📞', name: 'Telecom Network',
-    col: '#6EE7B7', weight: 0,
+    col: '#6EE7B7', weight: 0, active: true,
     acts: [
       {name:'Trenching',               w:20},
       {name:'Duct Installation',       w:25},
@@ -1539,16 +1539,15 @@ function loadUtNetworks(){
     var saved = JSON.parse(localStorage.getItem('ic1b3_utn')||'{}');
     for(var k in saved){
       if(UTIL_NETWORKS[k]){
-        // Restore activity statuses
         for(var i=0;i<UTIL_NETWORKS[k].acts.length;i++){
           if(saved[k]['a'+i]!==undefined) UTIL_NETWORKS[k]['a'+i]=saved[k]['a'+i];
         }
         if(saved[k].weight!==undefined) UTIL_NETWORKS[k].weight=saved[k].weight;
-        if(saved[k].active!==undefined) UTIL_NETWORKS[k].active=saved[k].active;
+        // Always keep active:true — all networks visible by default
+        UTIL_NETWORKS[k].active=true;
       }
     }
   }catch(e){}
-  // Recalc pct for all
   for(var i=0;i<UT_ORDER.length;i++) recalcUtPct(UT_ORDER[i]);
 }
 
@@ -1659,105 +1658,104 @@ function rUt(){
   var utEarned=calcUtTotalEarned();
   var brCurrent=Math.round(Math.max(0,100-6-0.7-PRE_PCT-utTotal)*10)/10;
   var brWarnCol=brCurrent<60?'var(--red)':brCurrent<70?'var(--amber)':'var(--gold)';
-  var activeCount=0;
-  for(var i=0;i<UT_ORDER.length;i++) if(UTIL_NETWORKS[UT_ORDER[i]].active) activeCount++;
 
   var h='';
 
-  // ── Header KPIs ───────────────────────────────────────────
+  // ── Header ────────────────────────────────────────────────
   h+='<div class="card" style="border-left:3px solid #38BDF8;">';
   h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">';
   h+='<div class="ct" style="margin-bottom:0;">🔧 Utilities & Infrastructure</div>';
-  h+='<span style="font-size:10px;color:var(--dimL);">'+activeCount+' of 5 active</span>';
+  h+='<div style="font-size:10px;color:var(--dimL);">Set weight → update progress stages</div>';
   h+='</div>';
   h+='<div style="display:flex;gap:8px;">';
-  var kpis2=[
-    {v:utTotal+'%',l:'Total Weight',c:'#38BDF8'},
-    {v:utEarned+'%',l:'Earned',c:'var(--green)'},
-    {v:brCurrent+'%',l:'Bridge Rem.',c:brWarnCol},
+  var utKpis=[
+    {v:utTotal+'%',  l:'Total Weight', c:'#38BDF8'},
+    {v:utEarned+'%', l:'Earned',       c:'var(--green)'},
+    {v:brCurrent+'%',l:'Bridge Rem.',  c:brWarnCol},
   ];
-  for(var i=0;i<kpis2.length;i++){
+  for(var ki=0;ki<utKpis.length;ki++){
     h+='<div style="flex:1;background:var(--panel);border-radius:8px;padding:8px 10px;text-align:center;">';
-    h+='<div style="font-size:16px;font-weight:900;color:'+kpis2[i].c+';">'+kpis2[i].v+'</div>';
-    h+='<div style="font-size:9px;color:var(--dimL);text-transform:uppercase;letter-spacing:1px;margin-top:2px;">'+kpis2[i].l+'</div>';
+    h+='<div style="font-size:16px;font-weight:900;color:'+utKpis[ki].c+';">'+utKpis[ki].v+'</div>';
+    h+='<div style="font-size:9px;color:var(--dimL);text-transform:uppercase;letter-spacing:1px;margin-top:2px;">'+utKpis[ki].l+'</div>';
     h+='</div>';
   }
   h+='</div>';
-  if(brCurrent<60) h+='<div style="margin-top:8px;padding:7px 10px;background:#E6393422;border-radius:8px;border-left:3px solid var(--red);font-size:11px;color:var(--red);">⚠️ Bridge weight critically low ('+brCurrent+'%) — reduce utility weights in 🔐 Setup</div>';
+  if(brCurrent<60) h+='<div style="margin-top:8px;padding:7px 10px;background:#E6393422;border-radius:8px;border-left:3px solid var(--red);font-size:11px;color:var(--red);">⚠️ Bridge weight critically low ('+brCurrent+'%) — reduce utility weights</div>';
   else if(brCurrent<70) h+='<div style="margin-top:8px;padding:7px 10px;background:var(--amber)22;border-radius:8px;border-left:3px solid var(--amber);font-size:11px;color:var(--amber);">⚠️ Bridge weight approaching limit ('+brCurrent+'%)</div>';
+  h+='<div style="margin-top:8px;font-size:11px;color:var(--dimL);">Tip: Each network contributes its weight × progress to the overall project score. Set weight to 0 to exclude a network.</div>';
   h+='</div>';
 
   // ── 5 Networks ────────────────────────────────────────────
   for(var ni=0;ni<UT_ORDER.length;ni++){
     var netId=UT_ORDER[ni];
     var n=UTIL_NETWORKS[netId];
-    var isActive=!!n.active;
-    var netPct=n.pct;
+    var netPct=n.pct||0;
     var pCol=netPct>=75?'var(--green)':netPct>0?n.col:'var(--dim)';
     var earnedWt=Math.round(netPct/100*(n.weight||0)*10)/10;
+    var isConfigured=(n.weight||0)>0;
 
-    h+='<div class="card" style="margin-top:12px;border-left:4px solid '+(isActive?n.col:'var(--border)')+';opacity:'+(isActive?'1':'0.55')+';">';
+    h+='<div class="card" style="margin-top:12px;border-left:4px solid '+n.col+';">';
 
-    // Network header
-    h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">';
+    // Network header with inline weight editor
+    h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">';
     h+='<div style="display:flex;align-items:center;gap:8px;">';
-    h+='<span style="font-size:20px;">'+n.icon+'</span>';
+    h+='<span style="font-size:22px;">'+n.icon+'</span>';
     h+='<div>';
     h+='<div style="font-size:14px;font-weight:800;color:var(--text);">'+n.name+'</div>';
-    h+='<div style="font-size:10px;color:var(--dimL);">Weight: <b style="color:'+(isActive?n.col:'var(--dimL)')+';">'+(isActive?n.weight+'%':'Inactive')+'</b></div>';
+    h+='<div style="font-size:10px;color:var(--dimL);">Project Weight: <span style="color:'+n.col+';font-weight:700;">'+(isConfigured?n.weight+'%':'not set')+'</span></div>';
     h+='</div></div>';
     h+='<div style="text-align:right;">';
-    h+='<div id="ut-pct-'+netId+'" style="font-size:22px;font-weight:900;color:'+pCol+';">'+(isActive?netPct+'%':'—')+'</div>';
-    if(isActive) h+='<div style="font-size:10px;color:var(--gold);">+'+earnedWt+'% earned</div>';
+    h+='<div style="font-size:22px;font-weight:900;color:'+pCol+';">'+netPct+'%</div>';
+    if(isConfigured) h+='<div style="font-size:10px;color:var(--gold);">+'+earnedWt+'% earned</div>';
     h+='</div></div>';
 
-    // Progress bar
-    if(isActive){
-      h+='<div style="height:7px;background:var(--panel);border-radius:4px;margin-bottom:12px;overflow:hidden;">';
-      h+='<div style="width:'+Math.min(100,netPct)+'%;height:7px;background:'+n.col+';border-radius:4px;transition:width 0.4s;"></div></div>';
-    }
-
-    // Toggle + Weight + Reset buttons
-    h+='<div style="display:flex;gap:6px;margin-bottom:'+(isActive?'12':'0')+'px;">';
-    var _tBorder=isActive?'var(--border)':'var(--gold)';
-    var _tColor=isActive?'var(--dimL)':'var(--gold)';
-    var _tLabel=isActive?'⏸ Deactivate':'▶ Activate';
-    h+='<button data-nid="'+netId+'" onclick="toggleUtNetwork(this.dataset.nid);" style="flex:1;padding:6px;border-radius:7px;border:1px solid '+_tBorder+';background:transparent;color:'+_tColor+';font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">'+_tLabel+'</button>';
-    if(isActive){
-      h+='<button data-nid="'+netId+'" onclick="editUtNetWeight(this.dataset.nid);" style="flex:1;padding:6px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--dimL);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">⚖️ Weight</button>';
-      h+='<button data-nid="'+netId+'" onclick="resetUtNetwork(this.dataset.nid);" style="flex:1;padding:6px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--dimL);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">🔄 Reset</button>';
-    }
+    // Weight input row
+    h+='<div style="display:flex;align-items:center;gap:8px;background:var(--panel);border-radius:8px;padding:8px 10px;margin-bottom:10px;">';
+    h+='<span style="font-size:12px;color:var(--dimL);flex:1;">Project weight %</span>';
+    var _utInputId='ut-wt-'+netId;
+    h+='<input type="number" id="'+_utInputId+'" value="'+(n.weight||0)+'" min="0" max="20" step="0.5" ';
+    h+='style="width:70px;padding:5px 8px;border-radius:7px;border:1px solid var(--border);background:var(--bg);color:var(--fg);font-size:14px;font-weight:700;text-align:center;" ';
+    h+='oninput="UTIL_NETWORKS[\''+netId+'\'].weight=Math.round((parseFloat(this.value)||0)*10)/10;saveUtNetworks();buildTicker();" ';
+    h+='<span style="font-size:12px;color:var(--dimL);">%</span>';
+    h+='<button data-nid="'+netId+'" onclick="resetUtNetwork(this.dataset.nid);" ';
+    h+='style="padding:5px 10px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--dimL);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">🔄</button>';
     h+='</div>';
 
-    // Activities (only if active)
-    if(isActive){
-      for(var ai=0;ai<n.acts.length;ai++){
-        var act=n.acts[ai];
-        var actSt=n['a'+ai]||'Not Started';
-        var aCol=SCOL[actSt]||'var(--dim)';
-        var aBg=SBGC[actSt]||'var(--panel)';
-        var contrib=actSt==='Complete'?act.w:actSt==='In Progress'?Math.round(act.w*0.3*10)/10:0;
+    // Progress bar
+    if(isConfigured){
+      h+='<div style="height:7px;background:var(--panel);border-radius:4px;margin-bottom:12px;overflow:hidden;">';
+      h+='<div style="width:'+Math.min(100,netPct)+'%;height:7px;background:'+n.col+';border-radius:4px;transition:width 0.3s;"></div></div>';
+    }
 
-        h+='<div style="border:1px solid '+(actSt!=='Not Started'?aCol:'var(--border)')+';border-radius:10px;padding:9px 12px;margin-bottom:6px;background:'+aBg+';">';
-        h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">';
-        h+='<div style="font-size:12px;font-weight:600;color:var(--fg);">'+act.name+'</div>';
-        h+='<div style="display:flex;align-items:center;gap:5px;">';
-        if(contrib>0) h+='<span style="font-size:10px;color:'+aCol+';font-weight:700;">+'+contrib+'%</span>';
-        h+='<span style="font-size:11px;color:var(--dimL);background:var(--panel);padding:2px 8px;border-radius:8px;">'+act.w+'%</span>';
-        h+='</div></div>';
-        h+='<div style="display:flex;gap:5px;">';
-        var sColors=[SCOL['Not Started'],SCOL['In Progress'],SCOL['Complete']];
-        var sLabels=['Not Started','In Progress','Complete'];
-        for(var k=0;k<sLabels.length;k++){
-          var isSel2=actSt===sLabels[k];
-          h+='<button data-nid="'+netId+'" data-ai="'+ai+'" data-st="'+sLabels[k]+'" onclick="setUtAct(this.dataset.nid,parseInt(this.dataset.ai),this.dataset.st,this);" ';
-          h+='style="flex:1;padding:5px 3px;border-radius:7px;border:2px solid '+sColors[k]+';';
-          h+='background:'+(isSel2?sColors[k]:'transparent')+';';
-          h+='color:'+(isSel2?'#000':'var(--dimL)')+';';
-          h+='font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;">'+sLabels[k]+'</button>';
-        }
-        h+='</div></div>';
+    // Activities
+    h+='<div style="font-size:10px;font-weight:700;color:var(--dimL);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Activities</div>';
+    for(var ai=0;ai<n.acts.length;ai++){
+      var act=n.acts[ai];
+      var actSt=n['a'+ai]||'Not Started';
+      var aCol=SCOL[actSt]||'var(--dim)';
+      var aBg=SBGC[actSt]||'var(--panel)';
+      var contrib=actSt==='Complete'?act.w:actSt==='In Progress'?Math.round(act.w*0.3*10)/10:0;
+
+      h+='<div style="border:1px solid '+(actSt!=='Not Started'?aCol:'var(--border)')+';border-radius:10px;padding:9px 12px;margin-bottom:6px;background:'+aBg+';">';
+      h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">';
+      h+='<div style="font-size:12px;font-weight:600;color:var(--fg);">'+act.name+'</div>';
+      h+='<div style="display:flex;align-items:center;gap:5px;">';
+      if(contrib>0) h+='<span style="font-size:10px;color:'+aCol+';font-weight:700;">+'+contrib+'%</span>';
+      h+='<span style="font-size:11px;color:var(--dimL);background:var(--panel);padding:2px 8px;border-radius:8px;">'+act.w+'%</span>';
+      h+='</div></div>';
+      h+='<div style="display:flex;gap:5px;">';
+      var sColors=[SCOL['Not Started'],SCOL['In Progress'],SCOL['Complete']];
+      var sLabels=['Not Started','In Progress','Complete'];
+      for(var k=0;k<sLabels.length;k++){
+        var isSel=actSt===sLabels[k];
+        h+='<button data-nid="'+netId+'" data-ai="'+ai+'" data-st="'+sLabels[k]+'" ';
+        h+='onclick="setUtAct(this.dataset.nid,parseInt(this.dataset.ai),this.dataset.st,this);" ';
+        h+='style="flex:1;padding:5px 3px;border-radius:7px;border:2px solid '+sColors[k]+';';
+        h+='background:'+(isSel?sColors[k]:'transparent')+';';
+        h+='color:'+(isSel?'#000':'var(--dimL)')+';';
+        h+='font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;">'+sLabels[k]+'</button>';
       }
+      h+='</div></div>';
     }
     h+='</div>';
   }
@@ -1765,8 +1763,6 @@ function rUt(){
   document.getElementById('pg-ut').innerHTML=h;
 }
 
-
-// ── Change Password ────────────────────────────────────────────
 function showChangePw(){
   var h='<div class="ct">🔑 Change Password</div>';
   h+='<div style="font-size:11px;color:var(--dimL);margin-bottom:14px;line-height:1.6;">Change the admin password for Setup access.</div>';
@@ -1865,6 +1861,22 @@ function brPct2(brId){
     break;
   }
   return total>0?Math.round(earned/total*100*10)/10:0;
+}
+
+
+function utSaveWeight(netId, val){
+  var n=UTIL_NETWORKS[netId];
+  if(!n) return;
+  n.weight=Math.round((parseFloat(val)||0)*10)/10;
+  saveUtNetworks();
+  // Update KPIs live
+  var utTotal=calcUtTotalWeight();
+  var utEarned=calcUtTotalEarned();
+  var brCurrent=Math.round(Math.max(0,100-6-0.7-PRE_PCT-utTotal)*10)/10;
+  // Refresh earned display
+  var netPct=n.pct||0;
+  var earnedWt=Math.round(netPct/100*n.weight*10)/10;
+  buildTicker();
 }
 
 function buildTicker(){
