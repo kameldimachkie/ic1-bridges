@@ -299,6 +299,8 @@ body{display:flex;flex-direction:column;}
     
     
     
+    <button class="nb"     id="tab-pl" onclick="nav('pl')">📅 Plan</button>
+    <button class="nb"     id="tab-ai" onclick="nav('ai')">🤖 AI Report</button>
     <button class="nb"     id="tab-rp" onclick="nav('rp')">Report</button>
     <button class="nb"     id="tab-mp" onclick="nav('mp')"><svg width="16" height="14" viewBox="0 0 22 18" fill="none" style="vertical-align:-3px;margin-right:4px"><line x1="1" y1="9" x2="21" y2="9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" opacity="0.75"/><line x1="8" y1="1" x2="8" y2="17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/><line x1="16" y1="1" x2="16" y2="17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/><path d="M3 9 Q7 4 11 4 Q15 4 19 9" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="11" cy="9" r="2.8" fill="currentColor" opacity="0.9"/><circle cx="11" cy="9" r="1.2" fill="#07090d"/></svg>Map</button>
     <button class="nb" id="tab-ch" onclick="nav('ch')">💬 Chat</button>
@@ -323,6 +325,8 @@ body{display:flex;flex-direction:column;}
   <div class="pg"    id="pg-em"></div>
   
   <div class="pg"    id="pg-tl"></div>
+  <div class="pg"    id="pg-pl"></div>
+  <div class="pg"    id="pg-ai"></div>
   <div class="pg"    id="pg-rp"></div>
   <div class="pg"    id="pg-is"></div>
 <div class="pg"    id="pg-gn"></div>
@@ -525,7 +529,30 @@ var CONTACTS=[];
 var ROADS={ibn:{pct:0,status:"Not Started"},sattam:{pct:0,status:"Not Started"}};
 var FILL_SLOPE={lm_r:false,lm_l:false,mn_r:false,mn_l:false};
 var UTILITIES=[];  // legacy shim — new system uses UTIL_NETWORKS
+// ── DAILY REPORT DATA ─────────────────────────────────────────
+var DAILY = {
+  photos: [],        // [{id, base64, thumb, caption, discipline, activity, ts, date}]
+  entries: [],       // [{id, discipline, activity, status, notes, ts, date}]
+  reports: [],       // [{id, date, summary, delays, pdf_html}]
+  snapshots: [],     // [{date, pct}] for stagnation detection
+  apiKey: ''         // Anthropic API key (stored locally)
+};
+var DAILY_GENERATING = false;
+
 var ADMIN_UNLOCKED=false;
+
+// ── PLAN DATA STRUCTURE ────────────────────────────────────────
+var PLAN = {
+  // S-Curve: array of {date:'YYYY-MM-DD', pct:number}
+  curve: [],
+  // Planned activities per discipline
+  activities: {
+    bridges:   [], // {name, start, end, output, unit, discipline:'bridges'}
+    roads:     [],
+    utilities: [],
+    fillslope: []
+  }
+};
 var ADMIN_HASH=localStorage.getItem('ic1_adminpw')||'Lina@6072';
 // Custom weights storage
 var CUSTOM_WEIGHTS={
@@ -561,6 +588,8 @@ function loadData(){
   // loadUtNetworks called after DOMContentLoaded
   try{CUSTOM_WEIGHTS=JSON.parse(localStorage.getItem("ic1b3_cw")||JSON.stringify(CUSTOM_WEIGHTS));}catch(e){}
   try{MESSAGES=JSON.parse(localStorage.getItem('ic1b3_msg')||'[]');}catch(e){MESSAGES=[];}
+  try{var _dly=localStorage.getItem('ic1b3_daily');if(_dly){var _dd=JSON.parse(_dly);DAILY.photos=_dd.photos||[];DAILY.entries=_dd.entries||[];DAILY.reports=_dd.reports||[];DAILY.snapshots=_dd.snapshots||[];DAILY.apiKey=_dd.apiKey||'';}}catch(e){}
+  try{var _p=localStorage.getItem('ic1b3_plan');if(_p){var _pp=JSON.parse(_p);PLAN.curve=_pp.curve||[];PLAN.activities=_pp.activities||PLAN.activities;}}catch(e){}
   try{ANTHROPIC_KEY=localStorage.getItem("ic1_ak")||"";}catch(e){}
 }
 function persist(){
@@ -574,6 +603,8 @@ function persist(){
   // Utilities saved via saveUtNetworks()
   try{localStorage.setItem("ic1b3_cw",JSON.stringify(CUSTOM_WEIGHTS));}catch(e){}
   try{localStorage.setItem('ic1b3_msg',JSON.stringify(MESSAGES.slice(-20)));}catch(e){}
+  try{localStorage.setItem('ic1b3_plan',JSON.stringify(PLAN));}catch(e){}
+  try{localStorage.setItem('ic1b3_daily',JSON.stringify({photos:DAILY.photos.slice(-50),entries:DAILY.entries.slice(-200),reports:DAILY.reports.slice(-30),snapshots:DAILY.snapshots.slice(-90),apiKey:DAILY.apiKey}));}catch(e){}
   // Record location and auto-push on every change
   if(typeof pushSync==="function"){
     if(navigator.geolocation){
@@ -1879,6 +1910,1443 @@ function utSaveWeight(netId, val){
   buildTicker();
 }
 
+
+// ══════════════════════════════════════════════════════════════
+// PHASE 3.5 — PLANNED PROGRESS MODULE
+// All "endpoint" logic implemented as pure functions
+// ══════════════════════════════════════════════════════════════
+
+// ── API: Get planned % for a specific date ─────────────────────
+function getPlannedCurve(){ return PLAN.curve; }
+
+function getPlannedPctForDate(dateStr){
+  // Exact match
+  for(var i=0;i<PLAN.curve.length;i++){
+    if(PLAN.curve[i].date===dateStr) return PLAN.curve[i].pct;
+  }
+  // Interpolate between nearest points
+  if(!PLAN.curve.length) return null;
+  var sorted=PLAN.curve.slice().sort(function(a,b){return a.date<b.date?-1:1;});
+  if(dateStr<=sorted[0].date) return sorted[0].pct;
+  if(dateStr>=sorted[sorted.length-1].date) return sorted[sorted.length-1].pct;
+  for(var i=0;i<sorted.length-1;i++){
+    if(dateStr>=sorted[i].date&&dateStr<=sorted[i+1].date){
+      var t=(dateStr<sorted[i+1].date&&dateStr>sorted[i].date)?
+        (new Date(dateStr)-new Date(sorted[i].date))/
+        (new Date(sorted[i+1].date)-new Date(sorted[i].date)):0.5;
+      return Math.round((sorted[i].pct+(sorted[i+1].pct-sorted[i].pct)*t)*10)/10;
+    }
+  }
+  return null;
+}
+
+// ── API: Get planned activities ────────────────────────────────
+function getPlannedActivities(discipline){
+  if(discipline) return PLAN.activities[discipline]||[];
+  return PLAN.activities;
+}
+
+// ── API: Get planned data for today ───────────────────────────
+function getPlannedToday(){
+  var today=new Date().toISOString().slice(0,10);
+  var plannedPct=getPlannedPctForDate(today);
+  var todayActivities=[];
+  var discs=['bridges','roads','utilities','fillslope'];
+  for(var d=0;d<discs.length;d++){
+    var acts=PLAN.activities[discs[d]]||[];
+    for(var i=0;i<acts.length;i++){
+      if(acts[i].start<=today&&acts[i].end>=today){
+        todayActivities.push({discipline:discs[d],name:acts[i].name,output:acts[i].output,unit:acts[i].unit||''});
+      }
+    }
+  }
+  return {date:today,plannedPct:plannedPct,activities:todayActivities};
+}
+
+// ── API: Compare planned vs actual ────────────────────────────
+function comparePlannedActual(){
+  var today=new Date().toISOString().slice(0,10);
+  var plannedPct=getPlannedPctForDate(today);
+  var actualPct=calcOverallPct();
+  var variance2=plannedPct!==null?Math.round((actualPct-plannedPct)*10)/10:null;
+  var todayPlan=getPlannedToday();
+  return {
+    date:today,
+    planned:plannedPct,
+    actual:actualPct,
+    variance:variance2,
+    status:variance2===null?'no_baseline':variance2>=0?'ahead':'behind',
+    plannedActivities:todayPlan.activities,
+    curve:PLAN.curve,
+    hasBaseline:PLAN.curve.length>0
+  };
+}
+
+// ── Add/remove curve point ─────────────────────────────────────
+function planSetCurvePoint(dateStr,pct){
+  pct=Math.max(0,Math.min(100,Math.round(parseFloat(pct)*10)/10));
+  if(isNaN(pct)) return false;
+  // Remove existing point for this date
+  PLAN.curve=PLAN.curve.filter(function(p){return p.date!==dateStr;});
+  PLAN.curve.push({date:dateStr,pct:pct});
+  PLAN.curve.sort(function(a,b){return a.date<b.date?-1:1;});
+  persist();
+  return true;
+}
+
+function planDeleteCurvePoint(dateStr){
+  PLAN.curve=PLAN.curve.filter(function(p){return p.date!==dateStr;});
+  persist();
+}
+
+// ── Import CSV ─────────────────────────────────────────────────
+function planImportCSV(csvText){
+  var lines=csvText.trim().split(/\r?\n/);
+  var imported=0,errors=[];
+  for(var i=0;i<lines.length;i++){
+    var line=lines[i].trim();
+    if(!line||line.toLowerCase().indexOf('date')>-1) continue; // skip header
+    var parts=line.split(',');
+    if(parts.length<2){errors.push('Line '+(i+1)+': missing columns');continue;}
+    var dateStr=parts[0].trim();
+    var pctStr=parts[1].trim();
+    // Validate date
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)){
+      // Try DD/MM/YYYY
+      var dp=dateStr.split('/');
+      if(dp.length===3) dateStr=dp[2]+'-'+(dp[1].length<2?'0':'')+dp[1]+'-'+(dp[0].length<2?'0':'')+dp[0];
+      else {errors.push('Line '+(i+1)+': invalid date '+dateStr);continue;}
+    }
+    var pct=parseFloat(pctStr);
+    if(isNaN(pct)||pct<0||pct>100){errors.push('Line '+(i+1)+': invalid % '+pctStr);continue;}
+    planSetCurvePoint(dateStr,pct);
+    imported++;
+  }
+  return {imported:imported,errors:errors};
+}
+
+// ── Generate monthly baseline from P6 logic ───────────────────
+function planGenerateMonthly(startDate,endDate,shape){
+  // shape: 'linear','scurve','front_loaded','back_loaded'
+  var start=new Date(startDate),end=new Date(endDate);
+  var months=[];
+  var d=new Date(start.getFullYear(),start.getMonth(),1);
+  while(d<=end){
+    months.push(d.getFullYear()+'-'+(d.getMonth()<9?'0':'')+(d.getMonth()+1)+'-01');
+    d.setMonth(d.getMonth()+1);
+  }
+  var n=months.length;
+  PLAN.curve=[];
+  for(var i=0;i<n;i++){
+    var t=(i+1)/n;
+    var pct;
+    if(shape==='linear')      pct=t*100;
+    else if(shape==='scurve') pct=(3*t*t-2*t*t*t)*100; // S-curve sigmoid
+    else if(shape==='front')  pct=(1-Math.pow(1-t,2))*100;
+    else                       pct=t*t*100; // back loaded
+    PLAN.curve.push({date:months[i],pct:Math.round(pct*10)/10});
+  }
+  persist();
+  return PLAN.curve.length;
+}
+
+// ── Add planned activity ───────────────────────────────────────
+function planAddActivity(discipline,name,start,end,output,unit){
+  if(!PLAN.activities[discipline]) PLAN.activities[discipline]=[];
+  if(start>end){flash('Start date must be before end date');return false;}
+  PLAN.activities[discipline].push({
+    id:'pa_'+Date.now(),
+    name:name.trim(),
+    start:start,
+    end:end,
+    output:parseFloat(output)||0,
+    unit:unit||'',
+    discipline:discipline
+  });
+  persist();
+  return true;
+}
+
+function planDeleteActivity(discipline,id){
+  if(!PLAN.activities[discipline]) return;
+  PLAN.activities[discipline]=PLAN.activities[discipline].filter(function(a){return a.id!==id;});
+  persist();
+}
+
+// ── Validation ─────────────────────────────────────────────────
+function validatePlanCurve(){
+  var errors=[];
+  if(!PLAN.curve.length){errors.push('No baseline curve defined');return errors;}
+  var sorted=PLAN.curve.slice().sort(function(a,b){return a.date<b.date?-1:1;});
+  for(var i=0;i<sorted.length;i++){
+    if(sorted[i].pct<0||sorted[i].pct>100) errors.push('Invalid %: '+sorted[i].date+' = '+sorted[i].pct+'%');
+    if(i>0&&sorted[i].pct<sorted[i-1].pct) errors.push('Non-monotonic: '+sorted[i].date+' ('+sorted[i].pct+'%) < previous ('+sorted[i-1].pct+'%)');
+  }
+  return errors;
+}
+
+
+// ── Plan tab renderer ──────────────────────────────────────────
+var _plTab='curve'; // 'curve' | 'activities' | 'compare'
+
+function rPl(){
+  var comp=comparePlannedActual();
+  var h='';
+
+  // ── Header ─────────────────────────────────────────────────
+  h+='<div class="card" style="border-left:3px solid var(--blue);">';
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">';
+  h+='<div class="ct" style="margin-bottom:0;">📅 Planned Progress Baseline</div>';
+  var vBadge=comp.hasBaseline?
+    (comp.variance>=0?'<span style="background:var(--green)22;color:var(--green);border:1px solid var(--green)33;border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700;">▲ +'+comp.variance+'% ahead</span>':
+     '<span style="background:var(--red)22;color:var(--red);border:1px solid var(--red)33;border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700;">▼ '+Math.abs(comp.variance)+'% behind</span>'):
+    '<span style="background:var(--panel);color:var(--dimL);border:1px solid var(--border);border-radius:6px;padding:2px 8px;font-size:10px;">No baseline</span>';
+  h+=vBadge;
+  h+='</div>';
+  h+='<div style="font-size:11px;color:var(--dimL);">Define the planned S-curve and activities per discipline. Used for delay detection in Phase 4.</div>';
+  h+='</div>';
+
+  // ── Sub-tabs ────────────────────────────────────────────────
+  h+='<div style="display:flex;gap:4px;margin-bottom:12px;">';
+  var subTabs=[['curve','📈 S-Curve'],['activities','📋 Activities'],['compare','⚖️ Compare']];
+  for(var st=0;st<subTabs.length;st++){
+    var isOn=_plTab===subTabs[st][0];
+    h+='<button data-tab="'+subTabs[st][0]+'" onclick="plSwitchTab(this.dataset.tab);" ';
+    h+='style="flex:1;padding:8px;border-radius:8px;border:1px solid '+(isOn?'var(--blue)':'var(--border)')+';';
+    h+='background:'+(isOn?'var(--blue)':'transparent')+';';
+    h+='color:'+(isOn?'#fff':'var(--dimL)')+';font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">';
+    h+=subTabs[st][1]+'</button>';
+  }
+  h+='</div>';
+
+  // ── S-CURVE TAB ─────────────────────────────────────────────
+  if(_plTab==='curve'){
+    // Summary
+    var sorted=PLAN.curve.slice().sort(function(a,b){return a.date<b.date?-1:1;});
+    h+='<div class="card">';
+    h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">';
+    h+='<div class="ct" style="margin-bottom:0;">📈 Baseline S-Curve</div>';
+    h+='<span style="font-size:10px;color:var(--dimL);">'+PLAN.curve.length+' data points</span>';
+    h+='</div>';
+
+    // Auto-generate section
+    h+='<div style="background:var(--panel);border-radius:8px;padding:10px;margin-bottom:12px;">';
+    h+='<div style="font-size:11px;font-weight:700;color:var(--dimL);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">Auto-Generate Curve</div>';
+    h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">';
+    h+='<div><label style="font-size:10px;color:var(--dimL);">Start Date</label>';
+    h+='<input type="date" id="pl-gen-start" value="2025-06-01" style="width:100%;padding:6px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--fg);font-size:12px;"></div>';
+    h+='<div><label style="font-size:10px;color:var(--dimL);">End Date</label>';
+    h+='<input type="date" id="pl-gen-end" value="2027-09-01" style="width:100%;padding:6px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--fg);font-size:12px;"></div>';
+    h+='</div>';
+    h+='<div style="margin-bottom:8px;"><label style="font-size:10px;color:var(--dimL);">Curve Shape</label>';
+    h+='<select id="pl-gen-shape" style="width:100%;padding:6px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--fg);font-size:12px;">';
+    h+='<option value="scurve">S-Curve (Recommended — slow start, peak middle, slow end)</option>';
+    h+='<option value="linear">Linear (Equal progress every month)</option>';
+    h+='<option value="front">Front-Loaded (Fast start, slow end)</option>';
+    h+='<option value="back">Back-Loaded (Slow start, fast end)</option>';
+    h+='</select></div>';
+    h+='<button onclick="plGenCurve();" style="width:100%;padding:8px;background:var(--blue);border:none;border-radius:8px;color:#fff;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;">⚡ Generate Curve</button>';
+    h+='</div>';
+
+    // Manual entry
+    h+='<div style="background:var(--panel);border-radius:8px;padding:10px;margin-bottom:12px;">';
+    h+='<div style="font-size:11px;font-weight:700;color:var(--dimL);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">Add / Edit Point</div>';
+    h+='<div style="display:flex;gap:6px;align-items:flex-end;">';
+    h+='<div style="flex:1;"><label style="font-size:10px;color:var(--dimL);">Date</label>';
+    h+='<input type="date" id="pl-pt-date" style="width:100%;padding:6px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--fg);font-size:12px;"></div>';
+    h+='<div style="width:80px;"><label style="font-size:10px;color:var(--dimL);">Planned %</label>';
+    h+='<input type="number" id="pl-pt-pct" min="0" max="100" step="0.1" placeholder="0–100" style="width:100%;padding:6px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--fg);font-size:12px;text-align:center;"></div>';
+    h+='<button onclick="plAddPoint();" style="padding:7px 12px;background:var(--gold);border:none;border-radius:8px;color:#000;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;">+ Add</button>';
+    h+='</div></div>';
+
+    // CSV import
+    h+='<div style="background:var(--panel);border-radius:8px;padding:10px;margin-bottom:12px;">';
+    h+='<div style="font-size:11px;font-weight:700;color:var(--dimL);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">📥 Import CSV</div>';
+    h+='<div style="font-size:10px;color:var(--dimL);margin-bottom:6px;">Format: <code style="background:var(--bg);padding:1px 5px;border-radius:3px;">YYYY-MM-DD,planned%</code> — one row per line</div>';
+    h+='<input type="file" id="pl-csv" accept=".csv,.txt" onchange="plImportCSV(this);" style="width:100%;padding:5px;font-size:11px;color:var(--fg);">';
+    h+='<div style="font-size:10px;color:var(--dimL);margin-top:4px;">Example: 2025-06-01,0 &nbsp;→&nbsp; 2025-12-01,25 &nbsp;→&nbsp; 2026-06-01,60</div>';
+    h+='</div>';
+
+    // Curve table
+    if(sorted.length){
+      h+='<div style="font-size:11px;font-weight:700;color:var(--dimL);margin-bottom:6px;">Current Baseline ('+sorted.length+' points)</div>';
+      h+='<div style="max-height:220px;overflow-y:auto;">';
+      h+='<table class="tbl"><tr><th>Date</th><th>Planned %</th><th>Actual %</th><th>Variance</th><th></th></tr>';
+      for(var pi=0;pi<sorted.length;pi++){
+        var pt=sorted[pi];
+        var actPt=getPlannedPctForDate(pt.date);
+        // Get actual for this date if it's in the past
+        var ptDate=new Date(pt.date);
+        var isPast=ptDate<=new Date();
+        var actualForDate=isPast?calcOverallPct():null; // simplified
+        var ptVar=actPt!==null&&actualForDate!==null?Math.round((actualForDate-actPt)*10)/10:null;
+        var ptVarCol=ptVar===null?'var(--dimL)':ptVar>=0?'var(--green)':'var(--red)';
+        h+='<tr>';
+        h+='<td>'+pt.date+'</td>';
+        h+='<td style="text-align:center;font-weight:700;color:var(--blue);">'+pt.pct+'%</td>';
+        h+='<td style="text-align:center;color:var(--dimL);">'+(isPast?calcOverallPct()+'%':'—')+'</td>';
+        h+='<td style="text-align:center;color:'+ptVarCol+';">'+(ptVar!==null?(ptVar>=0?'+':'')+ptVar+'%':'—')+'</td>';
+        h+='<td><button data-dt="'+pt.date+'" onclick="plDeletePoint(this.dataset.dt);" style="padding:2px 8px;border-radius:5px;border:1px solid var(--red);background:transparent;color:var(--red);font-size:10px;cursor:pointer;">✕</button></td>';
+        h+='</tr>';
+      }
+      h+='</table></div>';
+      // Validation
+      var errors=validatePlanCurve();
+      if(errors.length){
+        h+='<div style="margin-top:8px;padding:8px 10px;background:var(--red)22;border-radius:8px;border-left:3px solid var(--red);font-size:11px;color:var(--red);">';
+        h+='⚠️ '+errors.join(' &nbsp;·&nbsp; ')+'</div>';
+      } else {
+        h+='<div style="margin-top:8px;padding:6px 10px;background:var(--green)22;border-radius:8px;font-size:11px;color:var(--green);">✅ Curve is valid</div>';
+      }
+    } else {
+      h+='<div style="text-align:center;padding:20px;color:var(--dimL);font-size:12px;">No baseline defined yet — generate or import a curve above</div>';
+    }
+    h+='</div>';
+
+    // Clear button
+    if(PLAN.curve.length){
+      h+='<button onclick="plClearCurve();" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--red);background:transparent;color:var(--red);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:8px;">🗑 Clear Entire Curve</button>';
+    }
+  }
+
+  // ── ACTIVITIES TAB ──────────────────────────────────────────
+  else if(_plTab==='activities'){
+    var disciplineList=[
+      {id:'bridges',   label:'🌉 Bridges',   examples:['Pile Cap Concrete','Pier Shaft Concrete','Girder Erection','Deck Slab']},
+      {id:'roads',     label:'🛣 Roads',      examples:['Sub-base Compaction','Base Course','Asphalt Binder','Asphalt Wearing']},
+      {id:'utilities', label:'🔧 Utilities',  examples:['Trenching','Pipe Installation','Backfilling','Testing']},
+      {id:'fillslope', label:'⛰️ Fill Slope', examples:['Fill & Compaction','Grading','Erosion Protection']},
+    ];
+
+    h+='<div class="card">';
+    h+='<div class="ct">Add Planned Activity</div>';
+    h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;">Discipline</label>';
+    h+='<select id="pl-act-disc" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:13px;margin-bottom:8px;">';
+    for(var dl=0;dl<disciplineList.length;dl++){
+      h+='<option value="'+disciplineList[dl].id+'">'+disciplineList[dl].label+'</option>';
+    }
+    h+='</select>';
+    h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;">Activity Name</label>';
+    h+='<input type="text" id="pl-act-name" placeholder="e.g. Pile Cap Concrete — Bridge A" ';
+    h+='style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:13px;margin-bottom:8px;">';
+    h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">';
+    h+='<div><label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;">Start Date</label>';
+    h+='<input type="date" id="pl-act-start" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:13px;"></div>';
+    h+='<div><label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;">End Date</label>';
+    h+='<input type="date" id="pl-act-end" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:13px;"></div>';
+    h+='</div>';
+    h+='<div style="display:grid;grid-template-columns:2fr 1fr;gap:6px;margin-bottom:10px;">';
+    h+='<div><label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;">Expected Daily Output</label>';
+    h+='<input type="number" id="pl-act-output" placeholder="e.g. 2" min="0" step="0.1" ';
+    h+='style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:13px;"></div>';
+    h+='<div><label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;">Unit</label>';
+    h+='<input type="text" id="pl-act-unit" placeholder="piers/day" ';
+    h+='style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:13px;"></div>';
+    h+='</div>';
+    h+='<button onclick="plAddAct();" style="width:100%;padding:10px;background:var(--gold);border:none;border-radius:8px;color:#000;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;">+ Add Planned Activity</button>';
+    h+='</div>';
+
+    // Activity list per discipline
+    for(var dl=0;dl<disciplineList.length;dl++){
+      var disc=disciplineList[dl];
+      var acts=PLAN.activities[disc.id]||[];
+      h+='<div class="card">';
+      h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">';
+      h+='<div class="ct" style="margin-bottom:0;">'+disc.label+'</div>';
+      h+='<span style="font-size:10px;color:var(--dimL);">'+acts.length+' planned</span>';
+      h+='</div>';
+      if(!acts.length){
+        h+='<div style="font-size:11px;color:var(--dimL);font-style:italic;padding:4px 0;">No activities planned — add above</div>';
+        h+='<div style="font-size:10px;color:var(--dimL);margin-top:4px;">Examples: '+disc.examples.join(', ')+'</div>';
+      } else {
+        h+='<table class="tbl"><tr><th>Activity</th><th>Start</th><th>End</th><th>Output</th><th></th></tr>';
+        for(var ai=0;ai<acts.length;ai++){
+          var act=acts[ai];
+          var today2=new Date().toISOString().slice(0,10);
+          var isActive=act.start<=today2&&act.end>=today2;
+          var isFuture=act.start>today2;
+          var rowBg=isActive?'background:var(--blue)11;':'';
+          h+='<tr style="'+rowBg+'">';
+          h+='<td><span style="font-weight:600;">'+(isActive?'🟢 ':isFuture?'🔵 ':'✅ ')+act.name+'</span></td>';
+          h+='<td style="font-size:10px;">'+act.start+'</td>';
+          h+='<td style="font-size:10px;">'+act.end+'</td>';
+          h+='<td style="font-size:10px;">'+(act.output?act.output+' '+act.unit:'—')+'</td>';
+          h+='<td><button data-disc="'+disc.id+'" data-id="'+act.id+'" onclick="plDeleteAct(this.dataset.disc,this.dataset.id);" ';
+          h+='style="padding:2px 8px;border-radius:5px;border:1px solid var(--red);background:transparent;color:var(--red);font-size:10px;cursor:pointer;">✕</button></td>';
+          h+='</tr>';
+        }
+        h+='</table>';
+      }
+      h+='</div>';
+    }
+  }
+
+  // ── COMPARE TAB ──────────────────────────────────────────────
+  else if(_plTab==='compare'){
+    var comp2=comparePlannedActual();
+    h+='<div class="card">';
+    h+='<div class="ct">⚖️ Planned vs Actual Comparison</div>';
+    if(!comp2.hasBaseline){
+      h+='<div style="text-align:center;padding:20px;">';
+      h+='<div style="font-size:28px;margin-bottom:8px;">📈</div>';
+      h+='<div style="font-size:13px;font-weight:700;color:var(--fg);margin-bottom:6px;">No baseline defined</div>';
+      h+='<div style="font-size:12px;color:var(--dimL);">Go to S-Curve tab and generate or import your planned progress curve</div>';
+      h+='</div>';
+    } else {
+      // Comparison KPIs
+      var vC3=comp2.variance>=0?'var(--green)':'var(--red)';
+      h+='<div style="display:flex;gap:8px;margin-bottom:12px;">';
+      h+='<div style="flex:1;background:var(--panel);border-radius:8px;padding:10px;text-align:center;">';
+      h+='<div style="font-size:9px;color:var(--dimL);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Planned Today</div>';
+      h+='<div style="font-size:22px;font-weight:900;color:var(--blue);">'+(comp2.planned!==null?comp2.planned+'%':'N/A')+'</div>';
+      h+='</div>';
+      h+='<div style="flex:1;background:var(--panel);border-radius:8px;padding:10px;text-align:center;">';
+      h+='<div style="font-size:9px;color:var(--dimL);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Actual Today</div>';
+      h+='<div style="font-size:22px;font-weight:900;color:var(--gold);">'+comp2.actual+'%</div>';
+      h+='</div>';
+      h+='<div style="flex:1;background:var(--panel);border-radius:8px;padding:10px;text-align:center;">';
+      h+='<div style="font-size:9px;color:var(--dimL);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Variance</div>';
+      h+='<div style="font-size:22px;font-weight:900;color:'+vC3+';">'+(comp2.variance>=0?'+':'')+comp2.variance+'%</div>';
+      h+='</div>';
+      h+='</div>';
+      // Status banner
+      var sIcon=comp2.status==='ahead'?'✅':comp2.status==='behind'?'⚠️':'ℹ️';
+      var sBg=comp2.status==='ahead'?'var(--green)22':comp2.status==='behind'?'var(--red)22':'var(--panel)';
+      var sCol=comp2.status==='ahead'?'var(--green)':comp2.status==='behind'?'var(--red)':'var(--dimL)';
+      h+='<div style="padding:10px 12px;background:'+sBg+';border-radius:8px;border-left:3px solid '+sCol+';margin-bottom:12px;font-size:12px;color:'+sCol+';font-weight:700;">';
+      h+=sIcon+' '+( comp2.status==='ahead'?'Project is '+comp2.variance+'% ahead of the baseline schedule.':
+                     comp2.status==='behind'?'Project is '+Math.abs(comp2.variance)+'% behind the baseline schedule.':
+                     'On schedule.')+'</div>';
+      // Full curve comparison table
+      if(comp2.curve.length){
+        h+='<div style="font-size:11px;font-weight:700;color:var(--dimL);margin-bottom:6px;">Baseline Curve vs Actual</div>';
+        h+='<div style="max-height:280px;overflow-y:auto;">';
+        h+='<table class="tbl"><tr><th>Date</th><th>Planned</th><th>Actual</th><th>Variance</th><th>Status</th></tr>';
+        var sortedC=comp2.curve.slice().sort(function(a,b){return a.date<b.date?-1:1;});
+        var todayD=new Date().toISOString().slice(0,10);
+        for(var ci=0;ci<sortedC.length;ci++){
+          var cp=sortedC[ci];
+          var isPast2=cp.date<=todayD;
+          var cActual=isPast2?comp2.actual:null;
+          var cVar=isPast2?Math.round((cActual-cp.pct)*10)/10:null;
+          var cVCol=cVar===null?'var(--dimL)':cVar>=0?'var(--green)':'var(--red)';
+          var cSt=cVar===null?'—':cVar>=0?'✅ Ahead':'⚠️ Behind';
+          h+='<tr><td>'+cp.date+'</td>';
+          h+='<td style="text-align:center;color:var(--blue);font-weight:700;">'+cp.pct+'%</td>';
+          h+='<td style="text-align:center;color:var(--gold);">'+(isPast2?cActual+'%':'—')+'</td>';
+          h+='<td style="text-align:center;color:'+cVCol+';">'+(cVar!==null?(cVar>=0?'+':'')+cVar+'%':'—')+'</td>';
+          h+='<td style="text-align:center;font-size:10px;">'+cSt+'</td></tr>';
+        }
+        h+='</table></div>';
+      }
+    }
+    h+='</div>';
+
+    // Today planned activities
+    var todayPlan2=getPlannedToday();
+    h+='<div class="card">';
+    h+='<div class="ct">📋 Today\'s Planned Activities</div>';
+    if(!todayPlan2.activities.length){
+      h+='<div style="font-size:12px;color:var(--dimL);">No activities planned for today</div>';
+    } else {
+      for(var tai=0;tai<todayPlan2.activities.length;tai++){
+        var ta=todayPlan2.activities[tai];
+        h+='<div style="padding:7px 0;border-bottom:1px solid var(--border);font-size:12px;">';
+        h+='<span style="color:var(--dimL);">'+ta.discipline.toUpperCase()+'</span> &nbsp;→&nbsp; ';
+        h+='<span style="font-weight:700;color:var(--fg);">'+ta.name+'</span>';
+        if(ta.output) h+='<span style="color:var(--dimL);"> &nbsp;('+ta.output+' '+ta.unit+')</span>';
+        h+='</div>';
+      }
+    }
+    h+='</div>';
+  }
+
+  document.getElementById('pg-pl').innerHTML=h;
+}
+
+// ── Sub-tab switch ─────────────────────────────────────────────
+function plSwitchTab(tab){ _plTab=tab; rPl(); }
+
+// ── Button handlers ────────────────────────────────────────────
+function plGenCurve(){
+  var start=document.getElementById('pl-gen-start').value;
+  var end=document.getElementById('pl-gen-end').value;
+  var shape=document.getElementById('pl-gen-shape').value;
+  if(!start||!end){flash('Select start and end dates');return;}
+  if(start>=end){flash('Start must be before end');return;}
+  var n=planGenerateMonthly(start,end,shape);
+  flash('Generated '+n+' monthly baseline points ✅');
+  rPl();
+}
+
+function plAddPoint(){
+  var date=document.getElementById('pl-pt-date').value;
+  var pct=document.getElementById('pl-pt-pct').value;
+  if(!date||pct===''){flash('Enter date and planned %');return;}
+  if(planSetCurvePoint(date,pct)){
+    flash('Point added ✅');
+    rPl();
+  }
+}
+
+function plDeletePoint(dateStr){
+  planDeleteCurvePoint(dateStr);
+  flash('Point removed');
+  rPl();
+}
+
+function plClearCurve(){
+  if(!confirm('Clear the entire baseline curve?')) return;
+  PLAN.curve=[];
+  persist();
+  flash('Curve cleared');
+  rPl();
+}
+
+function plImportCSV(input){
+  if(!input.files||!input.files[0]) return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var result=planImportCSV(e.target.result);
+    flash('Imported '+result.imported+' points'+(result.errors.length?' ('+result.errors.length+' errors)':'')+'  ✅');
+    rPl();
+  };
+  reader.readAsText(input.files[0]);
+}
+
+function plAddAct(){
+  var disc=document.getElementById('pl-act-disc').value;
+  var name=document.getElementById('pl-act-name').value;
+  var start=document.getElementById('pl-act-start').value;
+  var end=document.getElementById('pl-act-end').value;
+  var output=document.getElementById('pl-act-output').value;
+  var unit=document.getElementById('pl-act-unit').value;
+  if(!name||!start||!end){flash('Fill in name, start and end date');return;}
+  if(planAddActivity(disc,name,start,end,output,unit)){
+    flash('Activity added ✅');
+    rPl();
+  }
+}
+
+function plDeleteAct(disc,id){
+  planDeleteActivity(disc,id);
+  flash('Activity deleted');
+  rPl();
+}
+
+
+// ══════════════════════════════════════════════════════════════
+// PHASE 4 — DELAY DETECTION ENGINE
+// ══════════════════════════════════════════════════════════════
+
+function snapshotProgress(){
+  var today=new Date().toISOString().slice(0,10);
+  var pct=calcOverallPct();
+  // Remove today's existing snapshot if any
+  DAILY.snapshots=DAILY.snapshots.filter(function(s){return s.date!==today;});
+  DAILY.snapshots.push({date:today,pct:pct});
+  DAILY.snapshots.sort(function(a,b){return a.date<b.date?-1:1;});
+  persist();
+}
+
+function detectDelays(){
+  var today=new Date().toISOString().slice(0,10);
+  var delays=[];
+  var comp=comparePlannedActual();
+
+  // ── 1. Planned vs Actual ─────────────────────────────────
+  if(comp.hasBaseline&&comp.planned!==null){
+    var gap=Math.round((comp.actual-comp.planned)*10)/10;
+    if(gap<0){
+      delays.push({
+        type: gap<-5?'critical':'warning',
+        discipline: 'Overall',
+        title: 'Schedule Delay Detected',
+        detail: 'Actual progress ('+comp.actual+'%) is '+Math.abs(gap)+'% below planned ('+comp.planned+'%)',
+        impact: gap<-5?'High — critical path at risk':'Medium — monitor closely',
+        action: 'Review with contractor and issue recovery schedule request'
+      });
+    }
+    if(comp.actual===0&&comp.planned>0){
+      delays.push({
+        type:'critical',
+        discipline:'Overall',
+        title:'Zero Progress — Critical Alert',
+        detail:'No progress recorded against planned '+comp.planned+'%',
+        impact:'High — project has not started or data not updated',
+        action:'Verify site mobilization and update all discipline progress'
+      });
+    }
+  }
+
+  // ── 2. Stagnation detection (3-day rule) ──────────────────
+  var sorted=DAILY.snapshots.slice().sort(function(a,b){return a.date<b.date?-1:1;});
+  if(sorted.length>=3){
+    var last3=sorted.slice(-3);
+    var minPct=Math.min(last3[0].pct,last3[1].pct,last3[2].pct);
+    var maxPct=Math.max(last3[0].pct,last3[1].pct,last3[2].pct);
+    if(maxPct-minPct<0.5&&maxPct>0){
+      delays.push({
+        type:'warning',
+        discipline:'Overall',
+        title:'Progress Stagnation — 3-Day Alert',
+        detail:'Progress has been static at ~'+Math.round(maxPct*10)/10+'% for the last 3 recorded days',
+        impact:'Medium — indicates work stoppage or data entry gap',
+        action:'Confirm site activity and update all discipline stages'
+      });
+    }
+  }
+
+  // ── 3. Discipline-specific checks ─────────────────────────
+  // Bridges: any bridge with 0% and project >10% elapsed
+  var tp=timePct?timePct():0;
+  if(tp>10){
+    for(var bi=0;bi<BRIDGES.length;bi++){
+      var bp=brPct2?brPct2(BRIDGES[bi].id):0;
+      if(bp===0){
+        delays.push({
+          type:'warning',
+          discipline:'Bridges',
+          title:'Bridge '+BRIDGES[bi].id+' — Not Started',
+          detail:'Bridge '+BRIDGES[bi].id+' shows 0% progress with '+tp+'% of project time elapsed',
+          impact:'Medium — may affect overall schedule',
+          action:'Confirm mobilization status for Bridge '+BRIDGES[bi].id
+        });
+      }
+    }
+  }
+
+  // Roads: both roads at 0 and project >20% elapsed
+  var rdPct4=Math.round(((ROADS.ibn.pct||0)+(ROADS.sattam.pct||0))/2*10)/10;
+  if(rdPct4===0&&tp>20){
+    delays.push({
+      type:'warning',
+      discipline:'Roads',
+      title:'Road Works — Not Started',
+      detail:'No road activity recorded despite '+tp+'% of project time elapsed',
+      impact:'Medium — road works should be active by now',
+      action:'Coordinate with contractor on road pavement schedule'
+    });
+  }
+
+  // Utilities: any active network with weight>0 and pct=0 and tp>15
+  var utDelay=false;
+  for(var ni=0;ni<UT_ORDER.length;ni++){
+    var n=UTIL_NETWORKS[UT_ORDER[ni]];
+    if(n.active&&(n.weight||0)>0&&(n.pct||0)===0&&tp>15&&!utDelay){
+      delays.push({
+        type:'info',
+        discipline:'Utilities',
+        title:'Utility Networks — No Progress Recorded',
+        detail:'Active utility networks have 0% progress with '+tp+'% of project time elapsed',
+        impact:'Low-Medium — utilities must be complete before road surfacing',
+        action:'Update utility activity stages in the Utilities module'
+      });
+      utDelay=true;
+    }
+  }
+
+  return delays;
+}
+
+// ── Build context string for AI ───────────────────────────────
+function buildAIContext(){
+  var today=new Date().toISOString().slice(0,10);
+  var comp=comparePlannedActual();
+  var delays=detectDelays();
+  var tp=timePct?timePct():0;
+  var dr=daysLeft?daysLeft():'?';
+  var todayPlan=getPlannedToday();
+
+  // Today photos and entries
+  var todayPhotos=DAILY.photos.filter(function(p){return p.date===today;});
+  var todayEntries=DAILY.entries.filter(function(e){return e.date===today;});
+
+  // Bridge progress summary
+  var brSummary=[];
+  for(var bi=0;bi<BRIDGES.length;bi++){
+    var bp2=brPct2?brPct2(BRIDGES[bi].id):0;
+    if(bp2>0) brSummary.push('Bridge '+BRIDGES[bi].id+': '+bp2+'%');
+  }
+
+  var ctx='IC1 Road Improvements - Daily Report Context\n';
+  ctx+='Date: '+today+'\n';
+  ctx+='Overall Progress: '+comp.actual+'%\n';
+  ctx+='Planned Progress Today: '+(comp.planned!==null?comp.planned+'%':'not defined')+'\n';
+  ctx+='Schedule Variance: '+(comp.variance!==null?(comp.variance>=0?'+':'')+comp.variance+'%':'n/a')+'\n';
+  ctx+='Time Elapsed: '+tp+'%\n';
+  ctx+='Days Remaining: '+dr+'\n';
+  ctx+='\nDISCIPLINE STATUS:\n';
+  ctx+='- Bridges: '+(brSummary.length?brSummary.join(', '):'no progress recorded')+'\n';
+  ctx+='- Ibn Saud Road: '+(ROADS.ibn.pct||0)+'%\n';
+  ctx+='- Prince Sattam Road: '+(ROADS.sattam.pct||0)+'%\n';
+  var utPct4=0,utActive=0;
+  for(var ni=0;ni<UT_ORDER.length;ni++){
+    var n=UTIL_NETWORKS[UT_ORDER[ni]];
+    if(n.active&&(n.weight||0)>0){utPct4+=n.pct||0;utActive++;}
+  }
+  ctx+='- Utilities: '+(utActive>0?Math.round(utPct4/utActive*10)/10+'% avg across '+utActive+' networks':'not configured')+'\n';
+  ctx+='- Fill Slope: '+(typeof calcFsEarned==="function"?Math.round(calcFsEarned()/0.7*100*10)/10+'%':'0%')+'\n';
+
+  if(todayPlan.activities.length){
+    ctx+='\nPLANNED ACTIVITIES TODAY:\n';
+    for(var ti=0;ti<todayPlan.activities.length;ti++){
+      ctx+='- '+todayPlan.activities[ti].discipline.toUpperCase()+': '+todayPlan.activities[ti].name;
+      if(todayPlan.activities[ti].output) ctx+=' ('+todayPlan.activities[ti].output+' '+todayPlan.activities[ti].unit+')';
+      ctx+='\n';
+    }
+  }
+
+  if(todayEntries.length){
+    ctx+='\nSITE ENTRIES TODAY:\n';
+    for(var ei=0;ei<todayEntries.length;ei++){
+      ctx+='- '+todayEntries[ei].discipline.toUpperCase()+' | '+todayEntries[ei].activity+' | '+todayEntries[ei].status;
+      if(todayEntries[ei].notes) ctx+=': '+todayEntries[ei].notes;
+      ctx+='\n';
+    }
+  }
+
+  if(delays.length){
+    ctx+='\nDETECTED DELAYS/ALERTS:\n';
+    for(var di2=0;di2<delays.length;di2++){
+      ctx+='- ['+delays[di2].type.toUpperCase()+'] '+delays[di2].discipline+': '+delays[di2].title+'\n';
+      ctx+='  Detail: '+delays[di2].detail+'\n';
+    }
+  }
+
+  ctx+='\nLOG ENTRIES (last 5):\n';
+  var recentLogs=LOGS.slice(-5);
+  for(var li2=0;li2<recentLogs.length;li2++){
+    ctx+='- Pier '+recentLogs[li2].pier+' (Bridge '+recentLogs[li2].bridge+'): '+recentLogs[li2].stage+' → '+recentLogs[li2].status+' on '+recentLogs[li2].date+'\n';
+  }
+
+  return ctx;
+}
+
+// ── Generate AI Daily Report ───────────────────────────────────
+async function generateAIReport(){
+  if(DAILY_GENERATING){flash('Report generation in progress…');return;}
+  // No API key required — handled by platform
+
+  DAILY_GENERATING=true;
+  var btn=document.getElementById('ai-gen-btn');
+  if(btn){btn.textContent='⏳ Generating…';btn.disabled=true;}
+
+  var ctx=buildAIContext();
+  var prompt=ctx+'\n\nBased on the project data above, write a professional daily progress report for the IC1 Road Improvements project. Structure your response EXACTLY as follows using these section headers:\n\n[ACHIEVEMENTS]\n(2-4 bullet points of what was accomplished today or recently)\n\n[DELAYS]\n(2-4 bullet points of any delays, if none write "No significant delays detected")\n\n[RISKS]\n(2-3 bullet points of upcoming risks)\n\n[TOMORROWS_PLAN]\n(3-4 bullet points of planned activities for tomorrow)\n\n[EXECUTIVE_SENTENCE]\n(One professional sentence summarizing the overall project status in consultant-grade language)\n\nKeep each bullet point concise (max 2 lines). Tone: professional, direct, consultant-grade. Do not repeat the data verbatim — synthesize and interpret it.';
+
+  try{
+    var resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+    var data=await resp.json();
+    var text='';
+    if(data.content&&data.content[0]&&data.content[0].text){
+      text=data.content[0].text;
+    } else if(data.error){
+      throw new Error(data.error.message||'API error');
+    }
+    // Parse sections
+    var report=parseAIReport(text);
+    // Save to history
+    var today=new Date().toISOString().slice(0,10);
+    DAILY.reports=DAILY.reports.filter(function(r){return r.date!==today;});
+    DAILY.reports.push({
+      id:'dr_'+Date.now(),
+      date:today,
+      generated:new Date().toISOString(),
+      raw:text,
+      parsed:report,
+      delays:detectDelays(),
+      overall:calcOverallPct()
+    });
+    persist();
+    DAILY_GENERATING=false;
+    rAi();
+    flash('AI Report generated ✅');
+  }catch(err){
+    DAILY_GENERATING=false;
+    if(btn){btn.textContent='🤖 Generate AI Report';btn.disabled=false;}
+    flash('Error: '+err.message);
+    console.error(err);
+  }
+}
+
+function parseAIReport(text){
+  var sections={achievements:[],delays:[],risks:[],tomorrow:[],executive:''};
+  var current=null;
+  var lines=text.split(/\r?\n/);
+  for(var i=0;i<lines.length;i++){
+    var line=lines[i].trim();
+    if(!line) continue;
+    if(line==='[ACHIEVEMENTS]'){current='achievements';continue;}
+    if(line==='[DELAYS]'){current='delays';continue;}
+    if(line==='[RISKS]'){current='risks';continue;}
+    if(line==='[TOMORROWS_PLAN]'){current='tomorrow';continue;}
+    if(line==='[EXECUTIVE_SENTENCE]'){current='executive';continue;}
+    if(current==='executive'){sections.executive+=line+' ';continue;}
+    if(current&&line.match(/^[-•*]/)){
+      sections[current].push(line.replace(/^[-*]\s*/,''));
+    } else if(current&&current!=='executive'&&line.length>10){
+      sections[current].push(line);
+    }
+  }
+  sections.executive=sections.executive.trim();
+  return sections;
+}
+
+
+// ══════════════════════════════════════════════════════════════
+// PHASE 4 — AI DAILY REPORT UI
+// ══════════════════════════════════════════════════════════════
+
+var _aiTab = 'report'; // 'report' | 'photos' | 'entries' | 'history'
+
+function rAi(){
+  var today = new Date().toISOString().slice(0,10);
+  var todayReport = null;
+  for(var i=DAILY.reports.length-1;i>=0;i--){
+    if(DAILY.reports[i].date===today){todayReport=DAILY.reports[i];break;}
+  }
+  var delays = detectDelays();
+  var comp = comparePlannedActual();
+
+  var h = '';
+
+  // ── Header ─────────────────────────────────────────────────
+  h+='<div class="card" style="border-left:3px solid var(--blue);background:linear-gradient(135deg,var(--card),#0d1420);">';
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">';
+  h+='<div>';
+  h+='<div class="ct" style="margin-bottom:2px;">🤖 AI Daily Report</div>';
+  h+='<div style="font-size:10px;color:var(--dimL);">'+today+' &nbsp;·&nbsp; Powered by Claude</div>';
+  h+='</div>';
+  h+='<button id="ai-gen-btn" onclick="aiGenClick();" style="padding:9px 14px;background:var(--blue);border:none;border-radius:8px;color:#fff;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;">';
+  h+=(DAILY_GENERATING?'⏳ Generating...':'🤖 Generate Report')+'</button>';
+  h+='</div>';
+
+  // Alert strip
+  if(delays.length>0){
+    var critCount=delays.filter(function(d){return d.type==='critical';}).length;
+    var warnCount=delays.filter(function(d){return d.type==='warning';}).length;
+    var alertCol=critCount>0?'var(--red)':'var(--amber)';
+    h+='<div style="padding:7px 10px;background:'+(critCount>0?'var(--red)22':'var(--amber)22')+';border-radius:8px;border-left:3px solid '+alertCol+';font-size:11px;color:'+alertCol+';font-weight:700;">';
+    h+=(critCount>0?'🔴 '+critCount+' Critical':'')+(critCount>0&&warnCount>0?' · ':'')+(warnCount>0?'⚠️ '+warnCount+' Warning':'')+(critCount===0&&warnCount===0?'✅ No delays detected':'')+' detected by delay engine</div>';
+  } else {
+    h+='<div style="padding:7px 10px;background:var(--green)22;border-radius:8px;border-left:3px solid var(--green);font-size:11px;color:var(--green);">✅ No delays detected — project on track</div>';
+  }
+
+  // AI always ready — no key warning needed
+  h+='</div>';
+
+  // ── Sub-tabs ─────────────────────────────────────────────────
+  h+='<div style="display:flex;gap:4px;margin-bottom:12px;overflow-x:auto;">';
+  var aiTabs=[['report','📄 Report'],['entries','📝 Site Log'],['photos','📸 Photos'],['delays','⚠️ Delays'],['history','🗂 History']];
+  for(var st=0;st<aiTabs.length;st++){
+    var isOn=_aiTab===aiTabs[st][0];
+    h+='<button data-tab="'+aiTabs[st][0]+'" onclick="aiSwitch(this.dataset.tab);" ';
+    h+='style="flex-shrink:0;padding:7px 12px;border-radius:8px;border:1px solid '+(isOn?'var(--blue)':'var(--border)')+';';
+    h+='background:'+(isOn?'var(--blue)':'transparent')+';';
+    h+='color:'+(isOn?'#fff':'var(--dimL)')+';font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">';
+    h+=aiTabs[st][1]+'</button>';
+  }
+  h+='</div>';
+
+  // ── REPORT TAB ────────────────────────────────────────────────
+  if(_aiTab==='report'){
+    if(!todayReport){
+      h+='<div class="card" style="text-align:center;padding:28px;">';
+      h+='<div style="font-size:36px;margin-bottom:10px;">🤖</div>';
+      h+='<div style="font-size:14px;font-weight:700;color:var(--fg);margin-bottom:6px;">No report generated today</div>';
+      h+='<div style="font-size:12px;color:var(--dimL);margin-bottom:16px;">Add site entries and photos, then tap "Generate Report" to create today\'s AI summary</div>';
+      h+='<button onclick="aiGenClick();" style="padding:10px 24px;background:var(--blue);border:none;border-radius:8px;color:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;">🤖 Generate Now</button>';
+      h+='</div>';
+
+      // Show delay analysis even without AI report
+      if(delays.length>0){
+        h+='<div class="card">';
+        h+='<div class="ct">⚠️ Delay Detection Results</div>';
+        for(var di=0;di<delays.length;di++){
+          var d=delays[di];
+          var dCol=d.type==='critical'?'var(--red)':d.type==='warning'?'var(--amber)':'var(--blue)';
+          h+='<div style="border:1px solid '+dCol+'33;border-radius:10px;padding:10px 12px;margin-bottom:8px;background:'+dCol+'11;">';
+          h+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">';
+          h+='<span style="font-size:11px;font-weight:700;color:'+dCol+';background:'+dCol+'22;padding:2px 8px;border-radius:6px;">'+d.type.toUpperCase()+'</span>';
+          h+='<span style="font-size:11px;color:var(--dimL);">'+d.discipline+'</span>';
+          h+='</div>';
+          h+='<div style="font-size:12px;font-weight:700;color:var(--fg);margin-bottom:3px;">'+d.title+'</div>';
+          h+='<div style="font-size:11px;color:var(--dimL);">'+d.detail+'</div>';
+          h+='<div style="font-size:11px;color:'+dCol+';margin-top:4px;">→ '+d.action+'</div>';
+          h+='</div>';
+        }
+        h+='</div>';
+      }
+    } else {
+      var rpt=todayReport.parsed;
+      // Executive sentence
+      if(rpt.executive){
+        h+='<div class="card" style="border-left:3px solid var(--blue);background:var(--blue)11;">';
+        h+='<div style="font-size:12px;font-style:italic;color:var(--fg);line-height:1.7;">'+rpt.executive+'</div>';
+        h+='</div>';
+      }
+      // Sections
+      var sections=[
+        {key:'achievements',label:'✅ Achievements',col:'var(--green)'},
+        {key:'delays',label:'⚠️ Delays',col:'var(--red)'},
+        {key:'risks',label:'🎯 Risks',col:'var(--amber)'},
+        {key:'tomorrow',label:'📅 Tomorrow\'s Plan',col:'var(--blue)'},
+      ];
+      for(var si=0;si<sections.length;si++){
+        var sec=sections[si];
+        var items=rpt[sec.key]||[];
+        h+='<div class="card" style="border-left:3px solid '+sec.col+';">';
+        h+='<div class="ct" style="margin-bottom:8px;color:'+sec.col+';">'+sec.label+'</div>';
+        if(!items.length){
+          h+='<div style="font-size:12px;color:var(--dimL);font-style:italic;">None reported</div>';
+        } else {
+          for(var ii=0;ii<items.length;ii++){
+            h+='<div style="display:flex;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);">';
+            h+='<span style="color:'+sec.col+';font-size:12px;flex-shrink:0;">•</span>';
+            h+='<span style="font-size:12px;color:var(--fg);line-height:1.6;">'+items[ii]+'</span>';
+            h+='</div>';
+          }
+        }
+        h+='</div>';
+      }
+      // Delay detection cards
+      if(delays.length>0){
+        h+='<div class="card" style="border-left:3px solid var(--red);">';
+        h+='<div class="ct" style="margin-bottom:8px;">🔍 Delay Detection Engine</div>';
+        for(var di=0;di<delays.length;di++){
+          var d2=delays[di];
+          var dc=d2.type==='critical'?'var(--red)':d2.type==='warning'?'var(--amber)':'var(--blue)';
+          h+='<div style="padding:8px 10px;background:'+dc+'11;border-radius:8px;border-left:3px solid '+dc+';margin-bottom:7px;">';
+          h+='<div style="font-size:11px;font-weight:800;color:'+dc+';margin-bottom:2px;">['+d2.type.toUpperCase()+'] '+d2.discipline+' — '+d2.title+'</div>';
+          h+='<div style="font-size:11px;color:var(--dimL);">'+d2.detail+'</div>';
+          h+='<div style="font-size:11px;color:'+dc+';margin-top:3px;font-weight:700;">→ '+d2.action+'</div>';
+          h+='</div>';
+        }
+        h+='</div>';
+      }
+      // Download PDF button
+      h+='<button onclick="dlDailyPDF();" style="width:100%;padding:12px;background:var(--gold);border:none;border-radius:10px;color:#000;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;margin-top:4px;">📥 Download Daily Report PDF</button>';
+    }
+  }
+
+  // ── SITE LOG TAB ──────────────────────────────────────────────
+  else if(_aiTab==='entries'){
+    h+='<div class="card">';
+    h+='<div class="ct">📝 Log Site Activity</div>';
+    h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;">Discipline</label>';
+    h+='<select id="ai-ent-disc" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:13px;margin-bottom:8px;" onchange="aiUpdateActivities()">';
+    var discs4=[['bridges','🌉 Bridges'],['roads','🛣 Roads'],['utilities','🔧 Utilities'],['fillslope','⛰️ Fill Slope'],['preliminary','📋 Preliminary']];
+    for(var di4=0;di4<discs4.length;di4++) h+='<option value="'+discs4[di4][0]+'">'+discs4[di4][1]+'</option>';
+    h+='</select>';
+    h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;">Activity</label>';
+    h+='<input id="ai-ent-act" type="text" placeholder="e.g. Pier 3A — Pile Cap Concreting" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:13px;margin-bottom:8px;">';
+    h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;">Status</label>';
+    h+='<div style="display:flex;gap:6px;margin-bottom:8px;">';
+    var statuses4=['Completed','In Progress','Delayed','Not Started'];
+    var sCols4=['var(--green)','var(--blue)','var(--red)','var(--dimL)'];
+    for(var si4=0;si4<statuses4.length;si4++){
+      h+='<button data-status="'+statuses4[si4]+'" onclick="aiSelectStatus(this);" ';
+      h+='style="flex:1;padding:7px 4px;border-radius:7px;border:2px solid '+sCols4[si4]+';background:transparent;color:var(--dimL);font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;" id="ai-st-'+si4+'">'+statuses4[si4]+'</button>';
+    }
+    h+='</div>';
+    h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;">Notes (optional)</label>';
+    h+='<textarea id="ai-ent-notes" placeholder="Any observations, issues or remarks..." style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:12px;font-family:inherit;height:60px;resize:none;outline:none;margin-bottom:8px;"></textarea>';
+    h+='<button onclick="aiAddEntry();" style="width:100%;padding:10px;background:var(--gold);border:none;border-radius:8px;color:#000;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;">+ Log Activity</button>';
+    h+='</div>';
+    // Today's entries
+    var todayEntries2=DAILY.entries.filter(function(e){return e.date===today;});
+    h+='<div class="card"><div class="ct">Today\'s Log ('+todayEntries2.length+')</div>';
+    if(!todayEntries2.length){
+      h+='<div style="font-size:12px;color:var(--dimL);text-align:center;padding:12px;">No entries today — log your site activities above</div>';
+    } else {
+      for(var ei2=0;ei2<todayEntries2.length;ei2++){
+        var e2=todayEntries2[ei2];
+        var eCol=e2.status==='Completed'?'var(--green)':e2.status==='In Progress'?'var(--blue)':e2.status==='Delayed'?'var(--red)':'var(--dimL)';
+        h+='<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:flex-start;">';
+        h+='<span style="font-size:9px;font-weight:700;color:'+eCol+';background:'+eCol+'22;padding:2px 6px;border-radius:5px;flex-shrink:0;margin-top:2px;">'+e2.status+'</span>';
+        h+='<div style="flex:1;">';
+        h+='<div style="font-size:11px;font-weight:700;color:var(--dimL);text-transform:uppercase;">'+e2.discipline+'</div>';
+        h+='<div style="font-size:12px;font-weight:600;color:var(--fg);">'+e2.activity+'</div>';
+        if(e2.notes) h+='<div style="font-size:11px;color:var(--dimL);">'+e2.notes+'</div>';
+        h+='</div>';
+        h+='<button data-eid="'+e2.id+'" onclick="aiDeleteEntry(this.dataset.eid);" style="padding:3px 8px;border-radius:5px;border:1px solid var(--red);background:transparent;color:var(--red);font-size:10px;cursor:pointer;">✕</button>';
+        h+='</div>';
+      }
+    }
+    h+='</div>';
+  }
+
+  // ── PHOTOS TAB ────────────────────────────────────────────────
+  else if(_aiTab==='photos'){
+    h+='<div class="card">';
+    h+='<div class="ct">📸 Site Photos</div>';
+    h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;">Discipline</label>';
+    h+='<select id="ai-ph-disc" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:13px;margin-bottom:8px;">';
+    for(var di4=0;di4<discs4.length;di4++) h+='<option value="'+discs4[di4][0]+'">'+discs4[di4][1]+'</option>';
+    h+='</select>';
+    h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;">Caption / Description</label>';
+    h+='<input id="ai-ph-cap" type="text" placeholder="e.g. Bridge A - Pier 3: Formwork installed" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:13px;margin-bottom:8px;">';
+    h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;">Select Photo</label>';
+    h+='<input type="file" id="ai-ph-file" accept="image/*" capture="environment" onchange="aiAddPhoto(this);" style="width:100%;padding:6px;font-size:12px;color:var(--fg);margin-bottom:4px;">';
+    h+='<div style="font-size:10px;color:var(--dimL);">Photos are stored locally and included in the daily PDF report</div>';
+    h+='</div>';
+    // Today's photos
+    var todayPhotos2=DAILY.photos.filter(function(p){return p.date===today;});
+    h+='<div class="card"><div class="ct">Today\'s Photos ('+todayPhotos2.length+')</div>';
+    if(!todayPhotos2.length){
+      h+='<div style="font-size:12px;color:var(--dimL);text-align:center;padding:16px;">No photos today</div>';
+    } else {
+      h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
+      for(var pi=0;pi<todayPhotos2.length;pi++){
+        var ph=todayPhotos2[pi];
+        h+='<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;">';
+        h+='<img src="'+ph.thumb+'" style="width:100%;height:100px;object-fit:cover;" alt="'+ph.caption+'">';
+        h+='<div style="padding:5px 6px;">';
+        h+='<div style="font-size:9px;color:var(--dimL);text-transform:uppercase;">'+ph.discipline+'</div>';
+        h+='<div style="font-size:10px;color:var(--fg);font-weight:600;">'+ph.caption+'</div>';
+        h+='<button data-pid="'+ph.id+'" onclick="aiDeletePhoto(this.dataset.pid);" style="margin-top:4px;padding:2px 8px;border-radius:5px;border:1px solid var(--red);background:transparent;color:var(--red);font-size:9px;cursor:pointer;">Delete</button>';
+        h+='</div></div>';
+      }
+      h+='</div>';
+    }
+    h+='</div>';
+  }
+
+  // ── DELAYS TAB ────────────────────────────────────────────────
+  else if(_aiTab==='delays'){
+    h+='<div class="card" style="border-left:3px solid var(--red);">';
+    h+='<div class="ct">⚠️ Delay Detection Engine</div>';
+    h+='<div style="font-size:11px;color:var(--dimL);margin-bottom:10px;">Automated analysis of planned vs actual, stagnation, and discipline-specific rules</div>';
+    if(!delays.length){
+      h+='<div style="text-align:center;padding:20px;">';
+      h+='<div style="font-size:28px;margin-bottom:8px;">✅</div>';
+      h+='<div style="font-size:13px;font-weight:700;color:var(--green);">No delays detected</div>';
+      h+='<div style="font-size:11px;color:var(--dimL);margin-top:4px;">All disciplines appear on track</div>';
+      h+='</div>';
+    } else {
+      for(var di5=0;di5<delays.length;di5++){
+        var d3=delays[di5];
+        var dc3=d3.type==='critical'?'var(--red)':d3.type==='warning'?'var(--amber)':'var(--blue)';
+        h+='<div style="border:1px solid '+dc3+'44;border-radius:10px;padding:12px;margin-bottom:10px;background:'+dc3+'11;">';
+        h+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">';
+        h+='<span style="font-size:10px;font-weight:700;color:'+dc3+';background:'+dc3+'33;padding:2px 8px;border-radius:6px;">'+d3.type.toUpperCase()+'</span>';
+        h+='<span style="font-size:11px;font-weight:700;color:var(--dimL);">'+d3.discipline+'</span>';
+        h+='</div>';
+        h+='<div style="font-size:13px;font-weight:800;color:var(--fg);margin-bottom:4px;">'+d3.title+'</div>';
+        h+='<div style="font-size:12px;color:var(--dimL);margin-bottom:6px;">'+d3.detail+'</div>';
+        h+='<div style="font-size:11px;color:var(--fg);"><span style="color:'+dc3+';font-weight:700;">Impact:</span> '+d3.impact+'</div>';
+        h+='<div style="font-size:11px;color:var(--fg);margin-top:3px;"><span style="color:var(--gold);font-weight:700;">Action:</span> '+d3.action+'</div>';
+        h+='</div>';
+      }
+    }
+    h+='</div>';
+    // Snapshot button
+    h+='<button onclick="aiSnapshot();" style="width:100%;padding:9px;background:var(--panel);border:1px solid var(--border);border-radius:8px;color:var(--dimL);font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;margin-bottom:8px;">📸 Record Progress Snapshot (for stagnation detection)</button>';
+    h+='<div style="font-size:10px;color:var(--dimL);text-align:center;">Snapshots are recorded automatically. If progress doesn\'t change for 3+ days, an alert appears here.</div>';
+  }
+
+  // ── HISTORY TAB ───────────────────────────────────────────────
+  else if(_aiTab==='history'){
+    h+='<div class="card"><div class="ct">🗂 Report History ('+DAILY.reports.length+')</div>';
+    if(!DAILY.reports.length){
+      h+='<div style="font-size:12px;color:var(--dimL);text-align:center;padding:16px;">No reports generated yet</div>';
+    } else {
+      var sorted2=DAILY.reports.slice().reverse();
+      for(var ri=0;ri<sorted2.length;ri++){
+        var rep=sorted2[ri];
+        h+='<div style="padding:10px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">';
+        h+='<div>';
+        h+='<div style="font-size:13px;font-weight:700;color:var(--fg);">'+rep.date+'</div>';
+        h+='<div style="font-size:10px;color:var(--dimL);">Overall: '+rep.overall+'% &nbsp;·&nbsp; '+( rep.delays?rep.delays.length:0)+' alerts</div>';
+        if(rep.parsed&&rep.parsed.executive) h+='<div style="font-size:11px;color:var(--dimL);font-style:italic;max-width:80%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+rep.parsed.executive.slice(0,100)+'...</div>';
+        h+='</div>';
+        h+='<div style="display:flex;gap:6px;">';
+        h+='<button data-rid="'+rep.id+'" onclick="aiViewReport(this.dataset.rid);" style="padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--dimL);font-size:10px;cursor:pointer;">View</button>';
+        h+='<button data-rid="'+rep.id+'" onclick="aiDeleteReport(this.dataset.rid);" style="padding:5px 10px;border-radius:6px;border:1px solid var(--red);background:transparent;color:var(--red);font-size:10px;cursor:pointer;">✕</button>';
+        h+='</div></div>';
+      }
+    }
+    h+='</div>';
+  }
+
+  // ── SETTINGS TAB ─────────────────────────────────────────────
+  else if(_aiTab==='settings'){
+    h+='<div class="card" style="border-left:3px solid var(--gold);">';
+    h+='<div class="ct">⚙ Report Settings</div>';
+    h+='<div style="display:flex;align-items:center;gap:10px;padding:10px 0;margin-bottom:8px;border-bottom:1px solid var(--border);">';
+    h+='<div style="width:32px;height:32px;background:var(--green)22;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;">✅</div>';
+    h+='<div>';
+    h+='<div style="font-size:12px;font-weight:700;color:var(--fg);">AI Engine Ready</div>';
+    h+='<div style="font-size:10px;color:var(--dimL);">Powered by Claude — no configuration required</div>';
+    h+='</div></div>';
+    h+='<div style="font-size:11px;color:var(--dimL);line-height:1.7;">The AI report engine is pre-configured and ready to use. Simply tap <b style="color:var(--blue);">Generate Report</b> on the Report tab.</div>';
+    h+='</div>';
+    // Report preferences
+    h+='<div class="card">';
+    h+='<div class="ct">📋 Report Preferences</div>';
+    h+='<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">';
+    h+='<div style="font-size:12px;color:var(--fg);">Auto-snapshot progress daily</div>';
+    h+='<span style="font-size:10px;color:var(--green);font-weight:700;">Enabled</span>';
+    h+='</div>';
+    h+='<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">';
+    h+='<div style="font-size:12px;color:var(--fg);">Delay detection</div>';
+    h+='<span style="font-size:10px;color:var(--green);font-weight:700;">Active</span>';
+    h+='</div>';
+    h+='<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;">';
+    h+='<div style="font-size:12px;color:var(--fg);">K&A Branding in PDF</div>';
+    h+='<span style="font-size:10px;color:var(--green);font-weight:700;">Always on</span>';
+    h+='</div>';
+    h+='</div>';
+    // Data management
+    h+='<div class="card">';
+    h+='<div class="ct" style="color:var(--red);">🗑 Data Management</div>';
+    h+='<div style="font-size:11px;color:var(--dimL);margin-bottom:8px;">Clear all locally stored daily report data (photos, entries, reports, snapshots)</div>';
+    h+='<button onclick="aiClearAll();" style="width:100%;padding:9px;border-radius:8px;border:1px solid var(--red);background:transparent;color:var(--red);font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;">🗑 Clear All Daily Report Data</button>';
+    h+='</div>';
+  }
+
+  document.getElementById('pg-ai').innerHTML=h;
+}
+
+// ── Helper functions ───────────────────────────────────────────
+function aiSwitch(tab){ _aiTab=tab; rAi(); }
+
+function aiGenClick(){
+  if(DAILY_GENERATING) return;
+  // No API key required
+  snapshotProgress();
+  generateAIReport();
+}
+
+var _aiSelectedStatus='Completed';
+function aiSelectStatus(btn){
+  _aiSelectedStatus=btn.dataset.status;
+  var statuses5=['Completed','In Progress','Delayed','Not Started'];
+  var sCols5=['var(--green)','var(--blue)','var(--red)','var(--dimL)'];
+  for(var i=0;i<statuses5.length;i++){
+    var b=document.getElementById('ai-st-'+i);
+    if(!b) continue;
+    var isSel=statuses5[i]===_aiSelectedStatus;
+    b.style.background=isSel?sCols5[i]:'transparent';
+    b.style.color=isSel?'#000':'var(--dimL)';
+  }
+}
+
+function aiAddEntry(){
+  var disc=document.getElementById('ai-ent-disc');
+  var act=document.getElementById('ai-ent-act');
+  var notes=document.getElementById('ai-ent-notes');
+  if(!act||!act.value.trim()){flash('Enter activity name');return;}
+  var today=new Date().toISOString().slice(0,10);
+  DAILY.entries.push({
+    id:'e_'+Date.now(),
+    date:today,
+    discipline:disc?disc.value:'general',
+    activity:act.value.trim(),
+    status:_aiSelectedStatus,
+    notes:notes?notes.value.trim():'',
+    ts:Date.now()
+  });
+  act.value='';
+  if(notes) notes.value='';
+  persist();
+  rAi();
+  flash('Activity logged ✅');
+}
+
+function aiDeleteEntry(id){
+  DAILY.entries=DAILY.entries.filter(function(e){return e.id!==id;});
+  persist();rAi();
+}
+
+function aiAddPhoto(input){
+  if(!input.files||!input.files[0]) return;
+  var disc=document.getElementById('ai-ph-disc');
+  var cap=document.getElementById('ai-ph-cap');
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var base64=e.target.result;
+    // Create thumbnail
+    var img=new Image();
+    img.onload=function(){
+      var canvas=document.createElement('canvas');
+      var MAX=300;
+      var ratio=Math.min(MAX/img.width,MAX/img.height);
+      canvas.width=Math.round(img.width*ratio);
+      canvas.height=Math.round(img.height*ratio);
+      var ctx3=canvas.getContext('2d');
+      ctx3.drawImage(img,0,0,canvas.width,canvas.height);
+      var thumb=canvas.toDataURL('image/jpeg',0.7);
+      var today=new Date().toISOString().slice(0,10);
+      DAILY.photos.push({
+        id:'ph_'+Date.now(),
+        date:today,
+        discipline:disc?disc.value:'general',
+        caption:cap&&cap.value.trim()?cap.value.trim():'Site photo',
+        base64:base64,
+        thumb:thumb,
+        ts:Date.now()
+      });
+      if(cap) cap.value='';
+      persist();rAi();
+      flash('Photo added ✅');
+    };
+    img.src=base64;
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+function aiDeletePhoto(id){
+  DAILY.photos=DAILY.photos.filter(function(p){return p.id!==id;});
+  persist();rAi();
+}
+
+function aiSaveKey(){ /* No key required — handled by platform */ }
+
+function aiViewReport(id){
+  for(var i=0;i<DAILY.reports.length;i++){
+    if(DAILY.reports[i].id===id){
+      // Set as "today" view temporarily
+      _aiTab='report';
+      rAi();
+      return;
+    }
+  }
+}
+
+function aiDeleteReport(id){
+  if(!confirm('Delete this report?')) return;
+  DAILY.reports=DAILY.reports.filter(function(r){return r.id!==id;});
+  persist();rAi();flash('Report deleted');
+}
+
+function aiClearAll(){
+  if(!confirm('Clear ALL daily report data? This cannot be undone.')) return;
+  DAILY.photos=[];DAILY.entries=[];DAILY.reports=[];DAILY.snapshots=[];
+  persist();rAi();flash('Data cleared');
+}
+
+function aiSnapshot(){
+  snapshotProgress();
+  flash('Snapshot recorded ✅');
+}
+
+
+function dlDailyPDF(){
+  var today=new Date();
+  var todayStr=today.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+  var timeStr=today.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  var todayIso=today.toISOString().slice(0,10);
+  var genStr='Generated on '+todayStr+' at '+timeStr;
+
+  // Find today's report
+  var rpt=null;
+  for(var i=DAILY.reports.length-1;i>=0;i--){
+    if(DAILY.reports[i].date===todayIso){rpt=DAILY.reports[i];break;}
+  }
+
+  var delays2=detectDelays();
+  var comp3=comparePlannedActual();
+  var todayPhotos3=DAILY.photos.filter(function(p){return p.date===todayIso;});
+  var todayEntries3=DAILY.entries.filter(function(e){return e.date===todayIso;});
+  var ov3=calcOverallPct();
+
+  var css=[
+    '@page{size:A4 portrait;margin:20mm 15mm 15mm 15mm}',
+    '*{box-sizing:border-box;margin:0;padding:0}',
+    'body{font-family:"Segoe UI",Arial,sans-serif;font-size:9pt;color:#000;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}',
+    '.page{width:180mm;min-height:257mm;position:relative;page-break-after:always;padding-bottom:12mm}',
+    '.page:last-child{page-break-after:auto}',
+    '.sec{background:#003A70;color:#fff;padding:5pt 10pt;font-size:10pt;font-weight:700;margin-bottom:8pt;border-left:4pt solid #C9A44C}',
+    '.sub{background:#E8F0F8;color:#003A70;padding:4pt 8pt;font-size:9pt;font-weight:700;margin-bottom:6pt;border-left:3pt solid #003A70}',
+    'table{width:100%;border-collapse:collapse;font-size:8pt;margin-bottom:10pt}',
+    'th{background:#003A70;color:#fff;padding:5pt 7pt;text-align:left;font-size:7.5pt;text-transform:uppercase}',
+    'td{padding:5pt 7pt;border-bottom:1px solid #D9D9D9;vertical-align:middle}',
+    'tr:nth-child(even) td{background:#F5F8FC}',
+    '.badge{display:inline-block;padding:1.5pt 6pt;border-radius:3pt;font-size:6.5pt;font-weight:700}',
+    '.done{background:#D4EDDA;color:#155724}.ip{background:#CCE5FF;color:#004085}.del{background:#F8D7DA;color:#721C24}.ns{background:#E2E3E5;color:#383D41}',
+    'ul{padding-left:12pt;margin-bottom:6pt}',
+    'li{font-size:8.5pt;line-height:1.7;margin-bottom:2pt}',
+    'p{font-size:8.5pt;line-height:1.7;margin-bottom:6pt}',
+    '.footer{font-size:7pt;color:#555;border-top:1px solid #D9D9D9;padding-top:4pt;display:flex;justify-content:space-between;margin-top:10mm}',
+    '.photo-grid{display:flex;flex-wrap:wrap;gap:6pt;margin-bottom:10pt}',
+    '.photo-item{width:80pt;text-align:center}',
+    '.photo-item img{width:80pt;height:60pt;object-fit:cover;border:1px solid #D9D9D9;border-radius:2pt}',
+    '.photo-cap{font-size:6pt;color:#555;margin-top:2pt;word-break:break-word}',
+    '.delay-card{border:1pt solid #F8D7DA;border-radius:3pt;padding:7pt;margin-bottom:7pt;background:#FFF8F8}',
+    '.delay-crit{border-color:#721C24;background:#FFF0F0}',
+  ].join('\n');
+
+  function footer3(pg,tot){
+    return '<div class="footer"><span>SITESYNC - Khatib & Alami | IC1 Road Improvements</span><span>Page '+pg+' of '+tot+'</span><span>'+genStr+'</span></div>';
+  }
+
+  var totalPgs=4;
+  var ph='<!DOCTYPE html><html><head><meta charset="UTF-8"><style>'+css+'</style></head><body>';
+
+  // ── PAGE 1: COVER ──────────────────────────────────────────
+  ph+='<div class="page" style="display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0a1628;">';
+  ph+='<div style="position:absolute;top:0;left:0;right:0;height:6mm;background:linear-gradient(90deg,#003A70,#C9A44C);"></div>';
+  ph+='<div style="text-align:center;color:#fff;padding:20pt;">';
+  ph+='<div style="font-size:28pt;font-weight:900;color:#C9A44C;margin-bottom:4pt;">SITESYNC</div>';
+  ph+='<div style="font-size:9pt;color:#94a3b8;letter-spacing:3px;margin-bottom:20pt;">CONSTRUCTION INTELLIGENCE PLATFORM</div>';
+  ph+='<div style="font-size:18pt;font-weight:800;color:#fff;margin-bottom:4pt;">DAILY PROGRESS REPORT</div>';
+  ph+='<div style="font-size:11pt;color:#C9A44C;margin-bottom:4pt;">IC1 Road Improvements</div>';
+  ph+='<div style="font-size:9pt;color:#94a3b8;margin-bottom:20pt;">Interchange 1 - Diriyah, Riyadh</div>';
+  ph+='<div style="background:#1e3a5f;border-radius:8pt;padding:14pt 24pt;margin:0 auto;display:inline-block;">';
+  ph+='<div style="font-size:32pt;font-weight:900;color:#C9A44C;line-height:1;">'+ov3+'%</div>';
+  ph+='<div style="font-size:8pt;color:#94a3b8;text-transform:uppercase;letter-spacing:2px;margin-top:4pt;">Overall Progress</div>';
+  if(comp3.hasBaseline&&comp3.variance!==null){
+    var vC4=comp3.variance>=0?'#06C98F':'#EF4444';
+    ph+='<div style="font-size:10pt;font-weight:700;color:'+vC4+';margin-top:4pt;">'+(comp3.variance>=0?'▲ +':'▼ ')+comp3.variance+'% vs Plan</div>';
+  }
+  ph+='</div>';
+  ph+='<div style="margin-top:24pt;display:flex;gap:20pt;justify-content:center;">';
+  var cItems=[['Date',todayStr],['Prepared By',MY_NAME],['Department','Head of Surveying'],['Report No.',new Date().getFullYear()+'/'+(today.getMonth()+1)+'/'+today.getDate()]];
+  for(var ci2=0;ci2<cItems.length;ci2++){
+    ph+='<div style="text-align:center;"><div style="font-size:8pt;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;">'+cItems[ci2][0]+'</div><div style="font-size:10pt;font-weight:700;color:#fff;margin-top:2pt;">'+cItems[ci2][1]+'</div></div>';
+  }
+  ph+='</div></div>';
+  ph+='<div style="position:absolute;bottom:0;left:0;right:0;height:6mm;background:linear-gradient(90deg,#003A70,#C9A44C);"></div>';
+  ph+='</div>';
+
+  // ── PAGE 2: AI SUMMARY + DELAYS ────────────────────────────
+  ph+='<div class="page">';
+  ph+='<div class="sec">1. AI-Generated Daily Summary</div>';
+
+  if(rpt&&rpt.parsed){
+    var p=rpt.parsed;
+    if(p.executive){
+      ph+='<div style="background:#E8F0F8;border-left:4pt solid #003A70;padding:8pt;margin-bottom:10pt;font-style:italic;font-size:9pt;">'+p.executive+'</div>';
+    }
+    var secsPDF=[
+      {key:'achievements',label:'Achievements'},
+      {key:'delays',label:'Delays'},
+      {key:'risks',label:'Risks'},
+      {key:'tomorrow',label:"Tomorrow's Plan"},
+    ];
+    for(var si5=0;si5<secsPDF.length;si5++){
+      var items3=p[secsPDF[si5].key]||[];
+      ph+='<div class="sub">'+secsPDF[si5].label+'</div>';
+      if(items3.length){
+        ph+='<ul>';
+        for(var ii3=0;ii3<items3.length;ii3++) ph+='<li>'+items3[ii3]+'</li>';
+        ph+='</ul>';
+      } else {
+        ph+='<p style="color:#555;font-style:italic;">None reported.</p>';
+      }
+    }
+  } else {
+    ph+='<p style="color:#555;font-style:italic;">AI report not generated for today. Generate from the AI Report tab.</p>';
+    ph+='<div class="sub">Delay Detection Results</div>';
+    if(delays2.length){
+      ph+='<ul>';
+      for(var di6=0;di6<delays2.length;di6++) ph+='<li><strong>'+delays2[di6].discipline+':</strong> '+delays2[di6].title+' — '+delays2[di6].detail+'</li>';
+      ph+='</ul>';
+    } else {
+      ph+='<p style="color:#155724;">No delays detected.</p>';
+    }
+  }
+
+  ph+=footer3(2,totalPgs);
+  ph+='</div>';
+
+  // ── PAGE 3: DISCIPLINE LOG + PHOTOS ────────────────────────
+  ph+='<div class="page">';
+  ph+='<div class="sec">2. Site Activity Log</div>';
+
+  if(todayEntries3.length){
+    ph+='<table><tr><th>Discipline</th><th>Activity</th><th>Status</th><th>Notes</th></tr>';
+    for(var ei3=0;ei3<todayEntries3.length;ei3++){
+      var e3=todayEntries3[ei3];
+      var eBadge=e3.status==='Completed'?'<span class="badge done">Completed</span>':
+                 e3.status==='In Progress'?'<span class="badge ip">In Progress</span>':
+                 e3.status==='Delayed'?'<span class="badge del">Delayed</span>':
+                 '<span class="badge ns">Not Started</span>';
+      ph+='<tr><td>'+e3.discipline.toUpperCase()+'</td><td>'+e3.activity+'</td><td>'+eBadge+'</td><td style="color:#555;font-style:italic;">'+( e3.notes||'—')+'</td></tr>';
+    }
+    ph+='</table>';
+  } else {
+    ph+='<p style="color:#555;font-style:italic;">No activity entries logged today.</p>';
+  }
+
+  ph+='<div class="sec">3. Site Photos</div>';
+  if(todayPhotos3.length){
+    ph+='<div class="photo-grid">';
+    for(var pi2=0;pi2<todayPhotos3.length;pi2++){
+      var ph2=todayPhotos3[pi2];
+      ph+='<div class="photo-item">';
+      ph+='<img src="'+ph2.thumb+'" alt="'+ph2.caption+'">';
+      ph+='<div class="photo-cap"><strong>'+ph2.discipline.toUpperCase()+'</strong><br>'+ph2.caption+'</div>';
+      ph+='</div>';
+    }
+    ph+='</div>';
+  } else {
+    ph+='<p style="color:#555;font-style:italic;">No photos uploaded today.</p>';
+  }
+
+  ph+=footer3(3,totalPgs);
+  ph+='</div>';
+
+  // ── PAGE 4: DELAY ANALYSIS + SIGN-OFF ──────────────────────
+  ph+='<div class="page">';
+  ph+='<div class="sec">4. Delay Analysis</div>';
+
+  if(!delays2.length){
+    ph+='<div style="background:#D4EDDA;border-left:4pt solid #155724;padding:8pt;margin-bottom:10pt;"><strong style="color:#155724;">No delays detected.</strong> All disciplines appear on track.</div>';
+  } else {
+    for(var di7=0;di7<delays2.length;di7++){
+      var d4=delays2[di7];
+      var isCrit=d4.type==='critical';
+      ph+='<div class="delay-card '+(isCrit?'delay-crit':'')+'">';
+      ph+='<div style="display:flex;justify-content:space-between;margin-bottom:4pt;">';
+      ph+='<strong style="font-size:9pt;color:'+(isCrit?'#721C24':'#856404')+';">'+d4.title+'</strong>';
+      ph+='<span class="badge '+(isCrit?'del':'ip')+'">'+d4.type.toUpperCase()+'</span>';
+      ph+='</div>';
+      ph+='<p style="margin-bottom:3pt;"><strong>Discipline:</strong> '+d4.discipline+'</p>';
+      ph+='<p style="margin-bottom:3pt;"><strong>Detail:</strong> '+d4.detail+'</p>';
+      ph+='<p style="margin-bottom:3pt;"><strong>Impact:</strong> '+d4.impact+'</p>';
+      ph+='<p style="color:#003A70;font-weight:700;"><strong>Action:</strong> '+d4.action+'</p>';
+      ph+='</div>';
+    }
+  }
+
+  ph+='<div class="sec">5. Sign-Off</div>';
+  ph+='<table><tr><th>Role</th><th>Name</th><th>Signature</th><th>Date</th></tr>';
+  ph+='<tr><td>Head of Surveying</td><td>'+MY_NAME+'</td><td style="min-width:50pt;">&nbsp;</td><td>'+todayStr+'</td></tr>';
+  ph+='<tr><td>Resident Engineer</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>';
+  ph+='<tr><td>Project Manager</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>';
+  ph+='</table>';
+
+  ph+='<div style="background:#003A70;color:#fff;padding:8pt 12pt;border-radius:4pt;display:flex;align-items:center;justify-content:space-between;margin-top:10pt;">';
+  ph+='<div><div style="font-size:11pt;font-weight:900;">SITESYNC</div><div style="font-size:7pt;color:#C9A44C;">Construction Intelligence Platform</div></div>';
+  ph+='<div style="font-size:7.5pt;text-align:right;"><div>Khatib & Alami Consolidated Engineering</div><div style="color:#C9A44C;margin-top:2pt;">'+genStr+'</div></div>';
+  ph+='</div>';
+
+  ph+=footer3(4,totalPgs);
+  ph+='</div>';
+
+  ph+='</body></html>';
+
+  var blob=new Blob([ph],{type:'text/html'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url;
+  a.download='IC1_Daily_Report_'+todayIso+'.html';
+  a.click();
+  URL.revokeObjectURL(url);
+  flash('Daily Report PDF downloaded ✅');
+}
+
 function buildTicker(){
   var items=[];
 
@@ -1951,7 +3419,7 @@ function countAllPiers(){
 // ═══════════════════════════════════════════════════════════════
 // NAVIGATION
 // ═══════════════════════════════════════════════════════════════
-var ALL_TABS=["ov","tr","rd","fs","ut","lg","rp","mp","ch","ws"];
+var ALL_TABS=["ov","tr","rd","fs","ut","lg","rp","pl","ai","mp","ch","ws"];
 
 function nav(id){
   for(var i=0;i<ALL_TABS.length;i++){
@@ -1981,6 +3449,8 @@ function nav(id){
   else if(id==="sc") rSc();
   else if(id==="tl") rTl();
   else if(id==="rp") rRp();
+  else if(id==="pl") rPl();
+  else if(id==="ai") rAi();
   else if(id==="is") rIs();
   else if(id==="rd") rRd();
   else if(id==="mp") rMp();
@@ -2241,7 +3711,9 @@ function rOv(){
     var tm=TEAM_LOCS[teamKeys[i]];
     if(tm&&tm.ts&&(Date.now()-tm.ts)<300000) onlineCount++;
   }
-  h+="<div style='background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;align-items:center;justify-content:space-between;'>";
+  // AI Report button
+  h+='<button onclick="nav(\'ai\');" style="width:100%;padding:10px;background:var(--blue);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;margin-bottom:12px;">🤖 Generate Daily AI Report</button>';
+    h+="<div style='background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;align-items:center;justify-content:space-between;'>";
   h+="<div style='display:flex;align-items:center;gap:8px;'>";
   h+="<div style='width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);'></div>";
   h+="<div>";
@@ -2259,7 +3731,9 @@ function rOv(){
     var tm=TEAM_LOCS[teamKeys[i]];
     if(tm&&tm.ts&&(Date.now()-tm.ts)<300000) onlineCount++;
   }
-  h+="<div style='background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;align-items:center;justify-content:space-between;'>";
+  // AI Report button
+  h+='<button onclick="nav(\'ai\');" style="width:100%;padding:10px;background:var(--blue);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;margin-bottom:12px;">🤖 Generate Daily AI Report</button>';
+    h+="<div style='background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;align-items:center;justify-content:space-between;'>";
   h+="<div style='display:flex;align-items:center;gap:8px;'>";
   h+="<div style='width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);'></div>";
   h+="<div>";
@@ -4061,6 +5535,8 @@ function pullSync(){
   // Utilities saved via saveUtNetworks()
   try{localStorage.setItem("ic1b3_cw",JSON.stringify(CUSTOM_WEIGHTS));}catch(e){}
   try{localStorage.setItem('ic1b3_msg',JSON.stringify(MESSAGES.slice(-20)));}catch(e){}
+  try{localStorage.setItem('ic1b3_plan',JSON.stringify(PLAN));}catch(e){}
+  try{localStorage.setItem('ic1b3_daily',JSON.stringify({photos:DAILY.photos.slice(-50),entries:DAILY.entries.slice(-200),reports:DAILY.reports.slice(-30),snapshots:DAILY.snapshots.slice(-90),apiKey:DAILY.apiKey}));}catch(e){}
       // Update sync label
       var lsEl=document.getElementById("last-sync-lbl");
       var now=new Date();
