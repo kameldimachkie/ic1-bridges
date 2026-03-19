@@ -2,13 +2,16 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="SiteSync">
 <meta name="theme-color" content="#07090d">
-<title>SiteSync</title>
+<title>SiteSync v3.2</title>
 <link rel="apple-touch-icon" href="https://kameldimachkie.github.io/ic1-bridges/file_00000000bc3c7246845d377da7f07358.png">
 <link rel="icon" href="https://kameldimachkie.github.io/ic1-bridges/file_00000000bc3c7246845d377da7f07358.png">
 <link rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjogIlNpdGVTeW5jIiwgInNob3J0X25hbWUiOiAiU2l0ZVN5bmMiLCAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwgImJhY2tncm91bmRfY29sb3IiOiAiIzA3MDkwZCIsICJ0aGVtZV9jb2xvciI6ICIjRDRBODQzIiwgInN0YXJ0X3VybCI6ICIuIiwgImljb25zIjogW3sic3JjIjogImh0dHBzOi8va2FtZWxkaW1hY2hraWUuZ2l0aHViLmlvL2ljMS1icmlkZ2VzL2ZpbGVfMDAwMDAwMDBiYzNjNzI0Njg0NWQzNzdkYTdmMDczNTgucG5nIiwgInNpemVzIjogIjUxMng1MTIiLCAidHlwZSI6ICJpbWFnZS9wbmciLCAicHVycG9zZSI6ICJhbnkgbWFza2FibGUifV19">
@@ -288,6 +291,7 @@ body{display:flex;flex-direction:column;}
     <button class="nb"     id="tab-tr" onclick="nav('tr')"><svg width="16" height="14" viewBox="0 0 22 18" fill="none" style="vertical-align:-3px;margin-right:4px"><rect x="0" y="13" width="22" height="3" rx="1.5" fill="currentColor" opacity="0.8"/><path d="M1 13 Q5.5 2 11 2 Q16.5 2 21 13" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round"/><line x1="7" y1="8" x2="7" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="15" y1="8" x2="15" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Bridges</button>
     <button class="nb"     id="tab-rd" onclick="nav('rd')"><svg width="16" height="14" viewBox="0 0 22 18" fill="none" style="vertical-align:-3px;margin-right:4px"><path d="M3 17 L8 1 L14 1 L19 17Z" fill="currentColor" opacity="0.12"/><line x1="3" y1="17" x2="8" y2="1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="19" y1="17" x2="14" y2="1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="3" y1="17" x2="19" y2="17" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><line x1="10.5" y1="13" x2="11.5" y2="9.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/><line x1="10" y1="16" x2="12" y2="16" stroke="currentColor" stroke-width="1" opacity="0.4"/></svg>Roads</button>
     <button class="nb"     id="tab-fs" onclick="nav('fs')">⛰️ Fill Slope</button>
+    <button class="nb"     id="tab-ut" onclick="nav('ut')">🔧 Utilities</button>
     <button class="nb"     id="tab-lg" onclick="nav('lg')">Log</button>
     
     
@@ -298,14 +302,18 @@ body{display:flex;flex-direction:column;}
     <button class="nb"     id="tab-rp" onclick="nav('rp')">Report</button>
     <button class="nb"     id="tab-mp" onclick="nav('mp')"><svg width="16" height="14" viewBox="0 0 22 18" fill="none" style="vertical-align:-3px;margin-right:4px"><line x1="1" y1="9" x2="21" y2="9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" opacity="0.75"/><line x1="8" y1="1" x2="8" y2="17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/><line x1="16" y1="1" x2="16" y2="17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/><path d="M3 9 Q7 4 11 4 Q15 4 19 9" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="11" cy="9" r="2.8" fill="currentColor" opacity="0.9"/><circle cx="11" cy="9" r="1.2" fill="#07090d"/></svg>Map</button>
     <button class="nb" id="tab-ch" onclick="nav('ch')">💬 Chat</button>
+    <button class="nb" id="tab-ws" onclick="nav('ws')" style="border-color:var(--gold);color:var(--gold);">🔐 Setup</button>
   </div>
 </div>
 
 <div id="main">
+  <div class="pg"    id="pg-ws"></div>
   <div class="pg on" id="pg-ov"></div>
   <div class="pg"    id="pg-tr"></div>
   <div class="pg"    id="pg-rd"></div>
   <div class="pg"    id="pg-fs"></div>
+  <div class="pg"    id="pg-ut"></div>
+  <div class="pg"    id="pg-ut"></div>
 <div class="pg"    id="pg-lg"></div>
   <div class="pg"    id="pg-dr"></div>
   <div class="pg"    id="pg-wr"></div>
@@ -384,6 +392,19 @@ var STAGES=[
   {id:"WNG",name:"Wing Walls",         ar:"جدران جانبية", col:"#4ECDC4",w:0},
   {id:"APS",name:"Approach Slab",      ar:"بلاطة مداخل",  col:"#45B7D1",w:0}
 ];
+var ROAD_ACTS=[
+  {name:"Demolition & Clearing",        w:3},
+  {name:"Earthworks",                   w:7},
+  {name:"Sub-base",                     w:8},
+  {name:"Base Course",                  w:12.8},
+  {name:"Asphalt Binder Course",        w:11},
+  {name:"Asphalt Wearing Course",       w:12},
+  {name:"Curb & Kerb",                  w:14.8},
+  {name:"Sidewalk Concrete",            w:18.7},
+  {name:"Drainage",                     w:4},
+  {name:"Road Markings & Lighting",     w:8},
+  {name:"Fill Slope Between Abutments", w:0.7}
+];
 
 // Direct foundations (no piling)
 var DIRECT=["1L-ABT","2L-ABT","1ML-ABT","1MR-ABT","2ML-ABT","2MR-ABT","1NL-ABT","1NR-ABT","2NL-ABT","2NR-ABT"];
@@ -426,8 +447,15 @@ function calcOverallPct(){
   // Project = Preliminary(7%) + Bridges(86.3%) + Roads(6%) + FillSlope(0.7%) = 100%
   // Preliminary is fixed baseline (fully done)
   var BR_WEIGHT=86.3; var ROAD_WEIGHT=6; var FS_WEIGHT=0.7; var PRE_WEIGHT=PRE_PCT;
-  // Adjust bridge weight if pre changes (deduct roads + Fill Slope + preliminary)
-  BR_WEIGHT=100-ROAD_WEIGHT-FS_WEIGHT-PRE_WEIGHT;
+  // Calculate total utility weight
+  var UT_WEIGHT=typeof calcUtTotalWeight==='function'?calcUtTotalWeight():0;
+  // Bridges absorb any utility weight (auto-deduction)
+  // Use custom bridge weight if set by user, else auto-calculate
+  if(CUSTOM_WEIGHTS&&CUSTOM_WEIGHTS.project&&CUSTOM_WEIGHTS.project.br){
+    BR_WEIGHT=CUSTOM_WEIGHTS.project.br;
+  } else {
+    BR_WEIGHT=Math.max(0,Math.round((100-ROAD_WEIGHT-FS_WEIGHT-PRE_WEIGHT-UT_WEIGHT)*10)/10);
+  }
   // Bridges earned
   var brEarned=0,brTotal=0;
   for(var b=0;b<BRIDGES.length;b++){
@@ -451,10 +479,15 @@ function calcOverallPct(){
   }
   var brPctVal=brTotal>0?(brEarned/brTotal):0;
   // Roads earned
-  var roadEarned=(ROADS.ibn.pct/100*3)+(ROADS.sattam.pct/100*3);
+  // Road weight split — use custom if set
+  var roadHalf=CUSTOM_WEIGHTS&&CUSTOM_WEIGHTS.project&&CUSTOM_WEIGHTS.project.roads?
+    Math.round(CUSTOM_WEIGHTS.project.roads/2*10)/10:3;
+  var roadEarned=(ROADS.ibn.pct/100*roadHalf)+(ROADS.sattam.pct/100*roadHalf);
   var fsEarned2=typeof calcFsEarned==='function'?calcFsEarned():0;
+  // Utilities earned
+  var utEarned=typeof calcUtTotalEarned==='function'?calcUtTotalEarned():0;
   // Total
-  var total=PRE_WEIGHT + (brPctVal*BR_WEIGHT) + roadEarned + fsEarned2;
+  var total=PRE_WEIGHT + (brPctVal*BR_WEIGHT) + roadEarned + fsEarned2 + utEarned;
   return Math.round(total*10)/10;
 }
 
@@ -491,15 +524,25 @@ var ANTHROPIC_KEY="";
 var CONTACTS=[];
 var ROADS={ibn:{pct:0,status:"Not Started"},sattam:{pct:0,status:"Not Started"}};
 var FILL_SLOPE={lm_r:false,lm_l:false,mn_r:false,mn_l:false};
+var UTILITIES=[];  // legacy shim — new system uses UTIL_NETWORKS
+var ADMIN_UNLOCKED=false;
+var ADMIN_HASH=localStorage.getItem('ic1_adminpw')||'Lina@6072';
+// Custom weights storage
+var CUSTOM_WEIGHTS={
+  project:{pre:7,roads:6,fs:0.7}, // bridges auto-calc
+  stages:{},   // per STAGE id
+  roads:{}     // per ROAD_ACT index
+};
 var MESSAGES=[];
 var PRE_PCT=7;
 
 // Convert raw bridge % to project-level % (includes preliminary baseline)
 function projPct(bridgeRawPct){
-  var brW=100-6-0.7-PRE_PCT;
-  return Math.round((PRE_PCT + (bridgeRawPct/100)*brW)*10)/10;
+  var utW=typeof calcUtTotalWeight==="function"?calcUtTotalWeight():0;
+  var brW=Math.max(0,Math.round((100-6-0.7-PRE_PCT-utW)*10)/10);
+  return Math.round((PRE_PCT+(bridgeRawPct/100*brW))*10)/10;
 }
-// Format for display: show both bridge % and project %
+
 function projLabel(bridgeRawPct){
   var pp=projPct(bridgeRawPct);
   return pp+"% <span style=\"font-size:9px;color:var(--dimL);font-weight:400;\">(bridges: "+bridgeRawPct+"%)</span>";
@@ -515,6 +558,8 @@ function loadData(){
   try{ROADS=JSON.parse(localStorage.getItem("ic1b3_roads")||'{"ibn":{"pct":0,"status":"Not Started"},"sattam":{"pct":0,"status":"Not Started"}}');}catch(e){ROADS={ibn:{pct:0,status:"Not Started"},sattam:{pct:0,status:"Not Started"}};}
   try{PRE_PCT=parseFloat(localStorage.getItem("ic1b3_pre")||"7");}catch(e){PRE_PCT=7;}
   try{FILL_SLOPE=JSON.parse(localStorage.getItem("ic1b3_fs")||'{"lm_r":false,"lm_l":false,"mn_r":false,"mn_l":false}');}catch(e){FILL_SLOPE={lm_r:false,lm_l:false,mn_r:false,mn_l:false};}
+  // loadUtNetworks called after DOMContentLoaded
+  try{CUSTOM_WEIGHTS=JSON.parse(localStorage.getItem("ic1b3_cw")||JSON.stringify(CUSTOM_WEIGHTS));}catch(e){}
   try{MESSAGES=JSON.parse(localStorage.getItem('ic1b3_msg')||'[]');}catch(e){MESSAGES=[];}
   try{ANTHROPIC_KEY=localStorage.getItem("ic1_ak")||"";}catch(e){}
 }
@@ -526,6 +571,8 @@ function persist(){
   try{localStorage.setItem("ic1b3_roads",JSON.stringify(ROADS));}catch(e){}
   try{localStorage.setItem("ic1b3_pre",String(PRE_PCT));}catch(e){}
   try{localStorage.setItem("ic1b3_fs",JSON.stringify(FILL_SLOPE));}catch(e){}
+  // Utilities saved via saveUtNetworks()
+  try{localStorage.setItem("ic1b3_cw",JSON.stringify(CUSTOM_WEIGHTS));}catch(e){}
   try{localStorage.setItem('ic1b3_msg',JSON.stringify(MESSAGES.slice(-20)));}catch(e){}
   // Record location and auto-push on every change
   if(typeof pushSync==="function"){
@@ -538,6 +585,21 @@ function persist(){
 }
 loadData();
 window.addEventListener('DOMContentLoaded',function(){
+  loadUtNetworks();
+  // Restore custom weights if saved
+  if(CUSTOM_WEIGHTS.stages&&Object.keys(CUSTOM_WEIGHTS.stages).length){
+    for(var i=0;i<STAGES.length;i++){
+      if(CUSTOM_WEIGHTS.stages[STAGES[i].id]!==undefined)
+        STAGES[i].w=CUSTOM_WEIGHTS.stages[STAGES[i].id];
+    }
+  }
+  if(CUSTOM_WEIGHTS.roads&&CUSTOM_WEIGHTS.roads.length){
+    for(var i=0;i<ROAD_ACTS.length;i++){
+      if(CUSTOM_WEIGHTS.roads[i]!==undefined)
+        ROAD_ACTS[i].w=CUSTOM_WEIGHTS.roads[i];
+    }
+  }
+  if(CUSTOM_WEIGHTS.project&&CUSTOM_WEIGHTS.project.pre) PRE_PCT=CUSTOM_WEIGHTS.project.pre;
   nav('ov');
   buildTicker();
   startTickerScroll();
@@ -775,6 +837,1014 @@ function startTickerScroll(){
   _tickerRAF=requestAnimationFrame(step);
 }
 
+
+// ══════════════════════════════════════════════════════════════
+// UTILITIES — IC1 Road Improvements
+// ══════════════════════════════════════════════════════════════
+
+function openWE(title, stages, currentWeights, saveCallback){
+  var h='<div class="ct">⚙️ '+title+'</div>';
+  h+='<div style="font-size:11px;color:var(--dimL);margin-bottom:12px;line-height:1.5;">Adjust weights — total must equal <b style="color:var(--gold);">100%</b></div>';
+  h+='<div id="we-rows">';
+  for(var i=0;i<stages.length;i++){
+    var s=stages[i];
+    if(s.w===0&&(s.id==='BCK'||s.id==='WNG'||s.id==='APS')) continue; // skip abt-only
+    var cw=currentWeights&&currentWeights[s.id]!==undefined?currentWeights[s.id]:s.w;
+    h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;">';
+    h+='<div style="flex:1;font-size:12px;color:var(--fg);">';
+    if(s.col) h+='<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:'+s.col+';margin-right:5px;vertical-align:middle;"></span>';
+    h+=s.name+'</div>';
+    h+='<input type="number" id="we_'+s.id+'" value="'+cw+'" min="0" max="100" step="0.5" ';
+    h+='style="width:65px;padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:13px;text-align:center;" ';
+    h+='oninput="weUpdateTotal()">';
+    h+='<span style="font-size:11px;color:var(--dimL);">%</span>';
+    h+='</div>';
+  }
+  h+='</div>';
+  // Total
+  h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:8px;background:var(--panel);margin:8px 0 12px;">';
+  h+='<span style="font-size:12px;font-weight:700;color:var(--dimL);">Total</span>';
+  h+='<span id="we-total" style="font-size:16px;font-weight:900;">—</span>';
+  h+='</div>';
+  // Buttons
+  h+='<div style="display:flex;gap:8px;">';
+  h+='<button onclick="weReset();" style="flex:1;padding:9px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--dimL);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">↩ Reset Default</button>';
+  h+='<button onclick="weSave();" style="flex:1;padding:9px;border-radius:8px;background:var(--gold);border:none;color:#000;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">💾 Save</button>';
+  h+='</div>';
+
+  // Store data for save/reset
+  window._weStages=stages;
+  window._weSaveCallback=saveCallback;
+
+  document.getElementById('modal-body').innerHTML=h;
+  document.getElementById('modal').style.display='flex';
+  setTimeout(weUpdateTotal,50);
+}
+
+function weUpdateTotal(){
+  var inputs=document.querySelectorAll('[id^="we_"]');
+  var total=0;
+  inputs.forEach(function(inp){total+=parseFloat(inp.value)||0;});
+  var el=document.getElementById('we-total');
+  if(!el) return;
+  total=Math.round(total*10)/10;
+  el.textContent=total+'%';
+  el.style.color=Math.abs(total-100)<0.5?'var(--green)':'var(--red)';
+}
+
+function weSave(){
+  var stages=window._weStages||[];
+  var newW={};
+  var total=0;
+  for(var i=0;i<stages.length;i++){
+    var inp=document.getElementById('we_'+stages[i].id);
+    if(!inp) continue;
+    var w=Math.round((parseFloat(inp.value)||0)*10)/10;
+    newW[stages[i].id]=w;
+    total+=w;
+  }
+  total=Math.round(total*10)/10;
+  if(Math.abs(total-100)>0.5){flash('Total must be 100% (currently '+total+'%)');return;}
+  if(window._weSaveCallback) window._weSaveCallback(newW);
+  closeModal();
+  flash('Weights saved ✅');
+}
+
+function weReset(){
+  var stages=window._weStages||[];
+  for(var i=0;i<stages.length;i++){
+    var inp=document.getElementById('we_'+stages[i].id);
+    if(inp) inp.value=stages[i].w;
+  }
+  weUpdateTotal();
+}
+
+
+function resetBridgeAll(brId){
+  if(!confirm('Reset ALL pier stages for this bridge?')) return;
+  var PS_keys=Object.keys(PS);
+  // Find piers belonging to this bridge
+  for(var bi=0;bi<BRIDGES.length;bi++){
+    if(BRIDGES[bi].id===brId){
+      for(var pi=0;pi<BRIDGES[bi].piers.length;pi++){
+        var pier=BRIDGES[bi].piers[pi];
+        if(PS[pier]) PS[pier]={};
+      }
+      break;
+    }
+  }
+  persist();
+  var activeTab=document.querySelector('.nb.on');
+  if(activeTab) nav(activeTab.id.replace('tab-',''));
+  buildTicker();flash('Bridge reset ✅');
+}
+
+function openBridgeWeights(brId){
+  // Custom weights stored per bridge in localStorage
+  var key='ic1_bw_'+brId;
+  var stored={};
+  try{stored=JSON.parse(localStorage.getItem(key)||'{}');}catch(e){}
+  openWE('Bridge Weights — '+brId, STAGES, stored, function(newW){
+    try{localStorage.setItem(key,JSON.stringify(newW));}catch(e){}
+    flash('Bridge weights saved ✅');
+  });
+}
+
+
+function resetPierStages(pier){
+  if(!confirm('Reset all stages for pier '+pier+'?')) return;
+  if(PS[pier]) PS[pier]={};
+  persist();
+  var activeTab=document.querySelector('.nb.on');
+  if(activeTab) nav(activeTab.id.replace('tab-',''));
+  buildTicker();flash('Pier '+pier+' reset ✅');
+}
+
+
+function openRoadWeights(roadKey){
+  var label=roadKey==='ibn'?'Ibn Saud Road':'Prince Sattam Road';
+  var key='ic1_rw_'+roadKey;
+  var stored={};
+  try{stored=JSON.parse(localStorage.getItem(key)||'{}');}catch(e){}
+  // Build stages from ROAD_ACTS
+  var stages=[];
+  for(var i=0;i<ROAD_ACTS.length;i++){
+    stages.push({id:'act'+i,name:ROAD_ACTS[i].name,w:ROAD_ACTS[i].w});
+  }
+  openWE('Road Weights — '+label, stages, stored, function(newW){
+    try{localStorage.setItem(key,JSON.stringify(newW));}catch(e){}
+    // Apply to ROAD_ACTS for this road
+    flash('Road weights saved ✅');
+  });
+}
+
+function resetRoadAll(roadKey){
+  if(!confirm('Reset ALL activities for this road?')) return;
+  for(var i=0;i<ROAD_ACTS.length;i++){
+    delete ROADS[roadKey+'.act.'+i];
+    ROADS[roadKey].pct=0;
+    ROADS[roadKey].status='Not Started';
+  }
+  persist();
+  var activeTab=document.querySelector('.nb.on');
+  if(activeTab) nav(activeTab.id.replace('tab-',''));
+  buildTicker();flash('Road reset ✅');
+}
+
+
+function openFsWeights(){
+  var items=[
+    {id:'lm_r',name:'L–M Right',w:0.175},
+    {id:'lm_l',name:'L–M Left', w:0.175},
+    {id:'mn_r',name:'M–N Right',w:0.175},
+    {id:'mn_l',name:'M–N Left', w:0.175}
+  ];
+  var stored={};
+  try{stored=JSON.parse(localStorage.getItem('ic1_fsw')||'{}');}catch(e){}
+  openWE('Fill Slope Weights', items, stored, function(newW){
+    try{localStorage.setItem('ic1_fsw',JSON.stringify(newW));}catch(e){}
+    flash('Fill Slope weights saved ✅');
+  });
+}
+
+function resetFsAll(){
+  if(!confirm('Reset all Fill Slope items to Not Started?')) return;
+  FILL_SLOPE={lm_r:'Not Started',lm_l:'Not Started',mn_r:'Not Started',mn_l:'Not Started'};
+  persist();
+  var activeTab=document.querySelector('.nb.on');
+  if(activeTab) nav(activeTab.id.replace('tab-',''));
+  buildTicker();flash('Fill Slope reset ✅');
+}
+
+
+// ══════════════════════════════════════════════════════════════
+// WEIGHT SETUP TAB
+// ══════════════════════════════════════════════════════════════
+function wsUpdateTotal(){
+  var ids=['ws-pre','ws-br','ws-roads','ws-fs'];
+  var total=0;
+  for(var i=0;i<ids.length;i++){
+    var el=document.getElementById(ids[i]);
+    if(el) total+=parseFloat(el.value)||0;
+  }
+  // Add utilities
+  var utTotal=typeof calcUtTotalWeight==="function"?calcUtTotalWeight():0;
+  total+=utTotal;
+  total=Math.round(total*10)/10;
+  var tel=document.getElementById('ws-total');
+  if(tel){
+    tel.textContent=total+'%';
+    tel.style.color=Math.abs(total-100)<0.1?'var(--green)':'var(--red)';
+  }
+  // Update bar widths
+  var barIds=['ws-pre','ws-br','ws-roads','ws-fs'];
+  var barEls=['ws-bar-pre','ws-bar-br','ws-bar-roads','ws-bar-fs','ws-bar-ut'];
+  for(var i=0;i<barIds.length;i++){
+    var inp=document.getElementById(barIds[i]);
+    var bar=document.getElementById(barEls[i]);
+    if(inp&&bar) bar.style.width=(parseFloat(inp.value)||0)+'%';
+  }
+}
+
+function wsCalcBridgeW(){
+  var utTotal=typeof calcUtTotalWeight==="function"?calcUtTotalWeight():0;
+  var pre=parseFloat(document.getElementById('ws-pre').value)||7;
+  var roads=parseFloat(document.getElementById('ws-roads').value)||6;
+  var fs=parseFloat(document.getElementById('ws-fs').value)||0.7;
+  var br=Math.round(Math.max(0,100-pre-roads-fs-utTotal)*10)/10;
+  var el=document.getElementById('ws-br-val');
+  if(el) el.textContent=br+'%';
+  // Update total
+  var total=Math.round((pre+br+roads+fs+utTotal)*10)/10;
+  var tel=document.getElementById('ws-total');
+  if(tel){
+    tel.textContent=total+'%';
+    tel.style.color=Math.abs(total-100)<0.1?'var(--green)':'var(--red)';
+  }
+  return br;
+}
+
+function wsStageTotal(){
+  var inputs=document.querySelectorAll('[id^="wss_"]');
+  var total=0;
+  inputs.forEach(function(inp){total+=parseFloat(inp.value)||0;});
+  total=Math.round(total*10)/10;
+  var el=document.getElementById('ws-stage-total');
+  if(el){
+    el.textContent=total+'%';
+    el.style.color=Math.abs(total-100)<0.1?'var(--green)':'var(--red)';
+  }
+}
+
+function wsRoadTotal(){
+  var inputs=document.querySelectorAll('[id^="wsr_"]');
+  var total=0;
+  inputs.forEach(function(inp){total+=parseFloat(inp.value)||0;});
+  total=Math.round(total*10)/10;
+  var el=document.getElementById('ws-road-total');
+  if(el){
+    el.textContent=total+'%';
+    el.style.color=Math.abs(total-100)<0.1?'var(--green)':'var(--red)';
+  }
+}
+
+function wsSave(){
+  // Save project weights
+  var pre=parseFloat(document.getElementById('ws-pre').value)||7;
+  var br=parseFloat(document.getElementById('ws-br').value)||86.3;
+  var roads=parseFloat(document.getElementById('ws-roads').value)||6;
+  var fs=parseFloat(document.getElementById('ws-fs').value)||0.7;
+  // Utilities weights saved via saveUtNetworks()
+  var utTotal=typeof calcUtTotalWeight==="function"?calcUtTotalWeight():0;
+  var total=Math.round((pre+br+roads+fs+utTotal)*10)/10;
+  if(Math.abs(total-100)>0.5){flash('Total must be 100% — currently '+total+'%');return;}
+
+  // Save stage weights
+  var stageTotal=0;
+  for(var i=0;i<STAGES.length;i++){
+    var inp=document.getElementById('wss_'+STAGES[i].id);
+    if(!inp) continue;
+    var w=parseFloat(inp.value)||0;
+    stageTotal+=w;
+  }
+  if(Math.abs(stageTotal-100)>0.5){flash('Bridge stage weights must total 100%');return;}
+
+  // Save road weights
+  var roadTotal=0;
+  for(var i=0;i<ROAD_ACTS.length;i++){
+    var inp2=document.getElementById('wsr_'+i);
+    if(!inp2) continue;
+    var w2=parseFloat(inp2.value)||0;
+    roadTotal+=w2;
+  }
+  if(Math.abs(roadTotal-100)>0.5){flash('Road activity weights must total 100%');return;}
+
+  // Apply all
+  PRE_PCT=pre;
+  CUSTOM_WEIGHTS.project={pre:pre,roads:roads,fs:fs};
+
+  // Apply stage weights — skip abt-only stages (BCK,WNG,APS)
+  var stageSum=0;
+  for(var i=0;i<STAGES.length;i++){
+    if(STAGES[i].id==='BCK'||STAGES[i].id==='WNG'||STAGES[i].id==='APS') continue;
+    var inp3=document.getElementById('wss_'+STAGES[i].id);
+    if(inp3){
+      STAGES[i].w=Math.round((parseFloat(inp3.value)||0)*10)/10;
+      stageSum+=STAGES[i].w;
+    }
+  }
+  CUSTOM_WEIGHTS.stages={}; // mark as customized
+  for(var i=0;i<STAGES.length;i++) CUSTOM_WEIGHTS.stages[STAGES[i].id]=STAGES[i].w;
+
+  // Apply road weights
+  for(var i=0;i<ROAD_ACTS.length;i++){
+    var inp4=document.getElementById('wsr_'+i);
+    if(inp4) ROAD_ACTS[i].w=parseFloat(inp4.value)||ROAD_ACTS[i].w;
+  }
+
+  // Save roads weight split (3+3)
+  var halfRoads=Math.round(roads/2*10)/10;
+  // Update calcOverallPct uses ROAD_WEIGHT constant — we need to update it
+  // Store in CUSTOM_WEIGHTS for reference
+  CUSTOM_WEIGHTS.project={pre:pre,br:Math.round(br*10)/10,roads:roads,fs:fs};
+  PRE_PCT=pre;
+  persist();
+  rWs();
+  rOv();
+  buildTicker();
+  flash('All weights saved ✅');
+}
+
+function wsReset(){
+  if(!confirm('Reset ALL weights to project defaults?')) return;
+  PRE_PCT=7;
+  // Reset STAGES to original defaults
+  var stageDefaults={PRB:2,EXC:5,BLD:3,FRB:8,FRC:10,PIL:18,STR:22,BRG:5,GRD:14,ERE:9,DEC:4,BCK:0,WNG:0,APS:0};
+  for(var i=0;i<STAGES.length;i++) STAGES[i].w=stageDefaults[STAGES[i].id]||0;
+  // Reset ROAD_ACTS to original defaults
+  var rdDefaults=[3,7,8,12.8,11,12,14.8,18.7,4,8,0.7];
+  for(var i=0;i<ROAD_ACTS.length;i++) ROAD_ACTS[i].w=rdDefaults[i]||0;
+  CUSTOM_WEIGHTS={project:{pre:7,roads:6,fs:0.7},stages:{},roads:{}};
+  persist();
+  rWs();
+  rOv();
+  buildTicker();
+  flash('All weights reset to defaults ✅');
+}
+
+function rWs(){
+  var utTotal=typeof calcUtTotalWeight==="function"?calcUtTotalWeight():0;
+  var brW=Math.round(Math.max(0,100-PRE_PCT-6-0.7-utTotal)*10)/10;
+
+  var h='';
+
+  // ── Header ────────────────────────────────────────────────
+  h+='<div class="card" style="border-left:3px solid var(--gold);">';
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">';
+  h+='<div class="ct" style="margin-bottom:0;">🔐 Setup — Admin</div>';
+  h+='<div style="display:flex;align-items:center;gap:8px;">';
+  h+='<span style="font-size:11px;color:var(--dimL);">Total: <span id="ws-total" style="font-size:14px;font-weight:900;color:var(--green);">100%</span></span>';
+  h+='<button onclick="lockAdmin();" style="padding:4px 10px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--dimL);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">🔒 Lock</button>';
+  h+='<button onclick="showChangePw();" style="padding:4px 10px;border-radius:8px;border:1px solid var(--gold);background:transparent;color:var(--gold);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">🔑 Change PW</button>';
+  h+='</div>';
+  h+='</div>';
+  h+='<div style="font-size:11px;color:var(--dimL);">Configure weights for all project components. All totals must equal <b style="color:var(--gold);">100%</b></div>';
+  h+='</div>';
+
+  // ── Section 1: Project Component Weights ─────────────────
+  h+='<div class="card" style="margin-top:12px;">';
+  h+='<div class="ct">📊 Project Component Weights</div>';
+  h+='<div style="font-size:11px;color:var(--dimL);margin-bottom:12px;">Edit any weight — total must equal <b style="color:var(--gold);">100%</b></div>';
+
+  var comps=[
+    {id:'ws-pre', label:'📋 Preliminary Works', val:PRE_PCT, col:'var(--green)', editable:true},
+    {id:'ws-br',  label:'🌉 Bridge Works',       val:brW,     col:'var(--gold)', editable:false},
+    {id:'ws-roads',label:'🛣 Roads (Total)',      val:6,       col:'var(--blue)', editable:true},
+    {id:'ws-fs',  label:'⛰️ Fill Slope',          val:0.7,     col:'#4ECDC4',    editable:true},
+    {id:'ws-ut',  label:'🔧 Utilities (Total)',   val:utTotal, col:'#38BDF8',    editable:true, readonly:true},
+  ];
+
+  for(var i=0;i<comps.length;i++){
+    var co=comps[i];
+    h+='<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);">';
+    h+='<div style="flex:1;font-size:13px;color:var(--fg);font-weight:600;">'+co.label+'</div>';
+    if(co.editable){
+      h+='<input type="number" id="'+co.id+'" value="'+co.val+'" min="0" max="100" step="0.1" ';
+      h+='oninput="wsUpdateTotal()" ';
+      h+='style="width:70px;padding:6px 8px;border-radius:7px;border:1px solid var(--border);background:var(--panel);color:'+co.col+';font-size:14px;font-weight:900;text-align:center;">';
+      h+='<span style="font-size:12px;color:var(--dimL);">%</span>';
+    } else if(co.id==='ws-br'){
+      h+='<input type="number" id="ws-br" value="'+co.val+'" min="0" max="100" step="0.1" ';
+      h+='oninput="wsUpdateTotal()" ';
+      h+='style="width:70px;padding:6px 8px;border-radius:7px;border:1px solid var(--border);background:var(--panel);color:'+co.col+';font-size:14px;font-weight:900;text-align:center;">';
+      h+='<span style="font-size:12px;color:var(--dimL);">%</span>';
+    } else if(co.id==='ws-ut'){
+      h+='<span style="font-size:14px;font-weight:900;color:'+co.col+';min-width:70px;text-align:right;" id="ws-ut-display">'+co.val+'%</span>';
+      h+='<span style="font-size:11px;color:var(--dimL);margin-left:4px;">(sum of networks)</span>';
+    } else {
+      h+='<span style="font-size:14px;font-weight:900;color:'+co.col+';min-width:70px;text-align:right;">'+co.val+'%</span>';
+      h+='<span style="font-size:11px;color:var(--dimL);margin-left:4px;">(auto)</span>';
+    }
+    h+='</div>';
+  }
+
+  // Total bar
+  h+='<div style="margin-top:12px;">';
+  h+='<div style="height:8px;background:var(--panel);border-radius:4px;overflow:hidden;display:flex;">';
+  var barComps=[
+    {id:'ws-bar-pre',  val:PRE_PCT, col:'var(--green)'},
+    {id:'ws-bar-br',   val:brW,     col:'var(--gold)'},
+    {id:'ws-bar-roads',val:6,       col:'var(--blue)'},
+    {id:'ws-bar-fs',   val:0.7,     col:'#4ECDC4'},
+    {id:'ws-bar-ut',   val:utTotal, col:'#38BDF8'},
+  ];
+  for(var i=0;i<barComps.length;i++){
+    if(barComps[i].val>0)
+      h+='<div id="'+barComps[i].id+'" style="width:'+barComps[i].val+'%;height:8px;background:'+barComps[i].col+';transition:width 0.3s;"></div>';
+  }
+  h+='</div></div>';
+  h+='</div>';
+
+  // ── Section 2: Bridge Stage Weights ──────────────────────
+  h+='<div class="card" style="margin-top:12px;">';
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">';
+  h+='<div class="ct" style="margin-bottom:0;">🌉 Bridge Stage Weights</div>';
+  h+='<span style="font-size:12px;">Total: <span id="ws-stage-total" style="font-weight:900;color:var(--green);">100%</span></span>';
+  h+='</div>';
+  h+='<div style="font-size:11px;color:var(--dimL);margin-bottom:10px;">Applies to all piers and abutments</div>';
+
+  for(var i=0;i<STAGES.length;i++){
+    var s=STAGES[i];
+    if(s.w===0&&(s.id==="BCK"||s.id==="WNG"||s.id==="APS")) continue;
+    h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;">';
+    h+='<span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:'+s.col+';flex-shrink:0;"></span>';
+    h+='<div style="flex:1;font-size:12px;color:var(--fg);">'+s.name+'</div>';
+    h+='<input type="number" id="wss_'+s.id+'" value="'+s.w+'" min="0" max="100" step="0.5" ';
+    h+='oninput="wsStageAutoBalance(this.id)" ';
+    h+='style="width:65px;padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:13px;text-align:center;">';
+    h+='<span style="font-size:11px;color:var(--dimL);">%</span>';
+    h+='</div>';
+  }
+  h+='</div>';
+
+  // ── Section 3: Road Activity Weights ─────────────────────
+  h+='<div class="card" style="margin-top:12px;">';
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">';
+  h+='<div class="ct" style="margin-bottom:0;">🛣 Road Activity Weights</div>';
+  h+='<span style="font-size:12px;">Total: <span id="ws-road-total" style="font-weight:900;color:var(--green);">100%</span></span>';
+  h+='</div>';
+  h+='<div style="font-size:11px;color:var(--dimL);margin-bottom:10px;">Applies to Ibn Saud Road &amp; Prince Sattam Road</div>';
+
+  for(var i=0;i<ROAD_ACTS.length;i++){
+    var act=ROAD_ACTS[i];
+    h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;">';
+    h+='<div style="flex:1;font-size:12px;color:var(--fg);">'+act.name+'</div>';
+    h+='<input type="number" id="wsr_'+i+'" value="'+act.w+'" min="0" max="100" step="0.5" ';
+    h+='oninput="wsRoadAutoBalance()" ';
+    h+='style="width:65px;padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:13px;text-align:center;">';
+    h+='<span style="font-size:11px;color:var(--dimL);">%</span>';
+    h+='</div>';
+  }
+  h+='</div>';
+
+  // ── Section 4: Utilities Management ─────────────────────
+  h+='<div class="card" style="margin-top:12px;border-left:3px solid #38BDF8;">';
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">';
+  h+='<div class="ct" style="margin-bottom:0;">🔧 Utilities & Infrastructure</div>';
+  h+='<button onclick="showAddUtil();" style="padding:6px 14px;background:var(--gold);border:none;border-radius:8px;color:#000;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;">+ Add</button>';
+  h+='</div>';
+  h+='<div style="font-size:11px;color:var(--dimL);margin-bottom:10px;">Water · Sewer · Stormwater · Electricity · Telecom &nbsp;·&nbsp; Weight deducted from Bridge Works automatically</div>';
+
+  if(!UT_ORDER||!UT_ORDER.length){
+    h+='<div style="text-align:center;padding:16px;color:var(--dimL);font-size:12px;">';
+    h+='<div style="font-size:24px;margin-bottom:6px;">🔧</div>';
+    h+='No utility networks yet — tap + Add to start';
+    h+='</div>';
+  } else {
+    // Group by type
+    // Utilities displayed via rUt() — show summary here
+    var grouped={};
+    for(var ti=0;ti<UTIL_TYPES_IC1.length;ti++){
+      var utType=UTIL_TYPES_IC1[ti];
+      if(!grouped[utType.id]) continue;
+      h+='<div style="font-size:11px;font-weight:800;color:'+utType.col+';margin:8px 0 5px;">'+utType.icon+' '+utType.name+'</div>';
+      var typeItems=grouped[utType.id];
+      for(var ii=0;ii<typeItems.length;ii++){
+        var item=typeItems[ii];
+        var upct=calcUtilItemPct(item);
+        var uCol=upct>=75?'var(--green)':upct>0?'var(--gold)':'var(--dim)';
+        h+='<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--panel);margin-bottom:5px;">';
+        h+='<div style="flex:1;">';
+        h+='<div style="font-size:12px;font-weight:700;color:var(--fg);">'+item.name+'</div>';
+        h+='<div style="font-size:10px;color:var(--dimL);">'+(item.qty||'')+'</div>';
+        h+='</div>';
+        h+='<div style="text-align:right;min-width:80px;">';
+        h+='<div style="font-size:13px;font-weight:900;color:'+uCol+';">'+upct+'%</div>';
+        h+='<div style="display:flex;align-items:center;gap:3px;justify-content:flex-end;margin-top:3px;">';
+        h+='<input type="number" id="ut-w-'+item.id+'" value="'+item.weight+'" min="0.1" max="20" step="0.1" ';
+        h+='oninput="utWeightChange(\''+item.id+'\',this.value)" ';
+        h+='style="width:50px;padding:3px 5px;border-radius:5px;border:1px solid var(--border);background:var(--panel);color:#38BDF8;font-size:12px;font-weight:700;text-align:center;">';
+        h+='<span style="font-size:10px;color:var(--dimL);">%</span>';
+        h+='</div></div>';
+        h+='<div style="display:flex;flex-direction:column;gap:4px;">';
+        h+='<button onclick="openUtilDetail(\''+item.id+'\');" style="padding:4px 8px;border-radius:6px;background:var(--gold);border:none;color:#000;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;">📋 Detail</button>';
+        h+='<button onclick="deleteUtil(\''+item.id+'\');rWs();" style="padding:4px 8px;border-radius:6px;border:1px solid var(--red);background:transparent;color:var(--red);font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;">🗑 Del</button>';
+        h+='</div>';
+        h+='</div>';
+      }
+    }
+  }
+  h+='</div>';
+
+  // ── Action Buttons ────────────────────────────────────────
+  h+='<div style="display:flex;gap:8px;margin-top:4px;">';
+  h+='<button onclick="wsReset();" style="flex:1;padding:12px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--dimL);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">↩ Reset Defaults</button>';
+  h+='<button onclick="wsSave();" style="flex:1;padding:12px;border-radius:10px;background:var(--gold);border:none;color:#000;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">💾 Save All Weights</button>';
+  h+='</div>';
+
+  document.getElementById("pg-ws").innerHTML=h;
+
+  // Update totals after render
+  setTimeout(function(){wsUpdateTotal();wsStageAutoBalance();wsRoadAutoBalance();},50);
+}
+
+
+function wsStageAutoBalance(changedId){
+  // Calculate total of all editable stages
+  var total=0;
+  var editableIds=[];
+  for(var i=0;i<STAGES.length;i++){
+    if(STAGES[i].id==='BCK'||STAGES[i].id==='WNG'||STAGES[i].id==='APS') continue;
+    editableIds.push(STAGES[i].id);
+    var inp=document.getElementById('wss_'+STAGES[i].id);
+    if(inp) total+=parseFloat(inp.value)||0;
+  }
+  total=Math.round(total*10)/10;
+  var el=document.getElementById('ws-stage-total');
+  if(el){
+    el.textContent=total+'%';
+    el.style.color=Math.abs(total-100)<0.1?'var(--green)':'var(--red)';
+  }
+}
+
+function wsRoadAutoBalance(){
+  var total=0;
+  for(var i=0;i<ROAD_ACTS.length;i++){
+    var inp=document.getElementById('wsr_'+i);
+    if(inp) total+=parseFloat(inp.value)||0;
+  }
+  total=Math.round(total*10)/10;
+  var el=document.getElementById('ws-road-total');
+  if(el){
+    el.textContent=total+'%';
+    el.style.color=Math.abs(total-100)<0.1?'var(--green)':'var(--red)';
+  }
+}
+
+
+
+
+function checkAdmin(callback){
+  if(ADMIN_UNLOCKED){ callback(); return; }
+  var h='<div class="ct">🔐 Admin Access Required</div>';
+  h+='<div style="font-size:12px;color:var(--dimL);margin-bottom:14px;">Weight Setup is restricted to administrators only.</div>';
+  h+='<label>Password</label>';
+  h+='<input type="password" id="admin-pw" placeholder="Enter admin password" ';
+  h+='style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:14px;font-family:inherit;outline:none;" ';
+  h+='onkeydown="if(event.key===\'Enter\') adminSubmit();">';
+  h+='<div id="admin-err" style="font-size:11px;color:var(--red);margin-top:6px;min-height:16px;"></div>';
+  h+='<div style="display:flex;gap:8px;margin-top:10px;">';
+  h+='<button onclick="closeModal();" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--dimL);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Cancel</button>';
+  h+='<button onclick="adminSubmit();" style="flex:1;padding:10px;border-radius:8px;background:var(--gold);border:none;color:#000;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">🔓 Unlock</button>';
+  h+='</div>';
+  window._adminCallback=callback;
+  openModal(h);
+  setTimeout(function(){var el=document.getElementById('admin-pw');if(el)el.focus();},100);
+}
+
+function adminSubmit(){
+  var pw=document.getElementById('admin-pw');
+  if(!pw) return;
+  if(pw.value===ADMIN_HASH){
+    ADMIN_UNLOCKED=true;
+    closeModal();
+    flash('Admin access granted ✅');
+    if(window._adminCallback) window._adminCallback();
+  } else {
+    var err=document.getElementById('admin-err');
+    if(err) err.textContent='❌ Incorrect password — try again';
+    pw.value='';pw.focus();
+  }
+}
+
+function lockAdmin(){
+  ADMIN_UNLOCKED=false;
+  flash('Admin locked 🔒');
+  nav('ov');
+}
+
+
+
+
+
+
+// ══════════════════════════════════════════════════════════════
+// UTILITIES — Full Component System (matches Roads & Bridges)
+// ══════════════════════════════════════════════════════════════
+
+var UTIL_TYPES_IC1=[
+  {id:'water',icon:'💧',name:'Water Supply',    col:'#38BDF8'},
+  {id:'sewer',icon:'🚰',name:'Sewer',           col:'#A78BFA'},
+  {id:'storm',icon:'🌧',name:'Stormwater & Culverts',col:'#60A5FA'},
+  {id:'elec', icon:'⚡',name:'Electricity',     col:'#FCD34D'},
+  {id:'tel',  icon:'📞',name:'Telecom',         col:'#6EE7B7'}
+];
+
+
+function timePct(){
+  var s=new Date("2025-06-01"),e=new Date("2027-09-01"),t=new Date();
+  return Math.round(Math.max(0,Math.min(100,(t-s)/(e-s)*100))*10)/10;
+}
+function daysLeft(){
+  var e=new Date("2027-09-01");
+  return Math.max(0,Math.ceil((e-new Date())/86400000));
+}
+
+
+function navDisc(id){ nav(id); }
+
+
+// ══════════════════════════════════════════════════════════════
+// UTILITIES MODULE — Pre-defined, mirrors Roads structure
+// 5 networks auto-loaded, user only updates progress
+// ══════════════════════════════════════════════════════════════
+
+// Pre-defined utility networks — identical structure to ROADS
+var UTIL_NETWORKS = {
+  water: {
+    id: 'water', icon: '💧', name: 'Water Network',
+    col: '#38BDF8', weight: 0, // set by user in Setup
+    acts: [
+      {name:'Trenching',               w:20},
+      {name:'Bedding',                 w:10},
+      {name:'Pipe Laying',             w:30},
+      {name:'Backfilling',             w:15},
+      {name:'Pressure Testing',        w:10},
+      {name:'Disinfection / Flushing', w:5},
+      {name:'Chambers / Valve Boxes',  w:5},
+      {name:'Final Connections',       w:5}
+    ], pct:0
+  },
+  sewer: {
+    id: 'sewer', icon: '🚰', name: 'Sewer Network',
+    col: '#A78BFA', weight: 0,
+    acts: [
+      {name:'Trenching',            w:20},
+      {name:'Bedding',              w:10},
+      {name:'Pipe Laying',          w:25},
+      {name:'Manhole Construction', w:25},
+      {name:'Backfilling',          w:10},
+      {name:'Leakage Testing',      w:5},
+      {name:'CCTV Inspection',      w:3},
+      {name:'Final Connections',    w:2}
+    ], pct:0
+  },
+  storm: {
+    id: 'storm', icon: '🌧', name: 'Stormwater Network',
+    col: '#60A5FA', weight: 0,
+    acts: [
+      {name:'Trenching',               w:20},
+      {name:'Bedding',                 w:10},
+      {name:'Pipe Laying',             w:25},
+      {name:'Catch Basin Installation',w:15},
+      {name:'Manhole Construction',    w:15},
+      {name:'Backfilling',             w:10},
+      {name:'Flow Testing',            w:3},
+      {name:'Final Connections',       w:2}
+    ], pct:0
+  },
+  elec: {
+    id: 'elec', icon: '⚡', name: 'Electricity Network',
+    col: '#FCD34D', weight: 0,
+    acts: [
+      {name:'Trenching',               w:20},
+      {name:'Duct Bank Installation',  w:25},
+      {name:'Cable Pulling',           w:20},
+      {name:'Jointing & Termination',  w:15},
+      {name:'Manholes / Handholes',    w:10},
+      {name:'Backfilling',             w:5},
+      {name:'Testing & Commissioning', w:5}
+    ], pct:0
+  },
+  tel: {
+    id: 'tel', icon: '📞', name: 'Telecom Network',
+    col: '#6EE7B7', weight: 0,
+    acts: [
+      {name:'Trenching',               w:20},
+      {name:'Duct Installation',       w:25},
+      {name:'Fiber Pulling',           w:20},
+      {name:'Splicing',                w:15},
+      {name:'Handholes / Chambers',    w:10},
+      {name:'Backfilling',             w:5},
+      {name:'Testing & Commissioning', w:5}
+    ], pct:0
+  }
+};
+
+var UT_ORDER = ['water','sewer','storm','elec','tel'];
+
+// ── Load/Save ──────────────────────────────────────────────────
+function loadUtNetworks(){
+  try{
+    var saved = JSON.parse(localStorage.getItem('ic1b3_utn')||'{}');
+    for(var k in saved){
+      if(UTIL_NETWORKS[k]){
+        // Restore activity statuses
+        for(var i=0;i<UTIL_NETWORKS[k].acts.length;i++){
+          if(saved[k]['a'+i]!==undefined) UTIL_NETWORKS[k]['a'+i]=saved[k]['a'+i];
+        }
+        if(saved[k].weight!==undefined) UTIL_NETWORKS[k].weight=saved[k].weight;
+        if(saved[k].active!==undefined) UTIL_NETWORKS[k].active=saved[k].active;
+      }
+    }
+  }catch(e){}
+  // Recalc pct for all
+  for(var i=0;i<UT_ORDER.length;i++) recalcUtPct(UT_ORDER[i]);
+}
+
+function saveUtNetworks(){
+  var out={};
+  for(var i=0;i<UT_ORDER.length;i++){
+    var id=UT_ORDER[i], n=UTIL_NETWORKS[id];
+    out[id]={weight:n.weight, active:n.active};
+    for(var j=0;j<n.acts.length;j++){
+      if(n['a'+j]) out[id]['a'+j]=n['a'+j];
+    }
+  }
+  try{localStorage.setItem('ic1b3_utn',JSON.stringify(out));}catch(e){}
+}
+
+function recalcUtPct(id){
+  var n=UTIL_NETWORKS[id];
+  var earned=0;
+  for(var i=0;i<n.acts.length;i++){
+    var st=n['a'+i]||'Not Started';
+    if(st==='Complete') earned+=n.acts[i].w;
+    else if(st==='In Progress') earned+=n.acts[i].w*0.3;
+  }
+  n.pct=Math.round(earned*10)/10;
+}
+
+function calcUtTotalWeight(){
+  var t=0;
+  for(var i=0;i<UT_ORDER.length;i++){
+    var n=UTIL_NETWORKS[UT_ORDER[i]];
+    if(n.active) t+=n.weight||0;
+  }
+  return Math.round(t*10)/10;
+}
+
+function calcUtTotalEarned(){
+  var e=0;
+  for(var i=0;i<UT_ORDER.length;i++){
+    var n=UTIL_NETWORKS[UT_ORDER[i]];
+    if(n.active) e+=n.pct/100*(n.weight||0);
+  }
+  return Math.round(e*10)/10;
+}
+
+// ── Set activity status ────────────────────────────────────────
+function setUtAct(netId, actIdx, status, btn){
+  var n=UTIL_NETWORKS[netId];
+  if(!n) return;
+  n['a'+actIdx]=status;
+  recalcUtPct(netId);
+  saveUtNetworks();
+  // Update button styles
+  var btns=btn.parentElement.querySelectorAll('button');
+  var sColors=[SCOL['Not Started'],SCOL['In Progress'],SCOL['Complete']];
+  for(var k=0;k<btns.length;k++){
+    var isSel=btns[k].textContent.trim()===status;
+    btns[k].style.background=isSel?sColors[k]:'transparent';
+    btns[k].style.color=isSel?'#000':'var(--dimL)';
+  }
+  var parent=btn.parentElement.parentElement;
+  parent.style.border='1px solid '+(status!=='Not Started'?SCOL[status]:'var(--border)');
+  parent.style.background=SBGC[status]||'var(--panel)';
+  buildTicker();
+  // Update pct display
+  var pctEl=document.getElementById('ut-pct-'+netId);
+  if(pctEl) pctEl.textContent=UTIL_NETWORKS[netId].pct+'%';
+}
+
+// ── Reset network ──────────────────────────────────────────────
+function resetUtNetwork(netId){
+  if(!confirm('Reset all activities for '+UTIL_NETWORKS[netId].name+'?')) return;
+  var n=UTIL_NETWORKS[netId];
+  for(var i=0;i<n.acts.length;i++) delete n['a'+i];
+  recalcUtPct(netId);
+  saveUtNetworks();
+  rUt();
+  buildTicker();
+  flash('Reset ✅');
+}
+
+// ── Toggle network active/inactive ────────────────────────────
+function toggleUtNetwork(netId){
+  var n=UTIL_NETWORKS[netId];
+  n.active=!n.active;
+  saveUtNetworks();
+  rUt();
+  rOv();
+  buildTicker();
+  flash(n.name+(n.active?' activated':' deactivated'));
+}
+
+// ── Edit network weight ────────────────────────────────────────
+function editUtNetWeight(netId){
+  var n=UTIL_NETWORKS[netId];
+  var newWt=prompt('Weight % for '+n.name+':',n.weight||0);
+  if(newWt===null) return;
+  var w=parseFloat(newWt);
+  if(isNaN(w)||w<0){flash('Invalid weight');return;}
+  n.weight=Math.round(w*10)/10;
+  saveUtNetworks();
+  rUt();rOv();buildTicker();
+  flash('Weight updated ✅');
+}
+
+// ── Render Utilities tab ───────────────────────────────────────
+function rUt(){
+  var utTotal=calcUtTotalWeight();
+  var utEarned=calcUtTotalEarned();
+  var brCurrent=Math.round(Math.max(0,100-6-0.7-PRE_PCT-utTotal)*10)/10;
+  var brWarnCol=brCurrent<60?'var(--red)':brCurrent<70?'var(--amber)':'var(--gold)';
+  var activeCount=0;
+  for(var i=0;i<UT_ORDER.length;i++) if(UTIL_NETWORKS[UT_ORDER[i]].active) activeCount++;
+
+  var h='';
+
+  // ── Header KPIs ───────────────────────────────────────────
+  h+='<div class="card" style="border-left:3px solid #38BDF8;">';
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">';
+  h+='<div class="ct" style="margin-bottom:0;">🔧 Utilities & Infrastructure</div>';
+  h+='<span style="font-size:10px;color:var(--dimL);">'+activeCount+' of 5 active</span>';
+  h+='</div>';
+  h+='<div style="display:flex;gap:8px;">';
+  var kpis2=[
+    {v:utTotal+'%',l:'Total Weight',c:'#38BDF8'},
+    {v:utEarned+'%',l:'Earned',c:'var(--green)'},
+    {v:brCurrent+'%',l:'Bridge Rem.',c:brWarnCol},
+  ];
+  for(var i=0;i<kpis2.length;i++){
+    h+='<div style="flex:1;background:var(--panel);border-radius:8px;padding:8px 10px;text-align:center;">';
+    h+='<div style="font-size:16px;font-weight:900;color:'+kpis2[i].c+';">'+kpis2[i].v+'</div>';
+    h+='<div style="font-size:9px;color:var(--dimL);text-transform:uppercase;letter-spacing:1px;margin-top:2px;">'+kpis2[i].l+'</div>';
+    h+='</div>';
+  }
+  h+='</div>';
+  if(brCurrent<60) h+='<div style="margin-top:8px;padding:7px 10px;background:#E6393422;border-radius:8px;border-left:3px solid var(--red);font-size:11px;color:var(--red);">⚠️ Bridge weight critically low ('+brCurrent+'%) — reduce utility weights in 🔐 Setup</div>';
+  else if(brCurrent<70) h+='<div style="margin-top:8px;padding:7px 10px;background:var(--amber)22;border-radius:8px;border-left:3px solid var(--amber);font-size:11px;color:var(--amber);">⚠️ Bridge weight approaching limit ('+brCurrent+'%)</div>';
+  h+='</div>';
+
+  // ── 5 Networks ────────────────────────────────────────────
+  for(var ni=0;ni<UT_ORDER.length;ni++){
+    var netId=UT_ORDER[ni];
+    var n=UTIL_NETWORKS[netId];
+    var isActive=!!n.active;
+    var netPct=n.pct;
+    var pCol=netPct>=75?'var(--green)':netPct>0?n.col:'var(--dim)';
+    var earnedWt=Math.round(netPct/100*(n.weight||0)*10)/10;
+
+    h+='<div class="card" style="margin-top:12px;border-left:4px solid '+(isActive?n.col:'var(--border)')+';opacity:'+(isActive?'1':'0.55')+';">';
+
+    // Network header
+    h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">';
+    h+='<div style="display:flex;align-items:center;gap:8px;">';
+    h+='<span style="font-size:20px;">'+n.icon+'</span>';
+    h+='<div>';
+    h+='<div style="font-size:14px;font-weight:800;color:var(--text);">'+n.name+'</div>';
+    h+='<div style="font-size:10px;color:var(--dimL);">Weight: <b style="color:'+(isActive?n.col:'var(--dimL)')+';">'+(isActive?n.weight+'%':'Inactive')+'</b></div>';
+    h+='</div></div>';
+    h+='<div style="text-align:right;">';
+    h+='<div id="ut-pct-'+netId+'" style="font-size:22px;font-weight:900;color:'+pCol+';">'+(isActive?netPct+'%':'—')+'</div>';
+    if(isActive) h+='<div style="font-size:10px;color:var(--gold);">+'+earnedWt+'% earned</div>';
+    h+='</div></div>';
+
+    // Progress bar
+    if(isActive){
+      h+='<div style="height:7px;background:var(--panel);border-radius:4px;margin-bottom:12px;overflow:hidden;">';
+      h+='<div style="width:'+Math.min(100,netPct)+'%;height:7px;background:'+n.col+';border-radius:4px;transition:width 0.4s;"></div></div>';
+    }
+
+    // Toggle + Weight + Reset buttons
+    h+='<div style="display:flex;gap:6px;margin-bottom:'+(isActive?'12':'0')+'px;">';
+    var _tBorder=isActive?'var(--border)':'var(--gold)';
+    var _tColor=isActive?'var(--dimL)':'var(--gold)';
+    var _tLabel=isActive?'⏸ Deactivate':'▶ Activate';
+    h+='<button data-nid="'+netId+'" onclick="toggleUtNetwork(this.dataset.nid);" style="flex:1;padding:6px;border-radius:7px;border:1px solid '+_tBorder+';background:transparent;color:'+_tColor+';font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">'+_tLabel+'</button>';
+    if(isActive){
+      h+='<button data-nid="'+netId+'" onclick="editUtNetWeight(this.dataset.nid);" style="flex:1;padding:6px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--dimL);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">⚖️ Weight</button>';
+      h+='<button data-nid="'+netId+'" onclick="resetUtNetwork(this.dataset.nid);" style="flex:1;padding:6px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--dimL);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">🔄 Reset</button>';
+    }
+    h+='</div>';
+
+    // Activities (only if active)
+    if(isActive){
+      for(var ai=0;ai<n.acts.length;ai++){
+        var act=n.acts[ai];
+        var actSt=n['a'+ai]||'Not Started';
+        var aCol=SCOL[actSt]||'var(--dim)';
+        var aBg=SBGC[actSt]||'var(--panel)';
+        var contrib=actSt==='Complete'?act.w:actSt==='In Progress'?Math.round(act.w*0.3*10)/10:0;
+
+        h+='<div style="border:1px solid '+(actSt!=='Not Started'?aCol:'var(--border)')+';border-radius:10px;padding:9px 12px;margin-bottom:6px;background:'+aBg+';">';
+        h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">';
+        h+='<div style="font-size:12px;font-weight:600;color:var(--fg);">'+act.name+'</div>';
+        h+='<div style="display:flex;align-items:center;gap:5px;">';
+        if(contrib>0) h+='<span style="font-size:10px;color:'+aCol+';font-weight:700;">+'+contrib+'%</span>';
+        h+='<span style="font-size:11px;color:var(--dimL);background:var(--panel);padding:2px 8px;border-radius:8px;">'+act.w+'%</span>';
+        h+='</div></div>';
+        h+='<div style="display:flex;gap:5px;">';
+        var sColors=[SCOL['Not Started'],SCOL['In Progress'],SCOL['Complete']];
+        var sLabels=['Not Started','In Progress','Complete'];
+        for(var k=0;k<sLabels.length;k++){
+          var isSel2=actSt===sLabels[k];
+          h+='<button data-nid="'+netId+'" data-ai="'+ai+'" data-st="'+sLabels[k]+'" onclick="setUtAct(this.dataset.nid,parseInt(this.dataset.ai),this.dataset.st,this);" ';
+          h+='style="flex:1;padding:5px 3px;border-radius:7px;border:2px solid '+sColors[k]+';';
+          h+='background:'+(isSel2?sColors[k]:'transparent')+';';
+          h+='color:'+(isSel2?'#000':'var(--dimL)')+';';
+          h+='font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;">'+sLabels[k]+'</button>';
+        }
+        h+='</div></div>';
+      }
+    }
+    h+='</div>';
+  }
+
+  document.getElementById('pg-ut').innerHTML=h;
+}
+
+
+// ── Change Password ────────────────────────────────────────────
+function showChangePw(){
+  var h='<div class="ct">🔑 Change Password</div>';
+  h+='<div style="font-size:11px;color:var(--dimL);margin-bottom:14px;line-height:1.6;">Change the admin password for Setup access.</div>';
+  h+='<label>Current Password</label>';
+  h+='<input type="password" id="cpw-old" placeholder="Enter current password" ';
+  h+='style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:14px;font-family:inherit;outline:none;margin-bottom:8px;">';
+  h+='<label>New Password</label>';
+  h+='<input type="password" id="cpw-new" placeholder="Enter new password" ';
+  h+='style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:14px;font-family:inherit;outline:none;margin-bottom:8px;">';
+  h+='<label>Confirm New Password</label>';
+  h+='<input type="password" id="cpw-confirm" placeholder="Confirm new password" ';
+  h+='style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:14px;font-family:inherit;outline:none;margin-bottom:6px;" ';
+  h+='onkeydown="if(event.key===\'Enter\') saveNewPw();">';
+  h+='<div id="cpw-err" style="font-size:11px;color:var(--red);min-height:16px;margin-bottom:10px;"></div>';
+  h+='<div style="display:flex;gap:8px;">';
+  h+='<button onclick="closeModal();" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--dimL);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Cancel</button>';
+  h+='<button onclick="saveNewPw();" style="flex:1;padding:10px;border-radius:8px;background:var(--gold);border:none;color:#000;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">💾 Save Password</button>';
+  h+='</div>';
+  openModal(h);
+  setTimeout(function(){var el=document.getElementById('cpw-old');if(el) el.focus();},100);
+}
+
+function saveNewPw(){
+  var oldPw=document.getElementById('cpw-old');
+  var newPw=document.getElementById('cpw-new');
+  var confirmPw=document.getElementById('cpw-confirm');
+  var errEl=document.getElementById('cpw-err');
+  if(!oldPw||!newPw||!confirmPw) return;
+
+  // Validate current password
+  if(oldPw.value!==ADMIN_HASH){
+    errEl.textContent='❌ Current password is incorrect';
+    oldPw.value='';oldPw.focus();
+    return;
+  }
+  // Validate new password length
+  if(newPw.value.length<6){
+    errEl.textContent='❌ New password must be at least 6 characters';
+    newPw.value='';newPw.focus();
+    return;
+  }
+  // Validate confirmation
+  if(newPw.value!==confirmPw.value){
+    errEl.textContent='❌ Passwords do not match';
+    confirmPw.value='';confirmPw.focus();
+    return;
+  }
+  // Save new password
+  ADMIN_HASH=newPw.value;
+  try{localStorage.setItem('ic1_adminpw',ADMIN_HASH);}catch(e){}
+  closeModal();
+  flash('Password updated ✅');
+}
+
+
+function ovDiscTip(el){
+  var discId=el.dataset.disc;
+  // Find disc data from current page
+  var tip=document.getElementById('disc-tip');
+  if(!tip) return;
+  // Get info from legend row
+  var rows=document.querySelectorAll('[data-disc]');
+  var name=el.querySelector('div:nth-child(2)')?el.querySelector('div:nth-child(2)').textContent:'';
+  var wt=el.querySelector('div:last-child')?el.querySelector('div:last-child').textContent:'';
+  // Get progress from discipline cards
+  var pct='—';
+  var cards=document.querySelectorAll('[data-disc="'+discId+'"]');
+  document.getElementById('disc-tip-icon').textContent=name.split(' ')[0]||'📊';
+  document.getElementById('disc-tip-name').textContent=name.substring(name.indexOf(' ')+1)||name;
+  document.getElementById('disc-tip-w').textContent='Weight: '+wt;
+  // Highlight row briefly
+  el.style.background='var(--gold)22';
+  setTimeout(function(){el.style.background='';},1000);
+  tip.style.display='block';
+  setTimeout(function(){tip.style.display='none';},4000);
+}
+
+function ovCloseTip(){var t=document.getElementById('disc-tip');if(t) t.style.display='none';}
 function buildTicker(){
   var items=[];
 
@@ -847,7 +1917,7 @@ function countAllPiers(){
 // ═══════════════════════════════════════════════════════════════
 // NAVIGATION
 // ═══════════════════════════════════════════════════════════════
-var ALL_TABS=["ov","tr","rd","fs","lg","rp","mp","ch"];
+var ALL_TABS=["ov","tr","rd","fs","ut","lg","rp","mp","ch","ws"];
 
 function nav(id){
   for(var i=0;i<ALL_TABS.length;i++){
@@ -856,7 +1926,20 @@ function nav(id){
     if(pg) pg.classList[ALL_TABS[i]===id?"add":"remove"]("on");
     if(tb) tb.classList[ALL_TABS[i]===id?"add":"remove"]("on");
   }
-  if(id==="ov") rOv();
+  if(id==="ws"){
+    checkAdmin(function(){
+      // Show page after auth
+      document.querySelectorAll('.nb').forEach(function(b){b.classList.remove('on');});
+      document.querySelectorAll('.pg').forEach(function(p){p.classList.remove('on');});
+      var btn2=document.getElementById('tab-ws');
+      var pg2=document.getElementById('pg-ws');
+      if(btn2) btn2.classList.add('on');
+      if(pg2) pg2.classList.add('on');
+      rWs();
+    });
+    return;
+  }
+  else if(id==="ov") rOv();
   else if(id==="tr"){rTr(); }
   else if(id==="lg") rLg();
   else if(id==="dr") rDr();
@@ -870,6 +1953,7 @@ function nav(id){
   else if(id==="wr") rWr();
   else if(id==="mr") rMr();
   else if(id==="fs") rFs();
+  else if(id==="ut") rUt();
   else if(id==="ch") rCh();
 }
 
@@ -877,176 +1961,286 @@ function nav(id){
 // OVERVIEW
 // ═══════════════════════════════════════════════════════════════
 
-function qUpdPre(v){setPrePct(v);var el=document.getElementById('qlbl-pre');if(el)el.textContent=parseFloat(v).toFixed(1)+'%';}
-function qUpdIbn(v){setIbnPct(v);var el=document.getElementById('qlbl-ibn');if(el)el.textContent=parseFloat(v)+'%';}
-function qUpdSat(v){setSatPct(v);var el=document.getElementById('qlbl-sat');if(el)el.textContent=parseFloat(v)+'%';}
-function setPrePct(v){
-  PRE_PCT=parseFloat(v);
-  localStorage.setItem('ic1b3_pre',String(v));
-}
-function setIbnPct(v){
-  var rd=JSON.parse(localStorage.getItem('ic1b3_roads')||'{"ibn":{"pct":0,"status":"Not Started"},"sattam":{"pct":0,"status":"Not Started"}}');
-  rd.ibn.pct=parseFloat(v); ROADS.ibn.pct=parseFloat(v);
-  localStorage.setItem('ic1b3_roads',JSON.stringify(rd));
-}
-function setSatPct(v){
-  var rd=JSON.parse(localStorage.getItem('ic1b3_roads')||'{"ibn":{"pct":0,"status":"Not Started"},"sattam":{"pct":0,"status":"Not Started"}}');
-  rd.sattam.pct=parseFloat(v); ROADS.sattam.pct=parseFloat(v);
-  localStorage.setItem('ic1b3_roads',JSON.stringify(rd));
+function qUpdPre(){
+  /* deprecated */
 }
 
 function rOv(){
-  var ov=overall();
-  var h='';
-  // Header card
-  h+='<div class="card em-contact-row" style="background:linear-gradient(135deg,#07090d,#0d1420);border-color:#D4A84333;">';
-  h+='<div style="font-size:10px;color:var(--dimL);margin-bottom:2px;">HEAD OF SURVEYING</div>';
-  h+='<div style="font-size:20px;font-weight:900;color:var(--gold);">Kamel Dimachkie</div>';
-  h+='<div style="font-size:11px;color:var(--dimL);margin-top:2px;">Khatib &amp; Alami &mdash; Consultant &nbsp;|&nbsp; SiteSync &mdash; Bridges</div>';
-  h+='</div>';
-  // KPIs
-  h+='<div class="kpi-grid">';
-  h+='<div class="kpi"><div class="kpi-val" style="color:var(--gold);">'+ov.pct+'%</div><div class="kpi-lbl">Overall</div></div>';
-  h+='<div class="kpi"><div class="kpi-val" style="color:var(--blue);">'+activP()+'</div><div class="kpi-lbl">Active Piers</div></div>';
-  h+='<div class="kpi"><div class="kpi-val" style="color:var(--green);">'+ov.pct+'%</div><div class="kpi-lbl">WTD %</div></div>';
-  h+='</div>';
-  // Bridge progress
-  h+='<div class="card"><div class="ct">Bridge Progress</div>';
-  for(var i=0;i<BRIDGES.length;i++){
-    var bp=brPct(BRIDGES[i].id);
-    var bc=bp===100?"var(--green)":bp>0?"var(--gold)":"var(--dim)";
-    h+='<div style="margin-bottom:10px;">';
-    h+='<div style="display:flex;justify-content:space-between;margin-bottom:4px;">';
-    h+='<span style="font-size:13px;font-weight:700;color:var(--gold);">Bridge '+BRIDGES[i].id+'</span>';
-    h+='<span style="font-size:13px;font-weight:700;color:'+bc+';">'+bp+'%</span>';
-    h+='</div>';
-    h+='<div class="pbar-wrap"><div class="pbar" style="width:'+bp+'%;background:'+bc+';"></div></div>';
-    h+='</div>';
-  }
-  h+='</div>';
-  // Stage summary
-  h+='<div class="card"><div class="ct">Stage Summary</div>';
-  for(var s=0;s<STAGES.length;s++){
-    var sid=STAGES[s].id; var cnt={c:0,ip:0,ns:0,total:0};
-    for(var bi=0;bi<BRIDGES.length;bi++){
-      for(var pi=0;pi<BRIDGES[bi].piers.length;pi++){
-        var pier=BRIDGES[bi].piers[pi];
-        if(sid==="PIL"&&DIRECT.indexOf(pier)>-1) continue;
-        cnt.total++;
-        var sv=gps(pier,sid);
-        if(sv==="Complete"||sv==="Inspected") cnt.c++;
-        else if(sv==="In Progress") cnt.ip++;
-        else cnt.ns++;
+  // ── Gather all discipline data ────────────────────────────
+  var ov=calcOverallPct();
+  var tp=timePct ? timePct() : 0;
+  var variance=Math.round((ov-tp)*10)/10;
+  var dr=daysLeft ? daysLeft() : '--';
+
+  // Utilities — from pre-defined networks
+  var utTotal=typeof calcUtTotalWeight==='function'?calcUtTotalWeight():0;
+  var utEarned=typeof calcUtTotalEarned==='function'?calcUtTotalEarned():0;
+  var utPct=utTotal>0?Math.round(utEarned/utTotal*100*10)/10:0;
+
+  // Bridges
+  var utDeduct=utTotal;
+  var brW=Math.round(Math.max(0,100-6-0.7-PRE_PCT-utDeduct)*10)/10;
+  var brEarned=0,brWtotal=0;
+  for(var b=0;b<BRIDGES.length;b++){
+    for(var p=0;p<BRIDGES[b].piers.length;p++){
+      var pier=BRIDGES[b].piers[p];
+      var isDr=DIRECT.indexOf(pier)>-1;
+      for(var s=0;s<STAGES.length;s++){
+        if(STAGES[s].id==="PIL"&&isDr) continue;
+        var w=STAGES[s].w;
+        if(isDr) w=Math.round(w*(100/82)*10)/10;
+        brWtotal+=w;
+        var sv=gps(pier,STAGES[s].id);
+        if(sv==="Complete"||sv==="Inspected") brEarned+=w;
+        else if(sv==="In Progress") brEarned+=w*0.3;
       }
     }
-    var pct2=cnt.total?Math.round(cnt.c/cnt.total*100):0;
-    h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">';
-    h+='<div style="width:8px;height:8px;border-radius:2px;background:'+STAGES[s].col+';flex-shrink:0;"></div>';
-    h+='<div style="flex:1;font-size:12px;color:var(--dimL);">'+STAGES[s].name+'</div>';
-    h+='<div style="font-size:11px;color:var(--green);margin-right:4px;">'+cnt.c+' done</div>';
-    if(cnt.ip>0) h+='<div style="font-size:11px;color:var(--blue);">'+cnt.ip+' active</div>';
-    h+='</div>';
   }
-  h+='</div>';
-  
-  // ── Quick Edit Card ──────────────────────────────────────
-  h+='<div class="card" style="margin-top:12px;">';
-  h+='<div class="ct" style="margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;">';
-  h+='<span>✏️ Quick Edit</span>';
-  h+='<span style="font-size:10px;color:var(--dimL);">Drag sliders to update</span>';
-  h+='</div>';
+  var brPct=brWtotal>0?Math.round(brEarned/brWtotal*100*10)/10:0;
+
+  // Roads
+  var rdPct=Math.round(((ROADS.ibn.pct||0)+(ROADS.sattam.pct||0))/2*10)/10;
+  var rdW=6;
+
+  // Fill Slope
+  var fsEarned=typeof calcFsEarned==="function"?calcFsEarned():0;
+  var fsPct=Math.round(fsEarned/0.7*100*10)/10;
+  var fsW=0.7;
 
   // Preliminary
-  var qpre=PRE_PCT;
-  h+='<div style="margin-bottom:13px;">';
-  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">';
-  h+='<span style="font-size:11px;font-weight:700;color:var(--dimL);">📋 Preliminary Works</span>';
-  h+='<span id="qlbl-pre" style="font-size:13px;font-weight:900;color:var(--gold);">'+qpre+'%</span>';
-  h+='</div>';
-  h+='<input type="range" min="0" max="20" step="0.5" value="'+qpre+'" style="width:100%;accent-color:var(--gold);" ';
-  h+='oninput="qUpdPre(this.value)">';
-  h+='</div>';
+  var prePct=100;
+  var preW=PRE_PCT;
 
-  // Ibn Saud
-  var qibn=ROADS.ibn.pct||0;
-  h+='<div style="margin-bottom:13px;">';
-  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">';
-  h+='<span style="font-size:11px;font-weight:700;color:var(--dimL);">🛣️ Ibn Saud Road</span>';
-  h+='<span id="qlbl-ibn" style="font-size:13px;font-weight:900;color:#3B82F6;">'+qibn+'%</span>';
-  h+='</div>';
-  h+='<div style="font-size:10px;color:var(--dimL);padding:6px 0;">Auto-calculated from road activities in Roads tab</div>';
-  h+='</div>';
+  // Discipline data array
+  var discs=[
+    {id:"tr", label:"Bridges",         icon:"🌉", pct:brPct,  w:brW,   col:"#D4A843", earned:Math.round(brPct/100*brW*10)/10},
+    {id:"rd", label:"Roads",           icon:"🛣",  pct:rdPct,  w:rdW,   col:"#58A6FF", earned:Math.round(rdPct/100*rdW*10)/10},
+    {id:"ut", label:"Utilities",       icon:"🔧", pct:utPct,  w:utTotal,col:"#38BDF8", earned:utEarned},
+    {id:"fs", label:"Fill Slope",      icon:"⛰️", pct:fsPct,  w:fsW,   col:"#4ECDC4", earned:Math.round(fsEarned*10)/10},
+    {id:"ws", label:"Prelim. Works",   icon:"📋", pct:prePct, w:preW,  col:"#06D6A0", earned:Math.round(prePct/100*preW*10)/10}
+  ];
 
-  // Prince Sattam
-  var qsat=ROADS.sattam.pct||0;
-  h+='<div style="margin-bottom:6px;">';
-  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">';
-  h+='<span style="font-size:11px;font-weight:700;color:var(--dimL);">🛣️ Prince Sattam Road</span>';
-  h+='<span id="qlbl-sat" style="font-size:13px;font-weight:900;color:#3B82F6;">'+qsat+'%</span>';
-  h+='</div>';
-  h+='<div style="font-size:10px;color:var(--dimL);padding:6px 0;">Auto-calculated from road activities in Roads tab</div>';
-  h+='</div>';
+  // ── Warnings engine ────────────────────────────────────────
+  var warns=[];
+  var totalW=Math.round((brW+rdW+utTotal+fsW+preW)*10)/10;
+  if(Math.abs(totalW-100)>0.5) warns.push({t:"error",m:"Total weights = "+totalW+"% (must be 100%)"});
+  if(brW<60) warns.push({t:"error",m:"Bridge weight critically low ("+brW+"%)"});
+  else if(brW<70) warns.push({t:"warn",m:"Bridge weight approaching limit ("+brW+"%)"});
+  if(variance<-5) warns.push({t:"warn",m:"Project is "+Math.abs(variance)+"% behind schedule"});
+  if(utTotal===0) warns.push({t:"info",m:"No utility networks configured — tap 🔧 Utilities to add"});
+  if(brPct===0&&brW>0) warns.push({t:"info",m:"Bridge works not yet started"});
+  if(rdPct===0) warns.push({t:"info",m:"Road works not yet started"});
 
-  h+='<div style="margin-top:10px;display:flex;gap:8px;">';
-  h+='<button onclick="rOv()" style="flex:1;padding:9px;background:var(--card);border:1px solid var(--gold);border-radius:8px;color:var(--gold);font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;">🔄 Refresh</button>';
-  h+='<button onclick="nav(\'tr\')" style="flex:1;padding:9px;background:var(--gold);border:none;border-radius:8px;color:#000;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;">🌉 Edit Piers</button>';
-  h+='</div>';
-  h+='</div>';
+  var h="";
 
+  // ── Page header ────────────────────────────────────────────
+  h+="<div style='background:linear-gradient(135deg,var(--card),#0d1420);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:14px;'>";
+  h+="<div style='display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;'>";
+  h+="<div>";
+  h+="<div style='font-size:11px;color:var(--dimL);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:3px;'>IC1 ROAD IMPROVEMENTS</div>";
+  h+="<div style='font-size:18px;font-weight:900;color:var(--text);letter-spacing:-0.5px;'>Dashboard</div>";
+  h+="</div>";
+  var vCol=variance>=0?"var(--green)":"var(--red)";
+  h+="<div style='text-align:right;'>";
+  h+="<div style='font-size:28px;font-weight:900;color:var(--gold);'>"+ov+"%</div>";
+  h+="<div style='font-size:11px;font-weight:700;color:"+vCol+";'>"+(variance>=0?"▲ +":"▼ ")+variance+"% vs plan</div>";
+  h+="</div></div>";
 
-
-  // ── Fill Slope card ───────────────────────────────────────
-  var fsEarned=calcFsEarned();
-  var fsDone=0; var fsIp=0;
-  var fsKeys=["lm_r","lm_l","mn_r","mn_l"];
-  var fsLabels=["L–M Right","L–M Left","M–N Right","M–N Left"];
-  for(var fi=0;fi<fsKeys.length;fi++){
-    var fst=FILL_SLOPE[fsKeys[fi]]||"Not Started";
-    if(fst==="Complete") fsDone++;
-    else if(fst==="In Progress") fsIp++;
+  // ── Build donut SVG ───────────────────────────────────────
+  function buildDonutSVG(segments, cx, sublabel){
+    var r=52, stroke=14, circ=2*Math.PI*r;
+    var total=0;
+    for(var i=0;i<segments.length;i++) total+=segments[i].val;
+    var svg="<svg viewBox='0 0 120 120' style='width:110px;height:110px;'>";
+    svg+="<circle cx='60' cy='60' r='"+r+"' fill='none' stroke='var(--panel)' stroke-width='"+stroke+"'/>";
+    if(total>0){
+      var cumAngle=-90;
+      for(var i=0;i<segments.length;i++){
+        if(segments[i].val<=0) continue;
+        var pct=segments[i].val/total;
+        var dashArr=circ*pct+" "+(circ*(1-pct));
+        svg+="<circle cx='60' cy='60' r='"+r+"' fill='none' stroke='"+segments[i].col+"' ";
+        svg+="stroke-width='"+stroke+"' stroke-dasharray='"+dashArr+"' ";
+        svg+="stroke-dashoffset='"+(circ*0.25)+"' ";
+        svg+="transform='rotate("+cumAngle+" 60 60)' stroke-linecap='butt'/>";
+        cumAngle+=pct*360;
+      }
+    } else {
+      svg+="<circle cx='60' cy='60' r='"+r+"' fill='none' stroke='#2a3f5a' stroke-width='"+stroke+"'/>";
+    }
+    svg+="<text x='60' y='55' text-anchor='middle' font-family='Segoe UI,Arial,sans-serif' font-size='14' font-weight='900' fill='var(--text)'>"+cx+"</text>";
+    svg+="<text x='60' y='70' text-anchor='middle' font-family='Segoe UI,Arial,sans-serif' font-size='8' fill='var(--dimL)'>"+sublabel+"</text>";
+    svg+="</svg>";
+    return svg;
   }
-  var fsOvSt=fsDone===4?"Complete":fsDone>0||fsIp>0?"In Progress":"Not Started";
-  var fsOvCol=fsOvSt==="Complete"?"var(--green)":fsOvSt==="In Progress"?"var(--blue)":"var(--dim)";
-  h+='<div class="card" style="margin-top:12px;border-left:3px solid #4ECDC4;">';
-  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">';
-  h+='<div>';
-  h+='<div style="font-size:13px;font-weight:700;color:#4ECDC4;">⛰️ Fill Slope</div>';
-  h+='<div style="font-size:10px;color:var(--dimL);">Between Abutments L–M &amp; M–N &nbsp;·&nbsp; Weight: 0.7%</div>';
-  h+='</div>';
-  h+='<div style="text-align:right;">';
-  h+='<div style="font-size:20px;font-weight:900;color:#4ECDC4;">'+Math.round(fsEarned/0.7*100)+'%</div>';
-  h+='<div style="font-size:10px;color:'+fsOvCol+';background:'+fsOvCol+'22;padding:2px 7px;border-radius:8px;">'+fsOvSt+'</div>';
-  h+='</div></div>';
-  // Progress bar
-  h+='<div style="height:6px;background:var(--panel);border-radius:3px;margin-bottom:8px;">';
-  h+='<div style="width:'+Math.round(fsEarned/0.7*100)+'%;height:6px;background:#4ECDC4;border-radius:3px;"></div></div>';
-  // Items row
-  h+='<div style="display:flex;gap:6px;">';
-  for(var fi2=0;fi2<fsKeys.length;fi2++){
-    var fst2=FILL_SLOPE[fsKeys[fi2]]||"Not Started";
-    var fc2=SCOL[fst2]||"var(--dim)";
-    var icon2=fst2==="Complete"?"✅":fst2==="In Progress"?"🔵":"⬜";
-    h+='<div onclick="nav(\'fs\')" style="flex:1;text-align:center;padding:5px 3px;background:var(--panel);border-radius:7px;cursor:pointer;">';
-    h+='<div style="font-size:11px;">'+icon2+'</div>';
-    h+='<div style="font-size:9px;color:var(--dimL);margin-top:2px;">'+fsLabels[fi2]+'</div>';
-    h+='<div style="font-size:9px;font-weight:700;color:#4ECDC4;">0.175%</div>';
-    h+='</div>';
-  }
-  h+='</div>';
-  h+='<div style="margin-top:8px;display:flex;justify-content:space-between;font-size:10px;color:var(--dimL);">';
-  h+='<span>'+fsDone+'/4 complete · '+fsIp+' in progress</span>';
-  h+='<span style="color:#4ECDC4;font-weight:700;">'+Math.round(fsEarned*1000)/1000+'% earned</span>';
-  h+='</div>';
-  h+='</div>';
 
+  // Weight segments
+  var wSegs=[];
+  for(var i=0;i<discs.length;i++){
+    if(discs[i].w>0) wSegs.push({col:discs[i].col,val:discs[i].w,label:discs[i].label,icon:discs[i].icon});
+  }
+  // Progress segments
+  var pSegs=[];
+  for(var i=0;i<discs.length;i++){
+    if(discs[i].w>0) pSegs.push({col:discs[i].col,val:Math.round(discs[i].pct*discs[i].w/100*10)/10,label:discs[i].label,icon:discs[i].icon});
+  }
+
+  // ── Donuts row ─────────────────────────────────────────────
+  h+="<div style='display:flex;gap:10px;margin-bottom:14px;align-items:flex-start;'>";
+
+  // LEFT: Weight donut + legend
+  h+="<div style='flex:1;'>";
+  h+="<div style='text-align:center;'>"+buildDonutSVG(wSegs,totalW+'%','WEIGHTS')+"</div>";
+  h+="<div style='font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:1px;text-align:center;margin-bottom:8px;'>Weight Split</div>";
+  // Legend
+  h+="<div style='background:var(--panel);border-radius:8px;padding:8px 10px;'>";
+  for(var i=0;i<discs.length;i++){
+    if(discs[i].w<=0) continue;
+    h+="<div data-disc='"+discs[i].id+"' onclick='ovDiscTip(this)' style='display:flex;align-items:center;gap:7px;padding:4px 0;border-bottom:1px solid var(--border);cursor:pointer;' id='wleg-"+discs[i].id+"'>";
+    h+="<div style='width:10px;height:10px;border-radius:2px;background:"+discs[i].col+";flex-shrink:0;'></div>";
+    h+="<div style='flex:1;font-size:11px;color:var(--fg);'>"+discs[i].icon+" "+discs[i].label+"</div>";
+    h+="<div style='font-size:11px;font-weight:800;color:"+discs[i].col+";'>"+discs[i].w+"%</div>";
+    h+="</div>";
+  }
+  h+="</div>";
+  h+="</div>";
+
+  // RIGHT: Progress donut
+  h+="<div style='flex:1;'>";
+  h+="<div style='text-align:center;'>"+buildDonutSVG(pSegs,ov+'%','PROGRESS')+"</div>";
+  h+="<div style='font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:1px;text-align:center;margin-bottom:8px;'>Progress Split</div>";
+  // Progress legend
+  h+="<div style='background:var(--panel);border-radius:8px;padding:8px 10px;'>";
+  for(var i=0;i<discs.length;i++){
+    if(discs[i].w<=0) continue;
+    var pCol2=discs[i].pct>=75?'var(--green)':discs[i].pct>0?discs[i].col:'var(--dim)';
+    h+="<div style='display:flex;align-items:center;gap:7px;padding:4px 0;border-bottom:1px solid var(--border);'>";
+    h+="<div style='width:10px;height:10px;border-radius:2px;background:"+discs[i].col+";flex-shrink:0;'></div>";
+    h+="<div style='flex:1;font-size:11px;color:var(--fg);'>"+discs[i].icon+" "+discs[i].label+"</div>";
+    h+="<div style='font-size:11px;font-weight:800;color:"+pCol2+";'>"+discs[i].pct+"%</div>";
+    h+="</div>";
+  }
+  h+="</div>";
+  h+="</div>";
+  h+="</div>";
+
+  // Tip popup (hidden by default)
+  h+="<div id='disc-tip' style='display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--card);border:1px solid var(--gold);border-radius:12px;padding:12px 18px;z-index:999;text-align:center;box-shadow:0 4px 20px #0008;min-width:180px;'>";
+  h+="<div id='disc-tip-icon' style='font-size:24px;margin-bottom:4px;'></div>";
+  h+="<div id='disc-tip-name' style='font-size:13px;font-weight:800;color:var(--fg);margin-bottom:4px;'></div>";
+  h+="<div id='disc-tip-w' style='font-size:12px;color:var(--gold);font-weight:700;'></div>";
+  h+="<div id='disc-tip-p' style='font-size:11px;color:var(--dimL);margin-top:2px;'></div>";
+  h+='<button onclick="ovCloseTip();" style="margin-top:8px;padding:4px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--dimL);font-size:11px;cursor:pointer;font-family:inherit;">✕ Close</button>';
+  h+="</div>";
+
+  // ── Timeline KPIs ──────────────────────────────────────────
+  h+="<div style='display:flex;gap:8px;'>";
+  var kpis=[
+    {v:dr, l:"Days Left", c:"var(--amber)"},
+    {v:tp+"%", l:"Time Elapsed", c:"var(--blue)"},
+    {v:(variance>=0?"+":"")+variance+"%", l:"Variance", c:vCol},
+  ];
+  for(var i=0;i<kpis.length;i++){
+    h+="<div style='flex:1;background:var(--panel);border-radius:8px;padding:8px;text-align:center;'>";
+    h+="<div style='font-size:15px;font-weight:900;color:"+kpis[i].c+";'>"+kpis[i].v+"</div>";
+    h+="<div style='font-size:9px;color:var(--dimL);text-transform:uppercase;letter-spacing:1px;margin-top:2px;'>"+kpis[i].l+"</div>";
+    h+="</div>";
+  }
+  h+="</div></div>";
+
+  // ── Discipline cards ───────────────────────────────────────
+  h+="<div style='margin-bottom:14px;'>";
+  h+="<div style='font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;'>Disciplines</div>";
+
+  for(var i=0;i<discs.length;i++){
+    var d=discs[i];
+    var pBarW=Math.min(100,d.pct);
+    var wBarW=d.w;
+    var statusTxt=d.pct>=100?"✅ Complete":d.pct>0?"🔨 In Progress":"⏳ Not Started";
+    var statusCol=d.pct>=100?"var(--green)":d.pct>0?"var(--amber)":"var(--dimL)";
+    var dId=d.id;
+    h+='<div data-disc="'+dId+'" onclick="navDisc(this.dataset.disc);" style="background:var(--card);border:1px solid var(--border);border-left:4px solid '+d.col+';border-radius:10px;padding:12px;margin-bottom:8px;cursor:pointer;">';
+    h+="<div style='display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;'>";
+    h+="<div style='display:flex;align-items:center;gap:8px;'>";
+    h+="<span style='font-size:18px;'>"+d.icon+"</span>";
+    h+="<div>";
+    h+="<div style='font-size:13px;font-weight:800;color:var(--text);'>"+d.label+"</div>";
+    h+="<div style='font-size:10px;color:"+statusCol+";font-weight:700;'>"+statusTxt+"</div>";
+    h+="</div></div>";
+    h+="<div style='text-align:right;'>";
+    h+="<div style='font-size:20px;font-weight:900;color:"+d.col+";'>"+d.pct+"%</div>";
+    h+="<div style='font-size:10px;color:var(--dimL);'>"+d.earned+"% / "+d.w+"% earned</div>";
+    h+="</div></div>";
+    // Dual bar: weight (ghost) + progress (fill)
+    h+="<div style='position:relative;height:8px;background:var(--panel);border-radius:4px;overflow:hidden;'>";
+    h+="<div style='position:absolute;left:0;top:0;height:8px;background:"+d.col+"22;border-radius:4px;' title='Weight'></div>";
+    h+="<div style='position:absolute;left:0;top:0;height:8px;width:"+pBarW+"%;background:"+d.col+";border-radius:4px;transition:width 0.4s;'></div>";
+    h+="</div>";
+    h+="<div style='display:flex;justify-content:space-between;margin-top:4px;'>";
+    h+="<span style='font-size:9px;color:var(--dimL);'>Progress: "+d.pct+"%</span>";
+    h+="<span style='font-size:9px;color:var(--dimL);'>Weight: "+d.w+"% &nbsp;→</span>";
+    h+="</div>";
+    h+="</div>";
+  }
+  h+="</div>";
+
+  // ── Warnings panel ─────────────────────────────────────────
+  if(warns.length>0){
+    h+="<div style='margin-bottom:14px;'>";
+    h+="<div style='font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;'>Alerts ("+warns.length+")</div>";
+    for(var i=0;i<warns.length;i++){
+      var w=warns[i];
+      var wBg=w.t==="error"?"#E6393422":w.t==="warn"?"var(--amber)22":"#06D6A022";
+      var wCol=w.t==="error"?"var(--red)":w.t==="warn"?"var(--amber)":"var(--green)";
+      var wIcon=w.t==="error"?"🔴":w.t==="warn"?"⚠️":"ℹ️";
+      h+="<div style='padding:8px 12px;background:"+wBg+";border-radius:8px;border-left:3px solid "+wCol+";margin-bottom:6px;font-size:12px;color:var(--text);'>";
+      h+=wIcon+" "+w.m;
+      h+="</div>";
+    }
+    h+="</div>";
+  }
+
+  // ── Sync + team status ─────────────────────────────────────
+  var onlineCount=0;
+  var teamKeys=Object.keys(TEAM_LOCS||{});
+  for(var i=0;i<teamKeys.length;i++){
+    var tm=TEAM_LOCS[teamKeys[i]];
+    if(tm&&tm.ts&&(Date.now()-tm.ts)<300000) onlineCount++;
+  }
+  h+="<div style='background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;align-items:center;justify-content:space-between;'>";
+  h+="<div style='display:flex;align-items:center;gap:8px;'>";
+  h+="<div style='width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);'></div>";
+  h+="<div>";
+  h+="<div style='font-size:12px;font-weight:700;color:var(--text);'>Live Sync Active</div>";
+  h+="<div id='last-sync-ov' style='font-size:10px;color:var(--dimL);'>Syncing every 15s</div>";
+  h+="</div></div>";
+  h+="<div style='text-align:right;'>";
+  h+="<div style='font-size:14px;font-weight:900;color:var(--blue);'>👥 "+onlineCount+"</div>";
+  h+="<div style='font-size:10px;color:var(--dimL);'>online now</div>";
+  h+="</div></div>";
+
+  document.getElementById("pg-ov").innerHTML=h;
+  buildTicker();
+  for(var i=0;i<teamKeys.length;i++){
+    var tm=TEAM_LOCS[teamKeys[i]];
+    if(tm&&tm.ts&&(Date.now()-tm.ts)<300000) onlineCount++;
+  }
+  h+="<div style='background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;align-items:center;justify-content:space-between;'>";
+  h+="<div style='display:flex;align-items:center;gap:8px;'>";
+  h+="<div style='width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);'></div>";
+  h+="<div>";
+  h+="<div style='font-size:12px;font-weight:700;color:var(--text);'>Live Sync Active</div>";
+  h+="<div id='last-sync-ov' style='font-size:10px;color:var(--dimL);'>Syncing every 15s</div>";
+  h+="</div></div>";
+  h+="<div style='text-align:right;'>";
+  h+="<div style='font-size:14px;font-weight:900;color:var(--blue);'>👥 "+onlineCount+"</div>";
+  h+="<div style='font-size:10px;color:var(--dimL);'>online now</div>";
+  h+="</div></div>";
 
   document.getElementById("pg-ov").innerHTML=h;
   buildTicker();
 }
 
-// ═══════════════════════════════════════════════════════════════
-// TRACKER
-// ═══════════════════════════════════════════════════════════════
 function sBr(id){curBr=id;curPier=null;rTr();}
 function sPier(id){curPier=id;rTr();}
 
@@ -1106,6 +2300,12 @@ function rTr(){
       if(sv2==="Complete"||sv2==="Inspected") doneC++;
     }
     h+='<div class="card">';
+    // Pier action buttons
+    h+='<div style="display:flex;gap:6px;margin-bottom:10px;">';
+    h+='<button onclick="openBridgeWeights(\''+curBr+'\');" style="flex:1;padding:6px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--dimL);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">⚙️ Bridge Weights</button>';
+    h+='<button onclick="resetPierStages(\''+curPier+'\');" style="flex:1;padding:6px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--dimL);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">🔄 Reset Pier</button>';
+    h+='<button onclick="resetBridgeAll(\''+curBr+'\');" style="flex:1;padding:6px;border-radius:7px;border:1px solid var(--red);background:transparent;color:var(--red);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">🗑 Reset Bridge</button>';
+    h+='</div>';
     h+='<div style="margin-bottom:14px;">';
     h+='<div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.12em;">Selected</div>';
     h+='<div style="font-size:22px;font-weight:800;color:var(--gold);">Pier '+curPier+'</div>';
@@ -3325,6 +4525,8 @@ function pullSync(){
       try{localStorage.setItem("ic1b3_roads",JSON.stringify(ROADS));}catch(e){}
       try{localStorage.setItem("ic1b3_pre",String(PRE_PCT));}catch(e){}
   try{localStorage.setItem("ic1b3_fs",JSON.stringify(FILL_SLOPE));}catch(e){}
+  // Utilities saved via saveUtNetworks()
+  try{localStorage.setItem("ic1b3_cw",JSON.stringify(CUSTOM_WEIGHTS));}catch(e){}
   try{localStorage.setItem('ic1b3_msg',JSON.stringify(MESSAGES.slice(-20)));}catch(e){}
       // Update sync label
       var lsEl=document.getElementById("last-sync-lbl");
@@ -4158,6 +5360,11 @@ function calcFsEarned(){
 
 function rFs(){
   var h='';
+  // Action buttons at top
+  h+='<div style="display:flex;gap:6px;margin-bottom:12px;">';
+  h+='<button onclick="openFsWeights();" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--dimL);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">⚙️ Edit Weights</button>';
+  h+='<button onclick="resetFsAll();" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--red);background:transparent;color:var(--red);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">🔄 Reset All</button>';
+  h+='</div>';
   var items=[
     {key:"lm_r",label:"L–M Right",w:0.175},
     {key:"lm_l",label:"L–M Left", w:0.175},
@@ -4276,7 +5483,7 @@ function rRd(){
   h+='<div style="font-size:11px;color:var(--dimL);margin-top:4px;">Combined weight: <b style="color:var(--gold);">6%</b> of total project value</div>';
   h+='</div>';
 
-  var ROAD_ACTS=[
+  ROAD_ACTS=[
     {name:"Demolition & Clearing",        w:3},
     {name:"Earthworks",                   w:7},
     {name:"Sub-base",                     w:8},
@@ -4340,6 +5547,11 @@ function rRd(){
     h+='<div style="display:flex;justify-content:space-between;margin-bottom:14px;padding:7px 12px;background:var(--panel);border-radius:8px;">';
     h+='<span style="font-size:11px;color:var(--dimL);">Earned project weight</span>';
     h+='<span style="font-size:12px;font-weight:900;color:var(--gold);">'+earnedWt+'% / '+rd.weight+'%</span>';
+    h+='</div>';
+    // Action buttons for road
+    h+='<div style="display:flex;gap:6px;margin-bottom:12px;">';
+    h+='<button onclick="openRoadWeights(\''+rd.key+'\');" style="flex:1;padding:7px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--dimL);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">⚙️ Edit Weights</button>';
+    h+='<button onclick="resetRoadAll(\''+rd.key+'\');" style="flex:1;padding:7px;border-radius:8px;border:1px solid var(--red);background:transparent;color:var(--red);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">🔄 Reset Road</button>';
     h+='</div>';
 
     // Activities with 3-state status
