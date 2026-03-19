@@ -2937,158 +2937,166 @@ function td(){
 }
 
 function rRp(){
-  // Calculate bridge-only pct
-  var bE=0,bT=0;
-  for(var b=0;b<BRIDGES.length;b++){for(var p=0;p<BRIDGES[b].piers.length;p++){
-    var pier=BRIDGES[b].piers[p];var isDr=DIRECT.indexOf(pier)>-1;
-    for(var s=0;s<STAGES.length;s++){if(STAGES[s].id==="PIL"&&isDr)continue;
-      var w=STAGES[s].w;if(isDr)w=Math.round(w*(100/82)*10)/10;
-      bT+=w;var sv=gps(pier,STAGES[s].id);
-      if(sv==="Complete"||sv==="Inspected")bE+=w;else if(sv==="In Progress")bE+=w*0.3;
+  var ov      = calcOverallPct();
+  var tp      = timePct ? timePct() : 0;
+  var variance= Math.round((ov-tp)*10)/10;
+  var dr      = daysLeft ? daysLeft() : '--';
+  var vCol    = variance>=0 ? 'var(--green)' : 'var(--red)';
+  var today3  = new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+
+  // Utilities
+  var utTotal  = typeof calcUtTotalWeight==='function' ? calcUtTotalWeight() : 0;
+  var utEarned = typeof calcUtTotalEarned==='function' ? calcUtTotalEarned() : 0;
+  var utPct    = utTotal>0 ? Math.round(utEarned/utTotal*100*10)/10 : 0;
+
+  // Fill Slope
+  var fsEarned2= typeof calcFsEarned==='function' ? calcFsEarned() : 0;
+  var fsPct2   = Math.round(fsEarned2/0.7*100*10)/10;
+
+  // Bridge pct
+  var brW = Math.round(Math.max(0,100-6-0.7-PRE_PCT-utTotal)*10)/10;
+  var brEarned2=0,brWtotal2=0;
+  for(var b=0;b<BRIDGES.length;b++){
+    for(var p=0;p<BRIDGES[b].piers.length;p++){
+      var pier=BRIDGES[b].piers[p];
+      var isDr2=DIRECT.indexOf(pier)>-1;
+      for(var s=0;s<STAGES.length;s++){
+        if(STAGES[s].id==='PIL'&&isDr2) continue;
+        var sw2=STAGES[s].w; if(isDr2) sw2=Math.round(sw2*(100/82)*10)/10;
+        brWtotal2+=sw2;
+        var sv2=gps(pier,STAGES[s].id);
+        if(sv2==='Complete'||sv2==='Inspected') brEarned2+=sw2;
+        else if(sv2==='In Progress') brEarned2+=sw2*0.3;
+      }
     }
-  }}
-  var brOnlyPct=bT>0?Math.round(bE/bT*1000)/10:0;
-  var rpOv=calcOverallPct();
-  var ibnP=ROADS.ibn.pct; var satP=ROADS.sattam.pct;
+  }
+  var brPct3=brWtotal2>0?Math.round(brEarned2/brWtotal2*100*10)/10:0;
+  var rdPct3=Math.round(((ROADS.ibn.pct||0)+(ROADS.sattam.pct||0))/2*10)/10;
 
-  var h='<div class="card"><div class="ct">Progress Report</div>';
-  h+='<div style="font-size:12px;color:var(--dimL);margin-bottom:10px;">Generated: '+td()+'</div>';
+  // Discipline summary
+  var discs3=[
+    {label:'Bridges',   col:'var(--gold)',  w:brW,     pct:brPct3, earned:Math.round(brPct3/100*brW*10)/10,    id:'tr'},
+    {label:'Roads',     col:'var(--blue)',  w:6,       pct:rdPct3, earned:Math.round(rdPct3/100*6*10)/10,      id:'rd'},
+    {label:'Utilities', col:'#38BDF8',      w:utTotal, pct:utPct,  earned:Math.round(utEarned*10)/10,           id:'ut'},
+    {label:'Fill Slope',col:'#4ECDC4',      w:0.7,     pct:fsPct2, earned:Math.round(fsEarned2*10)/10,          id:'fs'},
+    {label:'Prelim.',   col:'var(--green)', w:PRE_PCT, pct:100,    earned:PRE_PCT,                               id:'ws'},
+  ];
 
-  // Project breakdown
-  h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">';
-  h+='<div style="flex:1;min-width:90px;background:var(--green)11;border-radius:8px;padding:8px;text-align:center;">';
-  h+='<div style="font-size:9px;color:var(--green);font-weight:700;">PRELIMINARY</div>';
-  h+='<div style="font-size:22px;font-weight:900;color:var(--green);">'+PRE_PCT+'%</div>';
-  h+='<div style="font-size:9px;color:var(--green);">✓ Done</div></div>';
+  var h='';
 
-  h+='<div style="flex:1;min-width:90px;background:var(--gold)11;border-radius:8px;padding:8px;text-align:center;">';
-  h+='<div style="font-size:9px;color:var(--gold);font-weight:700;">BRIDGES</div>';
-  h+='<div style="font-size:22px;font-weight:900;color:var(--gold);">'+brOnlyPct+'%</div>';
-  h+='<div style="font-size:9px;color:var(--dimL);">of bridge scope</div></div>';
-
-  h+='<div style="flex:1;min-width:90px;background:#1a2a4411;border-radius:8px;padding:8px;text-align:center;">';
-  h+='<div style="font-size:9px;color:var(--blue);font-weight:700;">ROADS</div>';
-  h+='<div style="font-size:15px;font-weight:900;color:var(--blue);">Ibn '+ibnP+'%</div>';
-  h+='<div style="font-size:13px;font-weight:700;color:var(--blue);">Sat '+satP+'%</div></div>';
-
-  h+='<div style="flex:1;min-width:90px;background:var(--card);border-radius:8px;padding:8px;text-align:center;border:2px solid var(--gold);">';
-  h+='<div style="font-size:9px;color:var(--dimL);font-weight:700;">OVERALL</div>';
-  h+='<div style="font-size:26px;font-weight:900;color:var(--gold);">'+rpOv+'%</div>';
-  h+='<div style="font-size:9px;color:var(--dimL);">Total Project</div></div>';
+  // ── Header ─────────────────────────────────────────────────
+  h+='<div class="card" style="border-left:4px solid var(--gold);background:linear-gradient(135deg,var(--card),#0d1420);">';
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">';
+  h+='<div>';
+  h+='<div class="ct" style="margin-bottom:2px;">📄 Project Overview Report</div>';
+  h+='<div style="font-size:10px;color:var(--dimL);">IC1 Road Improvements &nbsp;·&nbsp; Khatib &amp; Alami &nbsp;·&nbsp; '+today3+'</div>';
+  h+='</div>';
+  h+='<button onclick="dlPDF();" style="padding:9px 16px;background:var(--gold);border:none;border-radius:8px;color:#000;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;">📥 Download PDF</button>';
+  h+='</div>';
   h+='</div>';
 
-  // Bridge detail
-  h+='<div class="card" style="margin-top:0;"><div class="ct" style="margin-bottom:8px;">Bridge Details</div>';
-  for(var i=0;i<BRIDGES.length;i++){
-    var br=BRIDGES[i]; var bp=brPct(br.id);
-    var bc=bp===100?"var(--green)":bp>0?"var(--gold)":"var(--dim)";
-    var bpProj=projPct(bp);
-    var totP=br.piers.length; var actP=0; var doneP=0;
-    for(var pi=0;pi<br.piers.length;pi++){
-      var allD=true,anyA=false;
-      for(var si=0;si<STAGES.length;si++){
-        var sv2=gps(br.piers[pi],STAGES[si].id);
-        if(sv2==="In Progress"||sv2==="On Hold")anyA=true;
-        if(sv2!=="Complete"&&sv2!=="Inspected")allD=false;
-      }
-      if(allD)doneP++;else if(anyA)actP++;
-    }
-    h+='<div style="margin-bottom:10px;padding:8px;background:var(--panel);border-radius:8px;">';
-    h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">';
-    h+='<span style="font-weight:700;color:var(--gold);">Bridge '+br.id+'</span>';
-    h+='<div style="text-align:right;">';
-    h+='<div style="font-size:13px;font-weight:700;color:'+bc+';">'+bpProj+'%</div>';
-    h+='<div style="font-size:9px;color:var(--dimL);">br scope: '+bp+'%</div>';
-    h+='</div></div>';
-    h+='<div class="pbar-wrap" style="margin-bottom:5px;"><div class="pbar" style="width:'+bp+'%;background:'+bc+';"></div></div>';
-    h+='<div style="font-size:10px;color:var(--dimL);">'+totP+' piers · '+actP+' active · '+doneP+' complete</div>';
+  // ── Overall KPIs ────────────────────────────────────────────
+  h+='<div style="display:flex;gap:8px;margin-bottom:12px;">';
+  var kpis3=[
+    {v:ov+'%',    l:'Overall',   c:'var(--gold)'},
+    {v:(variance>=0?'+':'')+variance+'%', l:'Variance', c:vCol},
+    {v:tp+'%',    l:'Time Elapsed', c:'var(--blue)'},
+    {v:dr+'d',    l:'Days Left', c:'var(--amber)'},
+  ];
+  for(var ki=0;ki<kpis3.length;ki++){
+    h+='<div style="flex:1;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 6px;text-align:center;">';
+    h+='<div style="font-size:16px;font-weight:900;color:'+kpis3[ki].c+';">'+kpis3[ki].v+'</div>';
+    h+='<div style="font-size:8px;color:var(--dimL);text-transform:uppercase;letter-spacing:0.5px;margin-top:2px;">'+kpis3[ki].l+'</div>';
     h+='</div>';
   }
+  h+='</div>';
 
-  // Roads section
-  h+='<div style="margin-top:10px;padding:10px;background:var(--panel);border-radius:8px;border-left:3px solid var(--blue);">';
-  h+='<div style="font-weight:700;color:var(--blue);margin-bottom:6px;">🛣 Road Works</div>';
-  h+='<div style="display:flex;gap:10px;">';
-  h+='<div style="flex:1;"><div style="font-size:11px;color:var(--dimL);">Ibn Saud</div>';
-  h+='<div class="pbar-wrap" style="margin:4px 0;"><div class="pbar" style="width:'+ibnP+'%;background:var(--blue);"></div></div>';
-  h+='<div style="font-size:11px;font-weight:700;color:var(--blue);">'+ibnP+'% · '+ROADS.ibn.status+'</div></div>';
-  h+='<div style="flex:1;"><div style="font-size:11px;color:var(--dimL);">Prince Sattam</div>';
-  h+='<div class="pbar-wrap" style="margin:4px 0;"><div class="pbar" style="width:'+satP+'%;background:var(--blue);"></div></div>';
-  h+='<div style="font-size:11px;font-weight:700;color:var(--blue);">'+satP+'% · '+ROADS.sattam.status+'</div></div>';
+  // ── Executive Summary ───────────────────────────────────────
+  h+='<div class="card" style="border-left:3px solid var(--blue);">';
+  h+='<div class="ct">📋 Executive Summary</div>';
+  var aheadBehind3=variance>=0?'ahead of':'behind';
+  h+='<div style="font-size:12px;color:var(--fg);line-height:1.7;margin-bottom:8px;">Overall progress is <b style="color:var(--gold);">'+ov+'%</b> against planned <b>'+tp+'%</b> — the project is <b style="color:'+vCol+';">'+(variance>=0?'+':'')+variance+'% '+aheadBehind3+' schedule</b> with <b>'+dr+' days</b> remaining.</div>';
+  h+='<div style="display:flex;flex-direction:column;gap:4px;">';
+  var sumItems=[
+    '🌉 Bridges: '+brPct3+'% complete across '+BRIDGES.length+' structures',
+    '🛣 Ibn Saud Road: '+(ROADS.ibn.pct||0)+'% &nbsp;·&nbsp; Prince Sattam Road: '+(ROADS.sattam.pct||0)+'%',
+    '🔧 Utilities: '+(utTotal>0?utPct+'% (weight: '+utTotal+'%)':'Not configured'),
+    '⛰️ Fill Slope: '+fsPct2+'% (earned: '+Math.round(fsEarned2*100)/100+'%)',
+    '📋 Preliminary Works: 100% (baseline)',
+  ];
+  for(var si2=0;si2<sumItems.length;si2++){
+    h+='<div style="font-size:11px;color:var(--fg);padding:3px 0;border-bottom:1px solid var(--border);">'+sumItems[si2]+'</div>';
+  }
   h+='</div></div>';
 
-  h+='</div>';
-  // Roads section
-  var ibnP2=ROADS.ibn.pct; var satP2=ROADS.sattam.pct;
-  h+='<div class="card" style="margin-top:12px;">';
-  h+='<div class="ct">🛣 Road Works</div>';
-  h+='<div style="display:flex;gap:10px;flex-wrap:wrap;">';
-  h+='<div style="flex:1;min-width:140px;padding:8px;background:var(--panel);border-radius:8px;">';
-  h+='<div style="font-size:11px;color:var(--dimL);margin-bottom:4px;">Ibn Saud Road</div>';
-  h+='<div class="pbar-wrap" style="margin-bottom:4px;"><div class="pbar" style="width:'+ibnP2+'%;background:var(--blue);"></div></div>';
-  h+='<div style="font-size:13px;font-weight:700;color:var(--blue);">'+ibnP2+'% · '+ROADS.ibn.status+'</div>';
-  h+='</div>';
-  h+='<div style="flex:1;min-width:140px;padding:8px;background:var(--panel);border-radius:8px;">';
-  h+='<div style="font-size:11px;color:var(--dimL);margin-bottom:4px;">Prince Sattam Road</div>';
-  h+='<div class="pbar-wrap" style="margin-bottom:4px;"><div class="pbar" style="width:'+satP2+'%;background:var(--blue);"></div></div>';
-  h+='<div style="font-size:13px;font-weight:700;color:var(--blue);">'+satP2+'% · '+ROADS.sattam.status+'</div>';
-  h+='</div></div></div>';
-  // PDF download button
-
-  // ── Editable Progress Section ─────────────────────────────
-  h+='<div class="card" style="margin-bottom:12px;">';
-  h+='<div class="ct" style="margin-bottom:10px;">✏️ Edit Progress</div>';
-
-  // Preliminary %
-  var preV=PRE_PCT;
-  h+='<div style="margin-bottom:12px;">';
-  h+='<div style="font-size:11px;font-weight:700;color:var(--dimL);margin-bottom:5px;">Preliminary Works (%)</div>';
-  h+='<div style="display:flex;align-items:center;gap:10px;">';
-
-  h+='<span style="font-size:13px;font-weight:900;color:var(--gold);min-width:36px;">'+preV+'%</span></div>';
-  h+='</div>';
-
-  // Roads
-  var ibnV=ROADS.ibn.pct||0; var satV=ROADS.sattam.pct||0;
-  h+='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;">';
-
-  h+='<div style="flex:1;min-width:140px;">';
-  h+='<div style="font-size:11px;font-weight:700;color:var(--dimL);margin-bottom:5px;">Ibn Saud Road (%)</div>';
-  h+='<div style="display:flex;align-items:center;gap:10px;">';
-    h+='<span style="font-size:13px;font-weight:900;color:#3B82F6;min-width:36px;">'+ibnV+'%</span></div>';
-  h+='</div>';
-
-  h+='<div style="flex:1;min-width:140px;">';
-  h+='<div style="font-size:11px;font-weight:700;color:var(--dimL);margin-bottom:5px;">Prince Sattam Road (%)</div>';
-  h+='<div style="display:flex;align-items:center;gap:10px;">';
-    h+='<span style="font-size:13px;font-weight:900;color:#3B82F6;min-width:36px;">'+satV+'%</span></div>';
-  h+='</div>';
-  h+='</div>';
-
-  // Per-bridge sliders
-  h+='<div style="font-size:11px;font-weight:700;color:var(--dimL);margin-bottom:8px;">Bridge Progress (tap ▶ to go to pier tracker)</div>';
-  for(var bi5=0;bi5<BRIDGES.length;bi5++){
-    var brX=BRIDGES[bi5]; var bpX=Math.round(calcBrPct(brX.id)*10)/10;
-    var bColX=bpX===100?"var(--green)":bpX>0?"var(--gold)":"var(--dimL)";
-    h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">';
-    h+='<div style="font-size:11px;font-weight:700;color:'+bColX+';min-width:56px;">Bridge '+brX.id+'</div>';
-    h+='<div style="flex:1;height:7px;background:var(--border);border-radius:4px;">';
-    h+='<div style="width:'+bpX+'%;height:7px;background:'+bColX+';border-radius:4px;"></div></div>';
-    h+='<span style="font-size:12px;font-weight:900;color:'+bColX+';min-width:38px;text-align:right;">'+bpX+'%</span>';
-    h+='<button onclick="nav(\'tr\')" style="background:none;border:1px solid var(--border);border-radius:6px;padding:2px 8px;cursor:pointer;font-size:10px;color:var(--dimL);">Edit</button>';
+  // ── Discipline Cards ────────────────────────────────────────
+  h+='<div class="card">';
+  h+='<div class="ct">📊 Discipline Summary</div>';
+  for(var di=0;di<discs3.length;di++){
+    var d=discs3[di];
+    var rem3=Math.round((d.w-d.earned)*100)/100;
+    var stTxt=d.pct>=100?'✅ Complete':d.pct>0?'🔨 In Progress':'⏳ Not Started';
+    var stCol2=d.pct>=100?'var(--green)':d.pct>0?'var(--amber)':'var(--dimL)';
+    h+='<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;" data-disc="'+d.id+'" onclick="navDisc(this.dataset.disc);">';
+    h+='<div style="width:3px;height:40px;background:'+d.col+';border-radius:2px;flex-shrink:0;"></div>';
+    h+='<div style="flex:1;">';
+    h+='<div style="display:flex;justify-content:space-between;margin-bottom:4px;">';
+    h+='<span style="font-size:12px;font-weight:700;color:var(--fg);">'+d.label+'</span>';
+    h+='<span style="font-size:14px;font-weight:900;color:'+d.col+';">'+d.pct+'%</span>';
     h+='</div>';
+    h+='<div style="height:6px;background:var(--panel);border-radius:3px;overflow:hidden;">';
+    h+='<div style="width:'+Math.min(100,d.pct)+'%;height:6px;background:'+d.col+';border-radius:3px;transition:width 0.3s;"></div></div>';
+    h+='<div style="display:flex;justify-content:space-between;margin-top:3px;">';
+    h+='<span style="font-size:10px;color:'+stCol2+';">'+stTxt+'</span>';
+    h+='<span style="font-size:10px;color:var(--dimL);">Wt:'+d.w+'% &nbsp;Earned:'+d.earned+'% &nbsp;Rem:'+rem3+'%</span>';
+    h+='</div></div></div>';
   }
-
-  h+='<button onclick="rRp()" style="margin-top:10px;width:100%;padding:9px;background:var(--card);border:1px solid var(--gold);border-radius:8px;color:var(--gold);font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;">🔄 Refresh Report</button>';
   h+='</div>';
 
+  // ── Weight Audit Table ───────────────────────────────────────
+  h+='<div class="card">';
+  h+='<div class="ct">⚖️ Weight Audit</div>';
+  h+='<table class="tbl">';
+  h+='<tr><th>Discipline</th><th>Weight</th><th>Earned</th><th>Remaining</th><th>%</th></tr>';
+  var totalW3=0,totalE3=0;
+  for(var di=0;di<discs3.length;di++){
+    var d3=discs3[di];
+    var rem4=Math.round((d3.w-d3.earned)*100)/100;
+    totalW3+=d3.w; totalE3+=d3.earned;
+    h+='<tr><td>'+d3.label+'</td>'
+      +'<td style="text-align:center;">'+d3.w+'%</td>'
+      +'<td style="text-align:center;color:var(--gold);font-weight:700;">'+d3.earned+'%</td>'
+      +'<td style="text-align:center;color:'+(rem4>0?'var(--red)':'var(--green)')+';">'+rem4+'%</td>'
+      +'<td style="text-align:center;"><span style="font-size:10px;font-weight:700;color:'+(d3.pct>=100?'var(--green)':d3.pct>0?'var(--blue)':'var(--dimL)')+';">'+(d3.pct>=100?'✅':d3.pct>0?'🔨':'⏳')+' '+d3.pct+'%</span></td></tr>';
+  }
+  h+='<tr style="font-weight:800;background:var(--panel);">'
+    +'<td>TOTAL</td>'
+    +'<td style="text-align:center;color:var(--gold);">'+Math.round(totalW3*10)/10+'%</td>'
+    +'<td style="text-align:center;color:var(--gold);">'+Math.round(totalE3*10)/10+'%</td>'
+    +'<td style="text-align:center;">'+Math.round((totalW3-totalE3)*10)/10+'%</td>'
+    +'<td></td></tr>';
+  h+='</table></div>';
 
-  h+='<div style="margin-top:14px;text-align:center;">';
-  h+='<button onclick="dlPDF()" style="background:var(--gold);color:#000;border:none;border-radius:8px;padding:12px 28px;font-size:14px;font-weight:800;cursor:pointer;letter-spacing:1px;">⬇ DOWNLOAD PDF REPORT</button>';
-  h+='<div style="font-size:10px;color:var(--dimL);margin-top:6px;">Full report with all pier data · weight audit · schedule</div>';
+  // ── Lookahead ────────────────────────────────────────────────
+  h+='<div class="card" style="border-left:3px solid var(--amber);">';
+  h+='<div class="ct">📅 14-Day Lookahead</div>';
+  var lookahead=[
+    '🌉 Continue pier construction — target 2+ piers to advance to next stage',
+    '🛣 Progress sub-base and base course where earthworks are accepted',
+    '🔧 Coordinate utility diversions and interface with abutment zones',
+    '⛰️ Commence fill slope compaction works between L–M abutments',
+    '📋 Issue weekly survey report and update as-built drawings',
+    '⚠️ Monitor schedule variance and flag any emerging delays immediately',
+  ];
+  for(var li=0;li<lookahead.length;li++){
+    h+='<div style="font-size:12px;color:var(--fg);padding:5px 0;border-bottom:1px solid var(--border);">'+lookahead[li]+'</div>';
+  }
   h+='</div>';
 
-  document.getElementById("pg-rp").innerHTML=h;
+  // ── Download button ──────────────────────────────────────────
+  h+='<button onclick="dlPDF();" style="width:100%;padding:13px;background:var(--gold);border:none;border-radius:10px;color:#000;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;margin-bottom:12px;">📥 Download Full PDF Report (7 Pages)</button>';
+
+  document.getElementById('pg-rp').innerHTML=h;
 }
 
 function dlPDF(){
