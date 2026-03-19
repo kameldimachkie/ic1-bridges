@@ -1845,6 +1845,28 @@ function ovDiscTip(el){
 }
 
 function ovCloseTip(){var t=document.getElementById('disc-tip');if(t) t.style.display='none';}
+
+function brPct2(brId){
+  var earned=0,total=0;
+  for(var b=0;b<BRIDGES.length;b++){
+    if(BRIDGES[b].id!==brId) continue;
+    for(var p=0;p<BRIDGES[b].piers.length;p++){
+      var pier=BRIDGES[b].piers[p];
+      var isDr=DIRECT.indexOf(pier)>-1;
+      for(var s=0;s<STAGES.length;s++){
+        if(STAGES[s].id==='PIL'&&isDr) continue;
+        var sw=STAGES[s].w; if(isDr) sw=Math.round(sw*(100/82)*10)/10;
+        total+=sw;
+        var sv=gps(pier,STAGES[s].id);
+        if(sv==='Complete'||sv==='Inspected') earned+=sw;
+        else if(sv==='In Progress') earned+=sw*0.3;
+      }
+    }
+    break;
+  }
+  return total>0?Math.round(earned/total*100*10)/10:0;
+}
+
 function buildTicker(){
   var items=[];
 
@@ -3070,1018 +3092,509 @@ function rRp(){
 }
 
 function dlPDF(){
-  var ov=calcOverallPct();
-  var bE=0,bT=0;
-  for(var bi=0;bi<BRIDGES.length;bi++){
-    for(var pi=0;pi<BRIDGES[bi].piers.length;pi++){
-      var pr=BRIDGES[bi].piers[pi]; var dri=DIRECT.indexOf(pr)>-1;
-      for(var si=0;si<STAGES.length;si++){
-        if(STAGES[si].id==="PIL"&&dri) continue;
-        var ww=STAGES[si].w; if(dri) ww=Math.round(ww*(100/82)*10)/10;
-        bT+=ww;
-        var sv=gps(pr,STAGES[si].id);
-        if(sv==="Complete"||sv==="Inspected") bE+=ww;
-        else if(sv==="In Progress") bE+=ww*0.3;
+  var today = new Date();
+  var todayStr = today.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+  var timeStr = today.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  var genStr = 'Generated on '+todayStr+' \u2013 '+timeStr;
+
+  // ── Collect all data ─────────────────────────────────────
+  var ov      = calcOverallPct();
+  var tp      = timePct ? timePct() : 0;
+  var variance= Math.round((ov-tp)*10)/10;
+  var dr      = daysLeft ? daysLeft() : '--';
+  var utTotal = typeof calcUtTotalWeight==='function' ? calcUtTotalWeight() : 0;
+  var utEarned= typeof calcUtTotalEarned==='function' ? calcUtTotalEarned() : 0;
+  var utPct   = utTotal>0 ? Math.round(utEarned/utTotal*100*10)/10 : 0;
+  var fsEarned= typeof calcFsEarned==='function' ? calcFsEarned() : 0;
+  var fsPct   = Math.round(fsEarned/0.7*100*10)/10;
+  var brW     = Math.round(Math.max(0,100-6-0.7-PRE_PCT-utTotal)*10)/10;
+
+  // Bridge overall pct
+  var brEarned=0,brWtotal=0;
+  for(var b=0;b<BRIDGES.length;b++){
+    for(var p=0;p<BRIDGES[b].piers.length;p++){
+      var pier=BRIDGES[b].piers[p];
+      var isDr=DIRECT.indexOf(pier)>-1;
+      for(var s=0;s<STAGES.length;s++){
+        if(STAGES[s].id==='PIL'&&isDr) continue;
+        var sw=STAGES[s].w; if(isDr) sw=Math.round(sw*(100/82)*10)/10;
+        brWtotal+=sw;
+        var sv=gps(pier,STAGES[s].id);
+        if(sv==='Complete'||sv==='Inspected') brEarned+=sw;
+        else if(sv==='In Progress') brEarned+=sw*0.3;
       }
     }
   }
-  var brOnlyPct=bT>0?Math.round(bE/bT*1000)/10:0;
-  var ibnPct=ROADS.ibn.pct||0; var satPct=ROADS.sattam.pct||0;
-  var BR_W=100-6-0.7-PRE_PCT;
-  var today3=td();
-  var now=new Date(); var ps=new Date("2025-06-01"); var pe=new Date("2027-09-30");
-  var totalDays3=Math.round((pe-ps)/86400000);
-  var elapsed3=Math.round((now-ps)/86400000);
-  var remaining3=Math.max(0,Math.round((pe-now)/86400000));
-  var timePct3=Math.round(elapsed3/totalDays3*100);
-  var variance3=Math.round((ov-timePct3)*10)/10;
-  var vCol3=variance3>=0?"#06C98F":"#EF4444";
+  var brPct = brWtotal>0 ? Math.round(brEarned/brWtotal*100*10)/10 : 0;
 
-  // S-Curve data
-  var SCA3={};
-  try{SCA3=JSON.parse(localStorage.getItem("ic1b3_sca")||"{}");}catch(e){}
-  var scMonths=["Jun'25","Jul","Aug","Sep","Oct","Nov","Dec","Jan'26","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec","Jan'27","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep'27"];
-  var scPlanned=[0,1,2,3,4,5,6,7,10,14,18,23,28,34,41,48,55,62,68,74,79,84,88,92,95,97,99,100];
-  var scActual=[];
-  for(var mi=0;mi<scMonths.length;mi++){
-    var mk=scMonths[mi].replace("'","");
-    scActual.push(SCA3[mk]!==undefined?SCA3[mk]:null);
-  }
-  var todayMIdx3=Math.min(scMonths.length-1,Math.floor((now-new Date("2025-06-01"))/(30*86400000)));
-  if(scActual[todayMIdx3]===null) scActual[todayMIdx3]=ov;
+  // Roads
+  var ibnPct   = Math.round((ROADS.ibn.pct||0)*10)/10;
+  var sattamPct= Math.round((ROADS.sattam.pct||0)*10)/10;
+  var rdPct    = Math.round((ibnPct+sattamPct)/2*10)/10;
+  var rdW      = 6;
 
-  function stCol3(sv){return sv==="Complete"||sv==="Inspected"?"#06C98F":sv==="In Progress"?"#3B82F6":sv==="On Hold"?"#EF4444":"#CBD5E1";}
-  function stSym3(sv){return sv==="Complete"||sv==="Inspected"?"✓":sv==="In Progress"?"▶":sv==="On Hold"?"⏸":"·";}
-
-  // ── Decorative SVG pattern ──
-  function decoPat(w,h,col){
-    var s='<svg width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'" xmlns="http://www.w3.org/2000/svg" style="position:absolute;top:0;left:0;pointer-events:none;">';
-    // Diagonal bridge-arch motif repeated
-    for(var xi=0;xi<w;xi+=80){
-      s+='<path d="M'+(xi)+' '+h+' Q'+(xi+40)+' '+(h-50)+' '+(xi+80)+' '+h+'" stroke="'+col+'" stroke-width="0.8" fill="none" opacity="0.3"/>';
-    }
-    // Horizontal rule lines
-    s+='<line x1="0" y1="'+(h-8)+'" x2="'+w+'" y2="'+(h-8)+'" stroke="'+col+'" stroke-width="0.5" opacity="0.2"/>';
-    s+='</svg>';
-    return s;
-  }
-
-  // ── SVG Donut ──
-  function donut3(pct,col,size){
-    var r=size/2-5; var circ=2*3.14159*r;
-    var fill=Math.round(circ*pct/100);
-    return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 '+size+' '+size+'">'
-      +'<circle cx="'+(size/2)+'" cy="'+(size/2)+'" r="'+r+'" fill="none" stroke="#E2E8F0" stroke-width="7"/>'
-      +'<circle cx="'+(size/2)+'" cy="'+(size/2)+'" r="'+r+'" fill="none" stroke="'+col+'" stroke-width="7" '
-      +'stroke-dasharray="'+fill+' '+circ+'" stroke-linecap="round" transform="rotate(-90 '+(size/2)+' '+(size/2)+')" />'
-      +'<text x="'+(size/2)+'" y="'+(size/2-4)+'" text-anchor="middle" font-family="Arial" font-weight="900" font-size="'+(size/4.5)+'" fill="'+col+'">'+pct+'%</text>'
-      +'<text x="'+(size/2)+'" y="'+(size/2+10)+'" text-anchor="middle" font-family="Arial" font-size="'+(size/9)+'" fill="#94a3b8">COMPLETE</text>'
-      +'</svg>';
-  }
-
-  // ── Bridge icon SVG ──
-  var bridgeIcon='<svg width="52" height="52" viewBox="0 0 52 52" fill="none"><rect x="2" y="38" width="48" height="7" rx="3" fill="#D4A843" opacity="0.25"/><path d="M3 38 Q13 9 26 9 Q39 9 49 38" stroke="#D4A843" stroke-width="3" fill="none" stroke-linecap="round"/><line x1="16" y1="24" x2="16" y2="38" stroke="#D4A843" stroke-width="2.5" stroke-linecap="round"/><line x1="36" y1="24" x2="36" y2="38" stroke="#D4A843" stroke-width="2.5" stroke-linecap="round"/><line x1="3" y1="38" x2="49" y2="38" stroke="#D4A843" stroke-width="1.5" opacity="0.6"/></svg>';
-
-  var ph='<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">';
-  ph+='<title>IC1 Progress Report — '+today3+'</title>';
-  ph+='<style>';
-  ph+='@page{size:A4;margin:0}';
-  ph+='*{box-sizing:border-box;margin:0;padding:0}';
-  ph+='body{font-family:"Segoe UI",Arial,Helvetica,sans-serif;font-size:8.5pt;color:#2D3748;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;line-height:1.8}';
-  ph+='.page{width:210mm;min-height:297mm;padding:0;page-break-after:always;position:relative;overflow:hidden}';
-  ph+='.page:last-child{page-break-after:auto}';
-
-  // Section page padding
-  ph+='.sp{padding:13mm 13mm 16mm}';
-
-  // Section header — double rule: gold top + navy bottom
-  ph+='.sec-hdr{padding-bottom:10px;margin-bottom:18px;position:relative;display:flex;align-items:flex-end;justify-content:space-between;}';
-  ph+='.sec-hdr::after{content:"";position:absolute;bottom:0;left:0;right:0;height:2px;background:#C9A84C}';
-  ph+='.sec-hdr::before{content:"";position:absolute;bottom:-4px;left:0;right:0;height:1px;background:#0B1D35;opacity:0.18}';
-  ph+='.sec-title{font-size:11pt;font-weight:800;color:#0B1D35;letter-spacing:-0.5px}';
-  ph+='.sec-date{font-size:7pt;color:#718096;font-style:italic}';
-
-  // Page footer — centered
-  ph+='.pn{position:absolute;bottom:8mm;left:0;right:0;text-align:center;font-size:6.5pt;color:#A0AEC0;letter-spacing:0.4px;display:flex;align-items:center;justify-content:center;gap:8px}';
-  ph+='.pn::before,.pn::after{content:"";flex:1;max-width:30mm;height:1px;background:#E2E8F0}';
-
-  // KPI cards — left gold border + shadow
-  ph+='.kpi{flex:1;background:#F4F7FB;border-radius:10px;padding:13px 14px 12px;border-left:4px solid #C9A84C;position:relative;overflow:hidden;box-shadow:rgba(0,0,0,0.08) 0 2px 4px}';
-  ph+='.kpi::after{content:"";position:absolute;right:-12px;bottom:-12px;width:54px;height:54px;border-radius:50%;background:currentColor;opacity:0.05}';
-  ph+='.kpi-val{font-size:22pt;font-weight:900;line-height:1;letter-spacing:-0.5px}';
-  ph+='.kpi-lbl{font-size:7pt;color:#4A5568;margin-top:5px;text-transform:uppercase;letter-spacing:1px;font-weight:700}';
-  ph+='.kpi-sub{font-size:7pt;color:#718096;margin-top:3px}';
-
-  // Sub-section title with gold left bar
-  ph+='.stitle{font-size:9.5pt;font-weight:700;color:#1E3A5F;margin:14px 0 8px;display:flex;align-items:center;gap:7px;letter-spacing:-0.2px}';
-  ph+='.stitle::before{content:"";display:inline-block;width:3px;height:15px;background:linear-gradient(180deg,#C9A84C,#f0c866);border-radius:2px;flex-shrink:0}';
-
-  // Tables
-  ph+='table{width:100%;border-collapse:collapse;font-size:7.5pt}';
-  ph+='th{background:#1E3A5F;color:#fff;padding:8px 9px;text-align:left;font-size:7pt;letter-spacing:1px;text-transform:uppercase;font-weight:600}';
-  ph+='th:first-child{border-radius:4px 0 0 0}th:last-child{border-radius:0 4px 0 0}';
-  ph+='td{padding:7px 9px;border-bottom:1px solid #EDF2F7;vertical-align:middle;color:#2D3748;min-height:32px}';
-  ph+='tr:nth-child(even) td{background:#F4F7FB}';
-  ph+='tr:last-child td{border-bottom:none}';
-  ph+='tr:hover td{background:rgba(201,168,76,0.08)}';
-
-  // Badges — pill shape
-  ph+='.badge{display:inline-block;padding:2px 9px;border-radius:12px;font-size:6.5pt;font-weight:700;letter-spacing:0.2px}';
-  ph+='.bg{background:#C6F6D5;color:#22543D}.bb{background:#BEE3F8;color:#2A4365}.br{background:#FED7D7;color:#742A2A}.bs{background:#EDF2F7;color:#4A5568}';
-  ph+='.bc{background:#FAF0D7;color:#744210}';
-
-  // Progress bars — 8px, gradient fill
-  ph+='.bar-wrap{display:inline-block;vertical-align:middle;border-radius:4px;overflow:hidden;background:#EDF2F7}';
-  ph+='.bar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#0B1D35,#C9A84C)}';
-
-  // Print rules
-  ph+='@media print{.page{page-break-after:always}.page:last-child{page-break-after:auto}body,html{background:#fff!important}.report-wrap{margin:0;padding:0;background:#fff!important}.report-inner{box-shadow:none;border-radius:0;max-width:100%}}';
-  ph+='</style></head><body>';
-
-  // ══════════════════════════════════════════════
-  // PAGE 1 — EXTRAORDINARY COVER
-  // ══════════════════════════════════════════════
-  ph+='<div class="page" style="background:#fff;position:relative;overflow:hidden;display:flex;flex-direction:column;">';
-
-  // ── FULL-HEIGHT LEFT DARK PANEL (40% width) ──────────────
-  ph+='<div style="position:absolute;top:0;left:0;width:28%;height:100%;background:linear-gradient(175deg,#0d1117 0%,#161d2e 50%,#1a2440 100%);z-index:1;"></div>';
-
-  // ── GOLD DIAGONAL SLASH divider ──────────────────────────
-  ph+='<svg style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:2;pointer-events:none;" viewBox="0 0 595 842" preserveAspectRatio="none">';
-  ph+='<polygon points="165,0 198,0 178,842 145,842" fill="#D4A843"/>';
-  ph+='<polygon points="172,0 182,0 162,842 152,842" fill="#f0c866" opacity="0.4"/>';
-  ph+='</svg>';
-
-  // ── DECORATIVE ELEMENTS on dark panel ────────────────────
-  ph+='<svg style="position:absolute;top:0;left:0;width:28%;height:100%;z-index:3;pointer-events:none;overflow:hidden;" viewBox="0 0 250 842">';
-  // Concentric arcs
-  ph+='<path d="M-30 500 Q125 200 280 500" stroke="#D4A843" stroke-width="0.8" fill="none" opacity="0.15"/>';
-  ph+='<path d="M-30 560 Q125 260 280 560" stroke="#D4A843" stroke-width="0.8" fill="none" opacity="0.12"/>';
-  ph+='<path d="M-30 620 Q125 320 280 620" stroke="#D4A843" stroke-width="0.8" fill="none" opacity="0.09"/>';
-  // Bridge silhouette watermark
-  ph+='<path d="M20 680 Q125 560 230 680" stroke="#D4A843" stroke-width="2" fill="none" opacity="0.2"/>';
-  ph+='<line x1="72" y1="615" x2="72" y2="680" stroke="#D4A843" stroke-width="1.5" opacity="0.2"/>';
-  ph+='<line x1="178" y1="615" x2="178" y2="680" stroke="#D4A843" stroke-width="1.5" opacity="0.2"/>';
-  ph+='<rect x="20" y="680" width="210" height="5" rx="2" fill="#D4A843" opacity="0.15"/>';
-  // Dot grid pattern top
-  for(var dgi=0;dgi<6;dgi++){for(var dgj=0;dgj<8;dgj++){
-    ph+='<circle cx="'+(30+dgi*35)+'" cy="'+(40+dgj*35)+'" r="1.5" fill="#D4A843" opacity="0.12"/>';
-  }}
-  ph+='</svg>';
-
-  // ── RIGHT SIDE — white area decorations ──────────────────
-  ph+='<svg style="position:absolute;top:0;right:0;width:58%;height:100%;z-index:1;pointer-events:none;" viewBox="0 0 350 842">';
-  ph+='<circle cx="350" cy="120" r="180" fill="#D4A843" opacity="0.03"/>';
-  ph+='<circle cx="350" cy="120" r="130" fill="#D4A843" opacity="0.03"/>';
-  ph+='<circle cx="350" cy="120" r="80" fill="#D4A843" opacity="0.04"/>';
-  ph+='<path d="M0 780 Q175 700 350 780" stroke="#e2e8f0" stroke-width="1" fill="none"/>';
-  ph+='</svg>';
-
-  // ── CONTENT LAYER ─────────────────────────────────────────
-  ph+='<div style="position:relative;z-index:10;display:flex;height:100%;">';
-
-  // LEFT PANEL content
-  ph+='<div style="width:28%;padding:32px 20px;display:flex;flex-direction:column;justify-content:space-between;color:#fff;">';
-  // Top: Logo
-  ph+='<div>';
-  ph+='<svg width="44" height="44" viewBox="0 0 48 48" fill="none" style="display:block;margin-bottom:12px;"><path d="M3 36 Q13 9 24 9 Q35 9 45 36" stroke="#D4A843" stroke-width="3" fill="none" stroke-linecap="round"/><line x1="15" y1="23" x2="15" y2="36" stroke="#D4A843" stroke-width="2.5" stroke-linecap="round"/><line x1="33" y1="23" x2="33" y2="36" stroke="#D4A843" stroke-width="2.5" stroke-linecap="round"/><rect x="2" y="36" width="44" height="6" rx="2" fill="#D4A843" opacity="0.35"/></svg>';
-  ph+='<div style="font-size:15pt;font-weight:900;letter-spacing:4px;color:#D4A843;">SITESYNC</div>';
-  ph+='<div style="font-size:6pt;color:#64748b;letter-spacing:2.5px;text-transform:uppercase;margin-top:3px;">Construction Progress</div>';
-  ph+='</div>';
-
-  // Middle: Report type + date
-  ph+='<div>';
-  ph+='<div style="width:28px;height:2px;background:#D4A843;border-radius:1px;margin-bottom:12px;"></div>';
-  ph+='<div style="font-size:7pt;color:#D4A843;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;">Progress Report</div>';
-  ph+='<div style="font-size:8pt;color:#64748b;margin-bottom:4px;">'+today3+'</div>';
-  ph+='<div style="font-size:7pt;color:#475569;">Khatib &amp; Alami</div>';
-  ph+='</div>';
-
-  // Bottom: Prepared by
-  ph+='<div style="border-top:1px solid #1e2d3d;padding-top:14px;">';
-  ph+='<div style="font-size:6.5pt;color:#475569;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px;">Prepared by</div>';
-  ph+='<div style="font-size:8.5pt;font-weight:700;color:#D4A843;">K. DIMACHKIE</div>';
-  ph+='<div style="font-size:7pt;color:#64748b;margin-top:2px;">Head of Surveying Department</div>';
-  ph+='</div>';
-  ph+='</div>';
-
-  // RIGHT PANEL content
-  ph+='<div style="flex:1;padding:40px 36px 32px 44px;display:flex;flex-direction:column;justify-content:space-between;">';
-
-  // Top: Main title
-  ph+='<div>';
-  ph+='<div style="font-size:7.5pt;font-weight:700;color:#D4A843;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">IC1 · Interchange 1</div>';
-  ph+='<div style="font-size:26pt;font-weight:900;color:#0f172a;line-height:1.05;letter-spacing:-1px;">Interchange 1 Road<br><span style="color:#D4A843;">Improvement</span></div>';
-  ph+='<div style="font-size:11pt;font-weight:500;color:#64748b;margin-top:6px;letter-spacing:0.5px;">Project</div>';
-  ph+='<div style="display:flex;align-items:center;gap:8px;margin-top:16px;">';
-  ph+='<div style="width:36px;height:3px;background:#D4A843;border-radius:2px;"></div>';
-  ph+='<div style="font-size:7.5pt;color:#64748b;letter-spacing:0.5px;">Diriyah · Kingdom of Saudi Arabia</div>';
-  ph+='</div>';
-  ph+='</div>';
-
-  // Middle: Big progress display
-  ph+='<div style="background:linear-gradient(135deg,#f8fafc,#fff);border:1px solid #e2e8f0;border-radius:16px;padding:24px 28px;box-shadow:0 4px 20px #0000000a;">';
-  // Large ring
-  var rC=56; var circC=2*3.14159*rC; var fillC=Math.round(circC*ov/100);
-  ph+='<div style="display:flex;align-items:center;gap:24px;">';
-  ph+='<svg width="136" height="136" viewBox="0 0 136 136" style="flex-shrink:0;">';
-  // Background ring
-  ph+='<circle cx="68" cy="68" r="'+rC+'" fill="none" stroke="#e2e8f0" stroke-width="11"/>';
-  // Gold progress arc
-  ph+='<circle cx="68" cy="68" r="'+rC+'" fill="none" stroke="url(#goldGrad)" stroke-width="11" stroke-dasharray="'+fillC+' '+circC+'" stroke-linecap="round" transform="rotate(-90 68 68)"/>';
-  ph+='<defs><linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" style="stop-color:#D4A843"/><stop offset="100%" style="stop-color:#f0c866"/></linearGradient></defs>';
-  // Center text
-  ph+='<text x="68" y="60" text-anchor="middle" font-family="Arial" font-weight="900" font-size="22" fill="#D4A843">'+ov+'%</text>';
-  ph+='<text x="68" y="76" text-anchor="middle" font-family="Arial" font-size="7.5" fill="#94a3b8" font-weight="600">COMPLETE</text>';
-  ph+='<text x="68" y="90" text-anchor="middle" font-family="Arial" font-size="6.5" fill="#cbd5e1">Overall</text>';
-  ph+='</svg>';
-  // KPI mini grid
-  ph+='<div style="flex:1;">';
-  ph+='<div style="font-size:8.5pt;font-weight:700;color:#0f172a;margin-bottom:14px;">Project Status</div>';
-  var cpKpis=[
-    {lbl:"Time Elapsed",val:timePct3+'%',c:"#3B82F6"},
-    {lbl:"Days Remaining",val:remaining3,c:"#06C98F"},
-    {lbl:"Variance",val:(variance3>=0?"+":"")+variance3+'%',c:vCol3},
-    {lbl:"Total Bridges",val:"10",c:"#9B5DE5"}
+  // Discipline array
+  var discs=[
+    {label:'Bridges',   icon:'',w:brW,   pct:brPct,  col:'#C9A44C',earned:Math.round(brPct/100*brW*10)/10},
+    {label:'Roads',     icon:'',w:rdW,   pct:rdPct,  col:'#003A70',earned:Math.round(rdPct/100*rdW*10)/10},
+    {label:'Utilities', icon:'',w:utTotal,pct:utPct, col:'#0077B6',earned:Math.round(utEarned*10)/10},
+    {label:'Fill Slope',icon:'',w:0.7,   pct:fsPct,  col:'#4ECDC4',earned:Math.round(fsEarned*10)/10},
+    {label:'Prelim.',   icon:'',w:PRE_PCT,pct:100,   col:'#06C98F',earned:PRE_PCT}
   ];
-  for(var ck=0;ck<cpKpis.length;ck++){
-    ph+='<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #f1f5f9;">';
-    ph+='<span style="font-size:7.5pt;color:#64748b;">'+cpKpis[ck].lbl+'</span>';
-    ph+='<span style="font-size:9pt;font-weight:900;color:'+cpKpis[ck].c+';">'+cpKpis[ck].val+'</span>';
-    ph+='</div>';
+
+  // ── CSS ───────────────────────────────────────────────────
+  var css = [
+    '@page{size:A4 portrait;margin:20mm 15mm 15mm 15mm}',
+    '*{box-sizing:border-box;margin:0;padding:0}',
+    'body{font-family:"Segoe UI",Arial,sans-serif;font-size:9pt;color:#000;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}',
+    '.page{width:180mm;min-height:257mm;position:relative;page-break-after:always;padding-bottom:12mm}',
+    '.page:last-child{page-break-after:auto}',
+    // Fixed footer on all pages except cover
+    '@media print{.footer{position:running(footer)} @page{@bottom-left{content:element(footer)}}}',
+    '.footer{font-size:7pt;color:#555;border-top:1px solid #D9D9D9;padding-top:4pt;display:flex;justify-content:space-between;margin-top:10mm}',
+    '.cover{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:257mm;text-align:center;padding:0}',
+    '.cover .bar{width:100%;height:8mm;background:#003A70;border-bottom:2mm solid #C9A44C}',
+    '.cover .bar-bot{width:100%;height:8mm;background:#003A70;border-top:2mm solid #C9A44C;margin-top:auto}',
+    '.sec-hdr{background:#003A70;color:#fff;padding:5pt 10pt;font-size:11pt;font-weight:700;letter-spacing:0.3px;margin-bottom:8pt;border-left:4pt solid #C9A44C}',
+    '.sub-hdr{background:#E8F0F8;color:#003A70;padding:4pt 8pt;font-size:9pt;font-weight:700;margin-bottom:6pt;border-left:3pt solid #003A70}',
+    'table{width:100%;border-collapse:collapse;font-size:8pt;margin-bottom:10pt}',
+    'th{background:#003A70;color:#fff;padding:5pt 7pt;text-align:left;font-size:7.5pt;text-transform:uppercase;letter-spacing:0.5px}',
+    'td{padding:5pt 7pt;border-bottom:1px solid #D9D9D9;vertical-align:middle}',
+    'tr:nth-child(even) td{background:#F5F8FC}',
+    '.badge{display:inline-block;padding:1.5pt 6pt;border-radius:3pt;font-size:7pt;font-weight:700}',
+    '.bg-done{background:#D4EDDA;color:#155724}',
+    '.bg-ip{background:#CCE5FF;color:#004085}',
+    '.bg-ns{background:#E2E3E5;color:#383D41}',
+    '.kpi-row{display:flex;gap:8pt;margin-bottom:10pt}',
+    '.kpi{flex:1;border:1px solid #D9D9D9;border-radius:4pt;padding:8pt;text-align:center;border-top:3pt solid #003A70}',
+    '.kpi-val{font-size:18pt;font-weight:900;color:#003A70;line-height:1}',
+    '.kpi-lbl{font-size:7pt;color:#555;text-transform:uppercase;letter-spacing:0.5px;margin-top:3pt}',
+    '.kpi-sub{font-size:7pt;color:#888;margin-top:2pt}',
+    '.disc-card{border:1px solid #D9D9D9;border-radius:4pt;padding:8pt;border-top:3pt solid #003A70;flex:1;min-width:0}',
+    '.disc-cards{display:flex;gap:6pt;margin-bottom:10pt}',
+    '.bar-wrap{height:6pt;background:#E9ECEF;border-radius:3pt;overflow:hidden;margin-top:4pt}',
+    '.bar-fill{height:6pt;border-radius:3pt;background:#003A70}',
+    '.two-col{display:flex;gap:12pt;margin-bottom:10pt}',
+    '.col-half{flex:1;min-width:0}',
+    'p{font-size:8.5pt;line-height:1.7;margin-bottom:6pt;color:#000}',
+    'ul{padding-left:14pt;margin-bottom:6pt}',
+    'li{font-size:8.5pt;line-height:1.7;margin-bottom:2pt}',
+    '.gold{color:#C9A44C;font-weight:700}',
+    '.blue{color:#003A70;font-weight:700}',
+    '.green{color:#155724;font-weight:700}',
+    '.red{color:#721C24;font-weight:700}',
+    '.divider{height:1px;background:#D9D9D9;margin:8pt 0}',
+    '.pg-num{text-align:center}',
+    '.legend-item{display:flex;align-items:center;gap:5pt;margin-bottom:3pt;font-size:8pt}',
+    '.legend-dot{width:10pt;height:10pt;border-radius:2pt;flex-shrink:0}',
+  ].join('\n');
+
+  // ── SVG Donut builder ─────────────────────────────────────
+  function svgDonut(segs, cx, sub, size){
+    var sz = size||110;
+    var r=42, stroke=12, circ=2*Math.PI*r;
+    var total=0; for(var i=0;i<segs.length;i++) total+=segs[i].val;
+    var svg='<svg viewBox="0 0 100 100" style="width:'+sz+'pt;height:'+sz+'pt;">';
+    svg+='<circle cx="50" cy="50" r="'+r+'" fill="none" stroke="#E9ECEF" stroke-width="'+stroke+'"/>';
+    if(total>0){
+      var cumAngle=-90;
+      for(var i=0;i<segs.length;i++){
+        if(segs[i].val<=0) continue;
+        var pct=segs[i].val/total;
+        var dash=circ*pct+' '+(circ*(1-pct));
+        svg+='<circle cx="50" cy="50" r="'+r+'" fill="none" stroke="'+segs[i].col+'" ';
+        svg+='stroke-width="'+stroke+'" stroke-dasharray="'+dash+'" ';
+        svg+='stroke-dashoffset="'+(circ*0.25)+'" ';
+        svg+='transform="rotate('+cumAngle+' 50 50)" stroke-linecap="butt"/>';
+        cumAngle+=pct*360;
+      }
+    }
+    svg+='<text x="50" y="47" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="13" font-weight="900" fill="#003A70">'+cx+'</text>';
+    svg+='<text x="50" y="60" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="7" fill="#555">'+sub+'</text>';
+    svg+='</svg>';
+    return svg;
+  }
+
+  // ── Status badge ──────────────────────────────────────────
+  function badge(pct){
+    if(pct>=100) return '<span class="badge bg-done">Complete</span>';
+    if(pct>0)    return '<span class="badge bg-ip">In Progress</span>';
+    return '<span class="badge bg-ns">Not Started</span>';
+  }
+
+  // ── Footer HTML (repeated) ────────────────────────────────
+  function footer(pg,total){
+    return '<div class="footer">'
+      +'<span>SITESYNC \u2013 Khatib &amp; Alami</span>'
+      +'<span class="pg-num">Page '+pg+' of '+total+'</span>'
+      +'<span>'+genStr+'</span>'
+      +'</div>';
+  }
+
+  var totalPages = 7;
+  var ph = '<!DOCTYPE html><html><head><meta charset="UTF-8">'
+    +'<style>'+css+'</style></head><body>';
+
+  // ══════════════════════════════════════════════════════════
+  // PAGE 1 — COVER
+  // ══════════════════════════════════════════════════════════
+  ph+='<div class="page">';
+  ph+='<div class="cover">';
+  // Top bar
+  ph+='<div class="bar"></div>';
+  // Content
+  ph+='<div style="padding:30pt 20pt;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;">';
+  // Logo area
+  ph+='<div style="margin-bottom:20pt;">';
+  ph+='<svg width="80" height="80" viewBox="0 0 42 42" xmlns="http://www.w3.org/2000/svg">';
+  ph+='<rect x="2" y="28" width="38" height="8" rx="2.5" fill="#C9A44C" opacity="0.3"/>';
+  ph+='<path d="M2 28 Q10 12 21 12 Q32 12 40 28" stroke="#C9A44C" stroke-width="2.5" fill="none" stroke-linecap="round"/>';
+  ph+='<line x1="10" y1="19" x2="10" y2="28" stroke="#003A70" stroke-width="2" stroke-linecap="round"/>';
+  ph+='<line x1="32" y1="19" x2="32" y2="28" stroke="#003A70" stroke-width="2" stroke-linecap="round"/>';
+  ph+='</svg>';
+  ph+='</div>';
+  // Org
+  ph+='<div style="font-size:10pt;color:#555;letter-spacing:1px;text-transform:uppercase;margin-bottom:6pt;">Khatib &amp; Alami Consolidated Engineering</div>';
+  ph+='<div style="width:40mm;height:1px;background:#C9A44C;margin-bottom:20pt;"></div>';
+  // Title
+  ph+='<div style="font-size:22pt;font-weight:900;color:#003A70;line-height:1.2;margin-bottom:8pt;">IC1 Road Improvements</div>';
+  ph+='<div style="font-size:14pt;font-weight:700;color:#555;margin-bottom:20pt;">Interchange 1 \u2013 Diriyah, Riyadh</div>';
+  // Report type
+  ph+='<div style="background:#003A70;color:#fff;padding:8pt 24pt;border-radius:4pt;margin-bottom:6pt;font-size:11pt;font-weight:700;letter-spacing:0.5px;">PROJECT OVERVIEW REPORT</div>';
+  ph+='<div style="font-size:9pt;color:#555;margin-bottom:24pt;">Progress as of '+todayStr+'</div>';
+  // Details table
+  ph+='<table style="width:100%;max-width:140mm;font-size:9pt;border-collapse:collapse;">';
+  var details=[
+    ['Client','Diriyah Gate Development Authority (DGDA)'],
+    ['Consultant','Khatib &amp; Alami Consolidated Engineering'],
+    ['Report Type','Project Overview &amp; Progress Report'],
+    ['Project Start','June 2025'],
+    ['Handover','September 2027'],
+    ['Prepared By',MY_NAME+' \u2013 Head of Surveying'],
+    ['Report Date',todayStr],
+  ];
+  for(var di=0;di<details.length;di++){
+    ph+='<tr><td style="padding:5pt 10pt;border-bottom:1px solid #D9D9D9;color:#003A70;font-weight:700;width:40%;">'+details[di][0]+'</td>';
+    ph+='<td style="padding:5pt 10pt;border-bottom:1px solid #D9D9D9;">'+details[di][1]+'</td></tr>';
+  }
+  ph+='</table>';
+  // Overall progress pill
+  ph+='<div style="margin-top:24pt;background:#F5F8FC;border:2px solid #003A70;border-radius:8pt;padding:12pt 24pt;text-align:center;">';
+  ph+='<div style="font-size:32pt;font-weight:900;color:#003A70;line-height:1;">'+ov+'%</div>';
+  ph+='<div style="font-size:9pt;color:#555;text-transform:uppercase;letter-spacing:1px;margin-top:4pt;">Overall Project Progress</div>';
+  var vC=variance>=0?'#155724':'#721C24';
+  ph+='<div style="font-size:10pt;font-weight:700;color:'+vC+';margin-top:4pt;">'+(variance>=0?'\u25b2 +':'\u25bc ')+variance+'% vs Planned</div>';
+  ph+='</div>';
+  ph+='</div>';
+  // Bottom bar
+  ph+='<div class="bar-bot"></div>';
+  ph+='</div>';
+  ph+='</div>';
+
+  // ══════════════════════════════════════════════════════════
+  // PAGE 2 — EXECUTIVE SUMMARY
+  // ══════════════════════════════════════════════════════════
+  ph+='<div class="page">';
+  ph+='<div class="sec-hdr">1. Executive Summary</div>';
+  // Auto-generated narrative
+  var aheadBehind = variance>=0 ? 'ahead of' : 'behind';
+  var absVar = Math.abs(variance);
+  ph+='<p>As of <strong>'+todayStr+'</strong>, the IC1 Road Improvements project at Interchange 1, Diriyah has achieved an overall progress of <strong class="blue">'+ov+'%</strong> against a planned progress of <strong>'+tp+'%</strong>, representing a schedule variance of <strong style="color:'+(variance>=0?'#155724':'#721C24')+'">'+(variance>=0?'+':'')+variance+'%</strong>. The project is currently <strong>'+absVar+'% '+aheadBehind+' schedule</strong> with <strong>'+dr+' days</strong> remaining until the planned handover date of September 2027.</p>';
+  ph+='<div class="sub-hdr">Key Achievements</div>';
+  ph+='<ul>';
+  ph+='<li>Bridge Works: <strong>'+brPct+'%</strong> complete across '+BRIDGES.length+' bridge structures ('+BRIDGES.length*2+' abutments and intermediate piers)</li>';
+  ph+='<li>Ibn Saud Road paving activities: <strong>'+ibnPct+'%</strong> complete</li>';
+  ph+='<li>Prince Sattam Road paving activities: <strong>'+sattamPct+'%</strong> complete</li>';
+  if(utTotal>0) ph+='<li>Utility networks activated with a combined project weight of <strong>'+utTotal+'%</strong></li>';
+  if(fsPct>0) ph+='<li>Fill Slope works between abutments: <strong>'+fsPct+'%</strong> progress recorded</li>';
+  ph+='</ul>';
+  ph+='<div class="sub-hdr">Schedule Status &amp; Risks</div>';
+  ph+='<ul>';
+  if(variance<-5) ph+='<li><strong style="color:#721C24;">Critical:</strong> Project is '+Math.abs(variance)+'% behind planned schedule — recovery plan required</li>';
+  else if(variance<0) ph+='<li><strong style="color:#856404;">Attention:</strong> Minor schedule slippage of '+Math.abs(variance)+'% — monitor closely</li>';
+  else ph+='<li>Schedule performance is satisfactory — project is '+variance+'% ahead of plan</li>';
+  ph+='<li>Bridge weight allocation is <strong>'+brW+'%</strong> of total project value'+( brW<70?' — approaching lower threshold':'')+'</li>';
+  if(utTotal===0) ph+='<li>Utility network weights have not been configured — this may understate actual project scope</li>';
+  ph+='<li>'+dr+' calendar days remain until scheduled project handover (September 2027)</li>';
+  ph+='</ul>';
+  ph+='<div class="sub-hdr">Next Steps (14-Day Lookahead)</div>';
+  ph+='<ul>';
+  ph+='<li>Continue pier construction and concrete works for active bridge structures</li>';
+  ph+='<li>Progress road sub-base and base course layers where earthworks are complete</li>';
+  ph+='<li>Coordinate utility diversions and interface with bridge abutment zones</li>';
+  ph+='<li>Update Primavera P6 schedule and issue weekly progress report by next Friday</li>';
+  ph+='<li>Conduct site survey for fill slope zones between L–M and M–N abutments</li>';
+  ph+='</ul>';
+  ph+= footer(2, totalPages);
+  ph+='</div>';
+
+  // ══════════════════════════════════════════════════════════
+  // PAGE 3 — DASHBOARD
+  // ══════════════════════════════════════════════════════════
+  ph+='<div class="page">';
+  ph+='<div class="sec-hdr">2. Project Dashboard</div>';
+
+  // KPI row
+  ph+='<div class="kpi-row">';
+  var kpis=[
+    {v:ov+'%',    l:'Overall Progress', s:'Planned: '+tp+'%'},
+    {v:(variance>=0?'+':'')+variance+'%', l:'Variance vs Plan', s:(variance>=0?'Ahead':'Behind')+' schedule'},
+    {v:tp+'%',    l:'Time Elapsed',      s:'Since June 2025'},
+    {v:dr+'',     l:'Days Remaining',    s:'Until Sep 2027'},
+  ];
+  for(var ki=0;ki<kpis.length;ki++){
+    var kc=ki===1?(variance>=0?'#155724':'#721C24'):'#003A70';
+    ph+='<div class="kpi"><div class="kpi-val" style="color:'+kc+';">'+kpis[ki].v+'</div>'
+      +'<div class="kpi-lbl">'+kpis[ki].l+'</div>'
+      +'<div class="kpi-sub">'+kpis[ki].s+'</div></div>';
+  }
+  ph+='</div>';
+
+  // Twin donuts + legends
+  ph+='<div class="two-col">';
+  // Weight donut
+  var wSegs=[];
+  for(var di=0;di<discs.length;di++) if(discs[di].w>0) wSegs.push({col:discs[di].col,val:discs[di].w});
+  ph+='<div class="col-half" style="text-align:center;">';
+  ph+='<div style="font-size:9pt;font-weight:700;color:#003A70;margin-bottom:6pt;text-transform:uppercase;letter-spacing:0.5px;">Weight Distribution</div>';
+  ph+=svgDonut(wSegs,'100%','WEIGHTS',90);
+  ph+='<div style="margin-top:8pt;">';
+  for(var di=0;di<discs.length;di++){
+    if(discs[di].w<=0) continue;
+    ph+='<div class="legend-item"><div class="legend-dot" style="background:'+discs[di].col+';"></div>'
+      +'<span style="flex:1;">'+discs[di].label+'</span>'
+      +'<strong style="color:'+discs[di].col+';">'+discs[di].w+'%</strong></div>';
   }
   ph+='</div></div>';
+  // Progress donut
+  var pSegs=[];
+  for(var di=0;di<discs.length;di++) if(discs[di].w>0) pSegs.push({col:discs[di].col,val:Math.round(discs[di].pct*discs[di].w/100*10)/10});
+  ph+='<div class="col-half" style="text-align:center;">';
+  ph+='<div style="font-size:9pt;font-weight:700;color:#003A70;margin-bottom:6pt;text-transform:uppercase;letter-spacing:0.5px;">Progress Distribution</div>';
+  ph+=svgDonut(pSegs,ov+'%','PROGRESS',90);
+  ph+='<div style="margin-top:8pt;">';
+  for(var di=0;di<discs.length;di++){
+    if(discs[di].w<=0) continue;
+    ph+='<div class="legend-item"><div class="legend-dot" style="background:'+discs[di].col+';"></div>'
+      +'<span style="flex:1;">'+discs[di].label+'</span>'
+      +'<strong style="color:'+discs[di].col+';">'+discs[di].pct+'%</strong></div>';
+  }
+  ph+='</div></div>';
+  ph+='</div>';
 
-  // Weight bars
-  ph+='<div style="margin-top:16px;">';
-  ph+='<div style="font-size:7pt;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Weight Breakdown</div>';
-  var cpWt=[
-    {lbl:"Preliminary",pct:PRE_PCT,wt:PRE_PCT,c:"#06C98F"},
-    {lbl:"Bridges",pct:brOnlyPct,wt:BR_W,c:"#D4A843"},
-    {lbl:"Ibn Saud Rd",pct:ibnPct,wt:3,c:"#3B82F6"},
-    {lbl:"Sattam Rd",pct:satPct,wt:3,c:"#3B82F6"},
-    {lbl:"Fill Slope",pct:Math.round(calcFsEarned()/0.7*100),wt:0.7,c:"#4ECDC4"}
-  ];
-  for(var cw=0;cw<cpWt.length;cw++){
-    var earn7=Math.round(cpWt[cw].pct/100*cpWt[cw].wt*10)/10;
-    ph+='<div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;">';
-    ph+='<div style="width:72px;font-size:6.5pt;color:#64748b;">'+cpWt[cw].lbl+'</div>';
-    ph+='<div style="width:16px;font-size:6pt;color:#94a3b8;text-align:right;">'+cpWt[cw].wt+'%</div>';
-    ph+='<div style="flex:1;height:5px;background:#e2e8f0;border-radius:3px;">';
-    ph+='<div style="width:'+cpWt[cw].pct+'%;height:5px;background:'+cpWt[cw].c+';border-radius:3px;"></div></div>';
-    ph+='<div style="font-size:6.5pt;font-weight:700;color:'+cpWt[cw].c+';min-width:40px;text-align:right;">'+earn7+'%</div>';
+  // Discipline summary cards
+  ph+='<div style="font-size:9pt;font-weight:700;color:#003A70;margin-bottom:6pt;text-transform:uppercase;letter-spacing:0.5px;">Discipline Summary</div>';
+  ph+='<div class="disc-cards">';
+  for(var di=0;di<discs.length;di++){
+    var d=discs[di];
+    var rem=Math.round((d.w-d.earned)*10)/10;
+    ph+='<div class="disc-card" style="border-top-color:'+d.col+';">';
+    ph+='<div style="font-size:8pt;font-weight:800;color:'+d.col+';margin-bottom:4pt;">'+d.label+'</div>';
+    ph+='<div style="font-size:16pt;font-weight:900;color:#003A70;line-height:1;">'+d.pct+'%</div>';
+    ph+='<div class="bar-wrap"><div class="bar-fill" style="width:'+Math.min(100,d.pct)+'%;background:'+d.col+';"></div></div>';
+    ph+='<div style="font-size:7pt;color:#555;margin-top:4pt;">Wt: <strong>'+d.w+'%</strong> | Earned: <strong>'+d.earned+'%</strong></div>';
+    ph+='<div style="margin-top:4pt;">'+badge(d.pct)+'</div>';
     ph+='</div>';
   }
   ph+='</div>';
+  ph+=footer(3,totalPages);
   ph+='</div>';
 
-  // Bottom: project meta + QR
-  ph+='<div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;">';
-  // Meta
-  ph+='<div style="font-size:7.5pt;color:#94a3b8;line-height:1.9;">';
-  ph+='<div><b style="color:#64748b;">Client:</b> Diriyah Gate Development Authority</div>';
-  ph+='<div><b style="color:#64748b;">Contract:</b> June 2025 — September 2027</div>';
-  ph+='<div><b style="color:#64748b;">Consultant:</b> Khatib &amp; Alami</div>';
+  // ══════════════════════════════════════════════════════════
+  // PAGE 4 — BRIDGES DETAIL
+  // ══════════════════════════════════════════════════════════
+  ph+='<div class="page">';
+  ph+='<div class="sec-hdr">3. Bridges &amp; Structures</div>';
+  ph+='<div class="two-col" style="margin-bottom:8pt;">';
+  ph+='<div><span class="blue">Total Bridges:</span> '+BRIDGES.length+'</div>';
+  ph+='<div><span class="blue">Overall Progress:</span> '+brPct+'%</div>';
+  ph+='<div><span class="blue">Project Weight:</span> '+brW+'%</div>';
+  ph+='<div><span class="blue">Earned:</span> '+Math.round(brPct/100*brW*10)/10+'%</div>';
   ph+='</div>';
-  // QR
-  ph+='<div style="text-align:center;flex-shrink:0;">';
-  var qrUC='https://api.qrserver.com/v1/create-qr-code/?size=90x90&data='+encodeURIComponent('https://kameldimachkie.github.io/ic1-bridges/');
-  ph+='<img src="'+qrUC+'" width="88" height="88" style="border:2.5px solid #1e293b;border-radius:8px;display:block;">';
-  ph+='<div style="font-size:6.5pt;color:#94a3b8;margin-top:4px;font-weight:600;">Scan to open app</div>';
-  ph+='</div>';
+  // Bridge table
+  ph+='<table>';
+  ph+='<tr><th>Bridge</th><th>Piers</th><th>Progress</th><th>Earned</th><th>Status</th></tr>';
+  for(var bi=0;bi<BRIDGES.length;bi++){
+    var br=BRIDGES[bi];
+    var bp=brPct2(br.id);
+    var bEarned=Math.round(bp/100*(brW/BRIDGES.length)*10)/10;
+    ph+='<tr><td><strong>Bridge '+br.id+'</strong></td>';
+    ph+='<td>'+br.piers.length+'</td>';
+    ph+='<td><div style="display:flex;align-items:center;gap:4pt;">'
+      +'<div style="width:50pt;height:5pt;background:#E9ECEF;border-radius:3pt;overflow:hidden;">'
+      +'<div style="width:'+Math.min(100,bp)+'%;height:5pt;background:#C9A44C;"></div></div>'
+      +'<span>'+bp+'%</span></div></td>';
+    ph+='<td>'+bEarned+'%</td>';
+    ph+='<td>'+badge(bp)+'</td></tr>';
+  }
+  ph+='</table>';
+  // Stage weights reference
+  ph+='<div class="sub-hdr">Construction Stages &amp; Weights</div>';
+  ph+='<table>';
+  ph+='<tr><th>Stage</th><th>ID</th><th>Weight</th><th>Type</th></tr>';
+  for(var si=0;si<STAGES.length;si++){
+    if(STAGES[si].w===0) continue;
+    ph+='<tr><td>'+STAGES[si].name+'</td><td><code>'+STAGES[si].id+'</code></td>';
+    ph+='<td>'+STAGES[si].w+'%</td>';
+    ph+='<td>'+(STAGES[si].id==='PIL'?'Piled only':'All piers')+'</td></tr>';
+  }
+  ph+='</table>';
+  ph+=footer(4,totalPages);
   ph+='</div>';
 
+  // ══════════════════════════════════════════════════════════
+  // PAGE 5 — ROADS & UTILITIES
+  // ══════════════════════════════════════════════════════════
+  ph+='<div class="page">';
+  ph+='<div class="sec-hdr">4. Roads &amp; Utilities</div>';
+
+  // Roads
+  ph+='<div class="sub-hdr">4.1 Roads</div>';
+  ph+='<div class="two-col" style="margin-bottom:8pt;">';
+  ph+='<div><span class="blue">Ibn Saud Road:</span> '+ibnPct+'%</div>';
+  ph+='<div><span class="blue">Prince Sattam Road:</span> '+sattamPct+'%</div>';
+  ph+='<div><span class="blue">Combined Weight:</span> '+rdW+'%</div>';
+  ph+='<div><span class="blue">Combined Progress:</span> '+rdPct+'%</div>';
   ph+='</div>';
+  // Road activities table
+  ph+='<table>';
+  ph+='<tr><th>Activity</th><th>Weight</th><th>Ibn Saud</th><th>Pr. Sattam</th></tr>';
+  for(var ri=0;ri<ROAD_ACTS.length;ri++){
+    var ibnSt=ROADS['ibn.act.'+ri]||'Not Started';
+    var satSt=ROADS['sattam.act.'+ri]||'Not Started';
+    ph+='<tr><td>'+ROAD_ACTS[ri].name+'</td><td>'+ROAD_ACTS[ri].w+'%</td>';
+    ph+='<td>'+badge(ibnSt==='Complete'?100:ibnSt==='In Progress'?30:0)+'</td>';
+    ph+='<td>'+badge(satSt==='Complete'?100:satSt==='In Progress'?30:0)+'</td></tr>';
+  }
+  ph+='</table>';
+
+  // Utilities
+  ph+='<div class="sub-hdr">4.2 Utilities &amp; Infrastructure</div>';
+  if(utTotal===0){
+    ph+='<p style="color:#555;font-style:italic;">No utility networks have been configured. Utility weight has not been allocated.</p>';
+  } else {
+    ph+='<table>';
+    ph+='<tr><th>Network</th><th>Weight</th><th>Progress</th><th>Earned</th><th>Status</th></tr>';
+    for(var ni=0;ni<UT_ORDER.length;ni++){
+      var n=UTIL_NETWORKS[UT_ORDER[ni]];
+      if(!n.active) continue;
+      var np=n.pct||0;
+      var ne=Math.round(np/100*(n.weight||0)*10)/10;
+      ph+='<tr><td>'+n.icon+' '+n.name+'</td><td>'+n.weight+'%</td>';
+      ph+='<td><div style="display:flex;align-items:center;gap:4pt;">'
+        +'<div style="width:50pt;height:5pt;background:#E9ECEF;border-radius:3pt;overflow:hidden;">'
+        +'<div style="width:'+Math.min(100,np)+'%;height:5pt;background:#0077B6;"></div></div>'
+        +'<span>'+np+'%</span></div></td>';
+      ph+='<td>'+ne+'%</td><td>'+badge(np)+'</td></tr>';
+    }
+    ph+='</table>';
+  }
+  ph+=footer(5,totalPages);
   ph+='</div>';
 
-  // Gold bottom bar
-  ph+='<div style="position:absolute;bottom:0;left:0;right:0;height:5px;background:linear-gradient(90deg,#D4A843,#f0c866,#D4A843);z-index:20;"></div>';
-  ph+='</div>';
+  // ══════════════════════════════════════════════════════════
+  // PAGE 6 — WEIGHT AUDIT & FILL SLOPE
+  // ══════════════════════════════════════════════════════════
+  ph+='<div class="page">';
+  ph+='<div class="sec-hdr">5. Weight Audit &amp; Remaining Works</div>';
 
-  // ══════════════════════════════════════════════
-  // PAGE 2 — SCHEMATIC SITE MAP
-  // ══════════════════════════════════════════════
-  ph+='<div class="page sp" style="background:#fff;">';
-  ph+='<div style="position:absolute;top:0;left:0;right:0;height:5px;background:linear-gradient(90deg,#D4A843,#f0c866,#D4A843);"></div>';
+  // Weight audit table
+  ph+='<div class="sub-hdr">5.1 Weight Audit Table</div>';
+  ph+='<table>';
+  ph+='<tr><th>Discipline</th><th>Allocated Weight</th><th>Earned</th><th>Remaining</th><th>% Complete</th></tr>';
+  var totalW2=0,totalEarned2=0;
+  for(var di=0;di<discs.length;di++){
+    var d2=discs[di];
+    var rem2=Math.round((d2.w-d2.earned)*100)/100;
+    totalW2+=d2.w; totalEarned2+=d2.earned;
+    ph+='<tr><td><strong>'+d2.label+'</strong></td>'
+      +'<td style="text-align:center;">'+d2.w+'%</td>'
+      +'<td style="text-align:center;color:#003A70;font-weight:700;">'+d2.earned+'%</td>'
+      +'<td style="text-align:center;color:'+(rem2>0?'#721C24':'#155724')+';">'+rem2+'%</td>'
+      +'<td style="text-align:center;">'+badge(d2.pct)+'</td></tr>';
+  }
+  ph+='<tr style="background:#003A70;color:#fff;">'
+    +'<td><strong>TOTAL</strong></td>'
+    +'<td style="text-align:center;font-weight:700;">'+Math.round(totalW2*10)/10+'%</td>'
+    +'<td style="text-align:center;font-weight:700;">'+Math.round(totalEarned2*10)/10+'%</td>'
+    +'<td style="text-align:center;font-weight:700;">'+Math.round((totalW2-totalEarned2)*10)/10+'%</td>'
+    +'<td></td></tr>';
+  ph+='</table>';
 
-  // Page header
-  ph+='<div style="border-bottom:2px solid #e2e8f0;padding-bottom:10px;margin-bottom:18px;display:flex;align-items:flex-end;justify-content:space-between;">';
-  ph+='<div>';
-  ph+='<div style="font-size:7.5pt;color:#D4A843;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">IC1 · Interchange 1 Road Improvements</div>';
-  ph+='<div style="font-size:16pt;font-weight:900;color:#0f172a;">Schematic Site Map</div>';
-  ph+='<div style="width:40px;height:3px;background:#D4A843;border-radius:2px;margin-top:8px;"></div>';
-  ph+='</div>';
-  ph+='<div style="text-align:right;font-size:7.5pt;color:#94a3b8;">'+today3+'</div>';
-  ph+='</div>';
-
-  // Build bridge data for map
-  var mapBridges=[
-    {id:"A",piers:12,x:52},
-    {id:"B",piers:11,x:105},
-    {id:"C",piers:13,x:160},
-    {id:"D",piers:9,x:212},
-    {id:"E",piers:17,x:268},
-    {id:"G",piers:9,x:322},
-    {id:"K",piers:7,x:372},
-    {id:"L",piers:2,x:412},
-    {id:"M",piers:6,x:452},
-    {id:"N",piers:4,x:495}
+  // Fill Slope
+  ph+='<div class="sub-hdr">5.2 Fill Slope</div>';
+  ph+='<table>';
+  ph+='<tr><th>Location</th><th>Status</th><th>Progress</th></tr>';
+  var fsItems=[
+    {label:'L\u2013M Right (0.175%)', key:'lm_r'},
+    {label:'L\u2013M Left (0.175%)',  key:'lm_l'},
+    {label:'M\u2013N Right (0.175%)', key:'mn_r'},
+    {label:'M\u2013N Left (0.175%)',  key:'mn_l'},
   ];
-
-  // SVG map
-  var SW=560; var SH=320;
-  ph+='<svg viewBox="0 0 '+SW+' '+SH+'" style="width:100%;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;display:block;margin-bottom:14px;">';
-
-  // Background grid
-  for(var gi2=0;gi2<SW;gi2+=40){
-    ph+='<line x1="'+gi2+'" y1="0" x2="'+gi2+'" y2="'+SH+'" stroke="#e2e8f0" stroke-width="0.5" opacity="0.5"/>';
+  for(var fsi=0;fsi<fsItems.length;fsi++){
+    var fsSt=FILL_SLOPE[fsItems[fsi].key]||'Not Started';
+    var fsPct2=fsSt==='Complete'?100:fsSt==='In Progress'?30:0;
+    ph+='<tr><td>'+fsItems[fsi].label+'</td><td>'+badge(fsPct2)+'</td>'
+      +'<td>'+fsPct2+'%</td></tr>';
   }
-  for(var gj2=0;gj2<SH;gj2+=40){
-    ph+='<line x1="0" y1="'+gj2+'" x2="'+SW+'" y2="'+gj2+'" stroke="#e2e8f0" stroke-width="0.5" opacity="0.5"/>';
-  }
-
-  // ── Prince Sattam Road (top) ──────────────────────────────
-  var satPct2=ROADS.sattam?ROADS.sattam.pct||0:0;
-  var satCol2=satPct2>=50?"#06C98F":satPct2>0?"#D4A843":"#CBD5E1";
-  ph+='<rect x="20" y="42" width="520" height="22" rx="4" fill="#1e293b" opacity="0.08"/>';
-  ph+='<rect x="20" y="42" width="'+Math.round(520*satPct2/100)+'" height="22" rx="4" fill="'+satCol2+'" opacity="0.35"/>';
-  ph+='<rect x="20" y="42" width="520" height="22" rx="4" fill="none" stroke="#94a3b8" stroke-width="1"/>';
-  ph+='<text x="30" y="57" font-family="Arial" font-size="8" font-weight="700" fill="#475569">Prince Sattam Road</text>';
-  ph+='<text x="530" y="57" text-anchor="end" font-family="Arial" font-size="8" font-weight="700" fill="'+satCol2+'">'+satPct2+'%</text>';
-
-  // ── King Khalid Road (center) — dual carriageway ──────────
-  ph+='<rect x="20" y="128" width="520" height="44" rx="4" fill="#1e293b" opacity="0.85"/>';
-  // Road markings
-  ph+='<line x1="20" y1="150" x2="540" y2="150" stroke="#D4A843" stroke-width="1.5" stroke-dasharray="12,8" opacity="0.7"/>';
-  for(var rm=40;rm<540;rm+=30){
-    ph+='<line x1="'+rm+'" y1="134" x2="'+rm+'" y2="168" stroke="#ffffff" stroke-width="0.5" opacity="0.1"/>';
-  }
-  ph+='<text x="280" y="145" text-anchor="middle" font-family="Arial" font-size="8" font-weight="900" fill="#D4A843" letter-spacing="2">KING KHALID ROAD</text>';
-  ph+='<text x="280" y="162" text-anchor="middle" font-family="Arial" font-size="6.5" fill="#94a3b8">IC1 — Interchange 1 Road Improvements</text>';
-
-  // Road direction arrows
-  ph+='<text x="50" y="146" font-family="Arial" font-size="10" fill="#D4A843" opacity="0.5">→</text>';
-  ph+='<text x="490" y="164" font-family="Arial" font-size="10" fill="#D4A843" opacity="0.5">←</text>';
-
-  // ── Ibn Saud Road (bottom) ────────────────────────────────
-  var ibnPct2=ROADS.ibn?ROADS.ibn.pct||0:0;
-  var ibnCol2=ibnPct2>=50?"#06C98F":ibnPct2>0?"#D4A843":"#CBD5E1";
-  ph+='<rect x="20" y="236" width="520" height="22" rx="4" fill="#1e293b" opacity="0.08"/>';
-  ph+='<rect x="20" y="236" width="'+Math.round(520*ibnPct2/100)+'" height="22" rx="4" fill="'+ibnCol2+'" opacity="0.35"/>';
-  ph+='<rect x="20" y="236" width="520" height="22" rx="4" fill="none" stroke="#94a3b8" stroke-width="1"/>';
-  ph+='<text x="30" y="251" font-family="Arial" font-size="8" font-weight="700" fill="#475569">Ibn Saud Road</text>';
-  ph+='<text x="530" y="251" text-anchor="end" font-family="Arial" font-size="8" font-weight="700" fill="'+ibnCol2+'">'+ibnPct2+'%</text>';
-
-  // ── Cross connectors (vertical roads) ────────────────────
-  var crossX=[120,200,280,360,440];
-  for(var ci=0;ci<crossX.length;ci++){
-    ph+='<line x1="'+crossX[ci]+'" y1="64" x2="'+crossX[ci]+'" y2="128" stroke="#94a3b8" stroke-width="2" stroke-dasharray="4,3" opacity="0.4"/>';
-    ph+='<line x1="'+crossX[ci]+'" y1="172" x2="'+crossX[ci]+'" y2="236" stroke="#94a3b8" stroke-width="2" stroke-dasharray="4,3" opacity="0.4"/>';
-  }
-
-  // ── Bridges as circles ────────────────────────────────────
-  for(var bi6=0;bi6<mapBridges.length;bi6++){
-    var mb=mapBridges[bi6];
-    var bpct=calcBrPct(mb.id);
-    var bpct2=Math.round(bpct);
-    // Color based on progress
-    var bFill=bpct2>=75?"#06C98F":bpct2>=25?"#D4A843":bpct2>0?"#F59E0B":"#CBD5E1";
-    var bStroke=bpct2>=75?"#059669":bpct2>=25?"#B8860B":bpct2>0?"#D97706":"#94a3b8";
-    var bText=bpct2>=25?"#fff":"#475569";
-    // Circle radius proportional to pier count
-    var brad=Math.max(16,Math.min(22,10+mb.piers));
-    var bcy=150;
-
-    // Vertical span line
-    ph+='<line x1="'+mb.x+'" y1="'+(bcy-brad)+'" x2="'+mb.x+'" y2="'+(bcy+brad)+'" stroke="'+bStroke+'" stroke-width="1.5" opacity="0.6"/>';
-
-    // Bridge circle
-    ph+='<circle cx="'+mb.x+'" cy="'+bcy+'" r="'+brad+'" fill="'+bFill+'" stroke="'+bStroke+'" stroke-width="2"/>';
-
-    // Bridge ID
-    ph+='<text x="'+mb.x+'" y="'+(bcy-3)+'" text-anchor="middle" font-family="Arial" font-weight="900" font-size="10" fill="'+bText+'">'+mb.id+'</text>';
-
-    // Progress %
-    ph+='<text x="'+mb.x+'" y="'+(bcy+9)+'" text-anchor="middle" font-family="Arial" font-size="7" fill="'+bText+'" opacity="0.9">'+bpct2+'%</text>';
-
-    // Pier count below
-    ph+='<text x="'+mb.x+'" y="'+(bcy+brad+12)+'" text-anchor="middle" font-family="Arial" font-size="6.5" fill="#64748b">'+mb.piers+' piers</text>';
-  }
-
-  // ── North arrow ───────────────────────────────────────────
-  ph+='<g transform="translate(525,25)">';
-  ph+='<circle cx="0" cy="0" r="14" fill="#0f172a" opacity="0.8"/>';
-  ph+='<polygon points="0,-10 -4,2 0,0 4,2" fill="#D4A843"/>';
-  ph+='<polygon points="0,10 -4,-2 0,0 4,-2" fill="#fff" opacity="0.4"/>';
-  ph+='<text x="0" y="4" text-anchor="middle" font-family="Arial" font-size="7" font-weight="900" fill="#D4A843">N</text>';
-  ph+='</g>';
-
-  // ── Overall progress bar at bottom ───────────────────────
-  ph+='<rect x="20" y="285" width="520" height="12" rx="6" fill="#e2e8f0"/>';
-  ph+='<rect x="20" y="285" width="'+Math.round(520*ov/100)+'" height="12" rx="6" fill="url(#ovGrad)"/>';
-  ph+='<defs><linearGradient id="ovGrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" style="stop-color:#D4A843"/><stop offset="100%" style="stop-color:#f0c866"/></linearGradient></defs>';
-  ph+='<text x="20" y="308" font-family="Arial" font-size="7.5" font-weight="700" fill="#64748b">Overall Project Progress</text>';
-  ph+='<text x="540" y="308" text-anchor="end" font-family="Arial" font-size="7.5" font-weight="900" fill="#D4A843">'+ov+'%</text>';
-
-  ph+='</svg>';
-
-  // ── Legend ────────────────────────────────────────────────
-  ph+='<div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-bottom:14px;">';
-  var lgMap=[
-    {col:"#06C98F",stroke:"#059669",lbl:"≥75% Complete"},
-    {col:"#D4A843",stroke:"#B8860B",lbl:"25–74% In Progress"},
-    {col:"#F59E0B",stroke:"#D97706",lbl:"1–24% Started"},
-    {col:"#CBD5E1",stroke:"#94a3b8",lbl:"0% Not Started"}
-  ];
-  for(var li2=0;li2<lgMap.length;li2++){
-    ph+='<div style="display:flex;align-items:center;gap:6px;">';
-    ph+='<svg width="18" height="18"><circle cx="9" cy="9" r="7" fill="'+lgMap[li2].col+'" stroke="'+lgMap[li2].stroke+'" stroke-width="1.5"/></svg>';
-    ph+='<span style="font-size:7.5pt;color:#475569;">'+lgMap[li2].lbl+'</span>';
-    ph+='</div>';
-  }
-  ph+='</div>';
-
-  // ── Bridge summary strip ──────────────────────────────────
-  ph+='<div style="display:flex;gap:4px;flex-wrap:wrap;">';
-  for(var bi7=0;bi7<mapBridges.length;bi7++){
-    var mb2=mapBridges[bi7];
-    var bp2=Math.round(calcBrPct(mb2.id));
-    var bc2=bp2>=75?"#06C98F":bp2>=25?"#D4A843":bp2>0?"#F59E0B":"#CBD5E1";
-    var btc=bp2>=25?"#fff":"#475569";
-    ph+='<div style="flex:1;min-width:42px;text-align:center;background:'+bc2+';border-radius:6px;padding:5px 3px;">';
-    ph+='<div style="font-size:9pt;font-weight:900;color:'+btc+';">'+mb2.id+'</div>';
-    ph+='<div style="font-size:7pt;color:'+btc+';opacity:0.85;">'+bp2+'%</div>';
-    ph+='</div>';
-  }
-  ph+='</div>';
-
-  ph+='<div class="pn">IC1 Road Improvements &nbsp;·&nbsp; Khatib &amp; Alami &nbsp;|&nbsp; Page 2 of 6</div>';
-  ph+='<div style="position:absolute;bottom:0;left:0;right:0;height:4px;background:linear-gradient(90deg,transparent,#D4A843,transparent);"></div>';
-  ph+='</div>';
-
-  // ══════════════════════════════════════════════
-  // PAGE 3 — EXECUTIVE NARRATIVE SUMMARY
-  // ══════════════════════════════════════════════
-  ph+='<div class="page sp" style="background:#fff;">';
-  ph+='<div style="position:absolute;top:0;left:0;right:0;height:5px;background:linear-gradient(90deg,#D4A843,#f0c866,#D4A843);"></div>';
-
-  // Page header
-  ph+='<div style="border-bottom:2px solid #e2e8f0;padding-bottom:12px;margin-bottom:22px;display:flex;align-items:flex-end;justify-content:space-between;">';
-  ph+='<div>';
-  ph+='<div style="font-size:7.5pt;color:#D4A843;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:5px;">IC1 · Interchange 1 Road Improvements</div>';
-  ph+='<div style="font-size:16pt;font-weight:900;color:#0f172a;letter-spacing:-0.3px;">Project Narrative Summary</div>';
-  ph+='<div style="width:40px;height:3px;background:#D4A843;border-radius:2px;margin-top:8px;"></div>';
-  ph+='</div>';
-  ph+='<div style="text-align:right;font-size:7.5pt;color:#94a3b8;">'+today3+'</div>';
-  ph+='</div>';
-
-  // Build paragraph data
-  var schedStatus=variance3>=0?"ahead of":"behind";
-  var schedWord=variance3>=0?"progressing well and ahead of":"currently running behind";
-  var brStatus=brOnlyPct===0?"has not yet commenced":brOnlyPct<25?"is in its early stages":brOnlyPct<50?"is progressing steadily":brOnlyPct<75?"is well advanced":"is nearing completion";
-  var ibnStatus=ibnPct===0?"has not yet commenced":ibnPct<50?"is in progress":"is well advanced";
-  var satStatus=satPct===0?"has not yet commenced":satPct<50?"is in progress":"is well advanced";
-  var overallWord=ov<10?"early":ov<30?"progressing":ov<60?"advancing well":ov<85?"well advanced":"nearing completion";
-
-  // Main paragraph
-  ph+='<div style="background:#f8fafc;border-radius:12px;border-left:4px solid #D4A843;padding:20px 24px;margin-bottom:20px;">';
-  ph+='<div style="font-size:9pt;font-weight:700;color:#0f172a;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px;">Project Status Overview</div>';
-  ph+='<p style="font-size:9.5pt;color:#334155;line-height:1.85;text-align:justify;">';
-  ph+='As of <b>'+today3+'</b>, the <b>IC1 Road Improvements Project</b> located at King Khalid Road, Diriyah, Kingdom of Saudi Arabia, has achieved an overall completion of <b style="color:#D4A843;">'+ov+'%</b> against a planned progress of <b>'+timePct3+'%</b>, ';
-  ph+='resulting in a schedule variance of <b style="color:'+vCol3+';">'+(variance3>=0?'+':'')+variance3+'%</b>. The project is '+schedWord+' the planned schedule by <b style="color:'+vCol3+';">'+Math.abs(variance3)+'%</b>.';
-  ph+='</p>';
-  ph+='</div>';
-
-  // Works breakdown paragraphs
-  ph+='<div style="margin-bottom:18px;">';
-  ph+='<div style="font-size:9pt;font-weight:700;color:#0f172a;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px;">Works Breakdown</div>';
+  ph+='</table>';
+  ph+='<p><span class="blue">Fill Slope Weight:</span> 0.7% &nbsp;|&nbsp; <span class="blue">Earned:</span> '+Math.round(fsEarned*100)/100+'% &nbsp;|&nbsp; <span class="blue">Overall Fill Slope Progress:</span> '+fsPct+'%</p>';
 
   // Preliminary
-  ph+='<div style="display:flex;gap:12px;margin-bottom:12px;padding:12px 16px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;">';
-  ph+='<div style="width:3px;border-radius:2px;background:#06C98F;flex-shrink:0;"></div>';
-  ph+='<div>';
-  ph+='<div style="font-size:8pt;font-weight:700;color:#06C98F;margin-bottom:4px;">Preliminary Works — '+PRE_PCT+'%</div>';
-  ph+='<p style="font-size:9pt;color:#475569;line-height:1.75;margin:0;">Preliminary works have been <b>fully completed</b> at <b>'+PRE_PCT+'%</b>, representing the mobilisation, site preparation, and pre-construction activities carried out between June 2025 and February 2026.</p>';
-  ph+='</div></div>';
-
-  // Bridges
-  ph+='<div style="display:flex;gap:12px;margin-bottom:12px;padding:12px 16px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;">';
-  ph+='<div style="width:3px;border-radius:2px;background:#D4A843;flex-shrink:0;"></div>';
-  ph+='<div>';
-  ph+='<div style="font-size:8pt;font-weight:700;color:#D4A843;margin-bottom:4px;">Bridge Works — '+brOnlyPct+'% (Weight: '+BR_W+'%)</div>';
-  ph+='<p style="font-size:9pt;color:#475569;line-height:1.75;margin:0;">Structural works across the <b>10 bridges</b> (A, B, C, D, E, G, K, L, M, N) encompassing <b>90 piers and abutments</b> '+brStatus+' at <b>'+brOnlyPct+'%</b>. This component carries the highest project weight at <b>'+BR_W+'%</b> and remains the primary focus of ongoing construction activities.</p>';
-  ph+='</div></div>';
-
-  // Roads
-  ph+='<div style="display:flex;gap:12px;margin-bottom:4px;padding:12px 16px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;">';
-  ph+='<div style="width:3px;border-radius:2px;background:#3B82F6;flex-shrink:0;"></div>';
-  ph+='<div>';
-  ph+='<div style="font-size:8pt;font-weight:700;color:#3B82F6;margin-bottom:4px;">Road Works — Ibn Saud: '+ibnPct+'% · Prince Sattam: '+satPct+'% (Weight: 3% each)</div>';
-  ph+='<p style="font-size:9pt;color:#475569;line-height:1.75;margin:0;">Works on <b>Imam Ibn Saud Road</b> '+ibnStatus+' at <b>'+ibnPct+'%</b>, while works on <b>Prince Sattam Road</b> '+satStatus+' at <b>'+satPct+'%</b>. Both road improvement components each carry a weight of <b>3%</b> of the overall project value.</p>';
-  ph+='</div></div>';
+  ph+='<div class="sub-hdr">5.3 Preliminary Works</div>';
+  ph+='<p><span class="blue">Weight:</span> '+PRE_PCT+'% &nbsp;|&nbsp; <span class="blue">Status:</span> <span class="badge bg-done">Complete (Baseline)</span> &nbsp;|&nbsp; <span class="blue">Earned:</span> '+PRE_PCT+'%</p>';
+  ph+=footer(6,totalPages);
   ph+='</div>';
 
-  // Outlook paragraph
-  ph+='<div style="background:linear-gradient(135deg,#f0f9ff,#fff);border-radius:10px;border:1px solid #bae6fd;padding:16px 20px;margin-bottom:16px;">';
-  ph+='<div style="font-size:8pt;font-weight:700;color:#0369a1;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">Project Outlook</div>';
-  ph+='<p style="font-size:9pt;color:#334155;line-height:1.85;margin:0;">The project is targeted for <b>handover in September 2027</b>, with <b>'+remaining3+' days</b> remaining. As of the report date, <b>'+elapsed3+' days</b> have elapsed out of a total contract duration of <b>'+totalDays3+' days</b> (<b>'+timePct3+'%</b> of the contract period). '+(variance3>=0?'The project is performing <b style="color:#06C98F;">ahead of schedule</b> and efforts should be maintained to sustain this positive trajectory.':'The project team is advised to review progress and implement <b style="color:#EF4444;">recovery measures</b> to close the schedule gap and meet the contractual handover date.')+'</p>';
-  ph+='</div>';
-
-  // Prepared by footer
-  ph+='<div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid #e2e8f0;padding-top:12px;">';
-  ph+='<div style="font-size:7.5pt;color:#64748b;"><b style="color:#0f172a;">Prepared by:</b> Kamel Dimachkie — Head of Surveying Department, Khatib &amp; Alami</div>';
-  ph+='<div style="font-size:7.5pt;color:#94a3b8;">Page 2</div>';
-  ph+='</div>';
-
-  ph+='<div class="pn">IC1 Road Improvements &nbsp;·&nbsp; Khatib &amp; Alami &nbsp;|&nbsp; Page 3 of 6</div>';
-  ph+='<div style="position:absolute;bottom:0;left:0;right:0;height:4px;background:linear-gradient(90deg,transparent,#D4A843,transparent);"></div>';
-  ph+='</div>';
-
-  // ══════════════════════════════════════════════
-  // PAGE 4 — EXECUTIVE SUMMARY + S-CURVE
-  // ══════════════════════════════════════════════
-  ph+='<div class="page sp">';
-  ph+='<div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#D4A843,transparent);"></div>';
-  // Subtle bridge watermark
-  ph+='<svg style="position:absolute;top:10px;right:20px;opacity:0.04" width="180" height="100" viewBox="0 0 180 100"><path d="M0 80 Q45 15 90 15 Q135 15 180 80" stroke="#0f172a" stroke-width="3" fill="none"/><line x1="45" y1="45" x2="45" y2="80" stroke="#0f172a" stroke-width="2"/><line x1="135" y1="45" x2="135" y2="80" stroke="#0f172a" stroke-width="2"/><rect x="0" y="80" width="180" height="6" fill="#0f172a"/></svg>';
-
-  ph+='<div class="sec-hdr"><div class="sec-title">Executive Summary</div><div class="sec-date">Report Date: '+today3+'</div></div>';
-  ph+='<div class="pn">IC1 Road Improvements &nbsp;·&nbsp; Khatib &amp; Alami &nbsp;|&nbsp; Page 4 of 6</div>';
-
-  // KPIs
-  ph+='<div style="display:flex;gap:9px;margin-bottom:14px;">';
-  var kpis3=[
-    {val:ov+'%',lbl:'Overall Progress',sub:'Project completion',c:'#D4A843'},
-    {val:timePct3+'%',lbl:'Time Elapsed',sub:elapsed3+' of '+totalDays3+' days',c:'#3B82F6'},
-    {val:remaining3,lbl:'Days Remaining',sub:'Handover Sep 2027',c:'#06C98F'},
-    {val:BRIDGES.length+' / 90',lbl:'Bridges / Piers',sub:'Active scope',c:'#9B5DE5'}
-  ];
-  for(var ki3=0;ki3<kpis3.length;ki3++){
-    var kp3=kpis3[ki3];
-    ph+='<div class="kpi" style="border-color:'+kp3.c+';color:'+kp3.c+';">';
-    ph+='<div class="kpi-val" style="color:'+kp3.c+';">'+kp3.val+'</div>';
-    ph+='<div class="kpi-lbl" style="margin-top:5px;">'+kp3.lbl+'</div>';
-    ph+='<div class="kpi-sub">'+kp3.sub+'</div></div>';
-  }
-  ph+='</div>';
-
-  // Variance strip
-  ph+='<div style="background:'+(variance3>=0?"rgba(76,175,80,0.12)":"rgba(229,62,62,0.12)")+'";border-radius:10px;border-left:5px solid '+vCol3+';padding:11px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 1px 4px rgba(0,0,0,0.06);">';
-  ph+='<div><div style="font-size:10pt;font-weight:700;color:'+vCol3+';">'+(variance3>=0?"▲ Ahead of Schedule":"▼ Behind Schedule")+'</div>';
-  ph+='<div style="font-size:7.5pt;color:#64748b;margin-top:2px;">Progress: '+ov+'%&nbsp;&nbsp;·&nbsp;&nbsp;Time used: '+timePct3+'%&nbsp;&nbsp;·&nbsp;&nbsp;Variance: '+(variance3>=0?'+':'')+variance3+'%</div></div>';
-  ph+='<div style="font-size:20pt;font-weight:900;color:'+vCol3+';">'+(variance3>=0?'+':'')+variance3+'%</div>';
-  ph+='</div>';
-
-  // S-CURVE — identical formula to app S-Curve tab
-  ph+='<div class="stitle">S-Curve — Planned vs Actual</div>';
-
-  // ── Same data as rGnSCurve ──────────────────────────────
-  var pdfMonths=["Jun'25","Jul","Aug","Sep","Oct","Nov","Dec","Jan'26","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec","Jan'27","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep'27"];
-  var pdfPlanned=[0,1,2,3,4,5,6,7,10,14,18,23,28,34,41,48,55,62,68,74,79,84,88,92,95,97,99,100];
-  var pdfSCA={};
-  try{pdfSCA=JSON.parse(localStorage.getItem("ic1b3_sca")||"{}");}catch(e){}
-
-  var pdfActual=[];
-  for(var pmi=0;pmi<pdfMonths.length;pmi++){
-    var pmk=pdfMonths[pmi].replace("'","");
-    pdfActual.push(pdfSCA[pmk]!==undefined?pdfSCA[pmk]:null);
-  }
-  var pdfTodayIdx=Math.min(pdfMonths.length-1,Math.floor((new Date()-new Date("2025-06-01"))/(30*86400000)));
-
-  // Build actual points — always starts at (0,0)
-  var pdfActPts=[{i:0,v:0}];
-  for(var pai=0;pai<pdfActual.length;pai++){
-    if(pdfActual[pai]!==null) pdfActPts.push({i:pai,v:pdfActual[pai]});
-  }
-  // Add today's real overall as last point
-  var pdfLastPt=pdfActPts[pdfActPts.length-1];
-  if(pdfLastPt.i!==pdfTodayIdx||pdfLastPt.v!==ov){
-    pdfActPts.push({i:pdfTodayIdx,v:ov});
-  }
-  var pdfPlannedNow=pdfPlanned[Math.min(pdfPlanned.length-1,pdfTodayIdx)]||0;
-  var pdfVariance=Math.round((ov-pdfPlannedNow)*10)/10;
-  var pdfVarCol=pdfVariance>=0?"#06C98F":"#EF4444";
-
-  // ── SVG chart ──────────────────────────────────────────
-  var PCW=490; var PCH=140; var PLPAD=30; var PBPAD=24;
-  var pcW=PCW-PLPAD-8; var pcH=PCH-PBPAD-12;
-  function scpX(i){return PLPAD+Math.round(i/(pdfMonths.length-1)*pcW);}
-  function scpY(v){return (PCH-PBPAD)-Math.round(v/100*pcH);}
-
-  ph+='<div style="background:#f8fafc;border-radius:10px;padding:12px 10px 6px;border:1px solid #e2e8f0;margin-bottom:12px;">';
-  ph+='<svg viewBox="0 0 '+PCW+' '+PCH+'" style="width:100%;display:block;">';
-
-  // Grid
-  for(var pg=0;pg<=4;pg++){
-    var pgv=pg*25; var pgy=scpY(pgv);
-    ph+='<line x1="'+PLPAD+'" y1="'+pgy+'" x2="'+(PLPAD+pcW)+'" y2="'+pgy+'" stroke="#e2e8f0" stroke-width="0.8"/>';
-    ph+='<text x="'+(PLPAD-3)+'" y="'+(pgy+3)+'" text-anchor="end" font-size="6" fill="#94a3b8">'+pgv+'</text>';
-  }
-  // Month labels every 4
-  for(var pml=0;pml<pdfMonths.length;pml+=4){
-    var plx=scpX(pml);
-    ph+='<text x="'+plx+'" y="'+(PCH-PBPAD+10)+'" text-anchor="middle" font-size="6" fill="#94a3b8">'+pdfMonths[pml]+'</text>';
-    ph+='<line x1="'+plx+'" y1="'+(PCH-PBPAD)+'" x2="'+plx+'" y2="'+(PCH-PBPAD+3)+'" stroke="#CBD5E1" stroke-width="0.8"/>';
-  }
-  // Axes
-  ph+='<line x1="'+PLPAD+'" y1="8" x2="'+PLPAD+'" y2="'+(PCH-PBPAD)+'" stroke="#CBD5E1" stroke-width="1"/>';
-  ph+='<line x1="'+PLPAD+'" y1="'+(PCH-PBPAD)+'" x2="'+(PLPAD+pcW)+'" y2="'+(PCH-PBPAD)+'" stroke="#CBD5E1" stroke-width="1"/>';
-
-  // Planned fill
-  var ppfill="M"+scpX(0)+" "+scpY(pdfPlanned[0]);
-  for(var ppfi=1;ppfi<pdfPlanned.length;ppfi++) ppfill+=" L"+scpX(ppfi)+" "+scpY(pdfPlanned[ppfi]);
-  ppfill+=" L"+(PLPAD+pcW)+" "+(PCH-PBPAD)+" L"+PLPAD+" "+(PCH-PBPAD)+" Z";
-  ph+='<path d="'+ppfill+'" fill="#D4A843" opacity="0.07"/>';
-
-  // Planned line — gold dashed (same as app)
-  var ppline="M"+scpX(0)+" "+scpY(pdfPlanned[0]);
-  for(var ppi=1;ppi<pdfPlanned.length;ppi++) ppline+=" L"+scpX(ppi)+" "+scpY(pdfPlanned[ppi]);
-  ph+='<path d="'+ppline+'" stroke="#D4A843" stroke-width="1.5" fill="none" stroke-dasharray="5,3" opacity="0.85"/>';
-
-  // Actual line — green solid (same as app)
-  var paline="M"+scpX(pdfActPts[0].i)+" "+scpY(pdfActPts[0].v);
-  for(var api2=1;api2<pdfActPts.length;api2++) paline+=" L"+scpX(pdfActPts[api2].i)+" "+scpY(pdfActPts[api2].v);
-  ph+='<path d="'+paline+'" stroke="#06D6A0" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>';
-  // Dot at today
-  var pLastPt=pdfActPts[pdfActPts.length-1];
-  ph+='<circle cx="'+scpX(pLastPt.i)+'" cy="'+scpY(pLastPt.v)+'" r="4" fill="#06D6A0"/>';
-  ph+='<text x="'+(scpX(pLastPt.i)+6)+'" y="'+(scpY(pLastPt.v)+4)+'" font-size="8" font-weight="900" fill="#06D6A0">'+ov+'%</text>';
-
-  // TODAY line
-  var ptx=scpX(pdfTodayIdx);
-  ph+='<line x1="'+ptx+'" y1="8" x2="'+ptx+'" y2="'+(PCH-PBPAD)+'" stroke="#EF4444" stroke-width="1.2" stroke-dasharray="3,2" opacity="0.7"/>';
-  ph+='<text x="'+ptx+'" y="6" text-anchor="middle" font-size="5.5" fill="#EF4444" font-weight="700">TODAY</text>';
-
-  // Legend
-  ph+='<g transform="translate('+PLPAD+',10)">';
-  ph+='<line x1="0" y1="5" x2="14" y2="5" stroke="#D4A843" stroke-width="1.5" stroke-dasharray="4,2"/>';
-  ph+='<text x="17" y="8" font-size="6" fill="#64748b">Planned</text>';
-  ph+='<line x1="58" y1="5" x2="72" y2="5" stroke="#06D6A0" stroke-width="2.5"/>';
-  ph+='<text x="75" y="8" font-size="6" fill="#64748b">Actual</text>';
-  ph+='</g>';
-
-  // Variance callout inside chart
-  ph+='<text x="'+(PLPAD+pcW-2)+'" y="20" text-anchor="end" font-size="7" font-weight="700" fill="'+pdfVarCol+'">'+(pdfVariance>=0?'▲ Ahead ':'▼ Behind ')+Math.abs(pdfVariance)+'%</text>';
-  ph+='</svg>';
-
-  // Planned / Actual / Variance pills
-  ph+='<div style="display:flex;gap:10px;justify-content:center;padding:6px 0 2px;">';
-  ph+='<div style="text-align:center;padding:5px 14px;background:#fff;border-radius:6px;border:1px solid #e2e8f0;">';
-  ph+='<div style="font-size:6.5pt;color:#64748b;">Planned</div>';
-  ph+='<div style="font-size:11pt;font-weight:900;color:#D4A843;">'+pdfPlannedNow+'%</div></div>';
-  ph+='<div style="text-align:center;padding:5px 14px;background:#fff;border-radius:6px;border:1px solid #e2e8f0;">';
-  ph+='<div style="font-size:6.5pt;color:#64748b;">Actual</div>';
-  ph+='<div style="font-size:11pt;font-weight:900;color:#06D6A0;">'+ov+'%</div></div>';
-  ph+='<div style="text-align:center;padding:5px 14px;background:#fff;border-radius:6px;border:1px solid '+pdfVarCol+'33;">';
-  ph+='<div style="font-size:6.5pt;color:#64748b;">Variance</div>';
-  ph+='<div style="font-size:11pt;font-weight:900;color:'+pdfVarCol+';">'+(pdfVariance>=0?"+":"")+pdfVariance+'%</div></div>';
-  ph+='</div>';
-  ph+='</div>';
-
-// Weight table
-  ph+='<div class="stitle">Weight Breakdown</div>';
-  ph+='<table><tr><th>Component</th><th style="text-align:center">Weight</th><th>Progress</th><th style="text-align:center">Earned</th><th>Status</th></tr>';
-  var preEarned3=Math.round(PRE_PCT*10)/10;
-  var brEarned3=Math.round(brOnlyPct/100*BR_W*10)/10;
-  var wt3=[
-    {nm:"Preliminary Works",wt:PRE_PCT,pct:PRE_PCT,earned:preEarned3,st:"Complete",c:"#06C98F"},
-    {nm:"Bridge Works ("+BRIDGES.length+" bridges)",wt:BR_W,pct:brOnlyPct,earned:brEarned3,st:brOnlyPct>0?"In Progress":"Not Started",c:"#D4A843"},
-    {nm:"Ibn Saud Road",wt:3,pct:ibnPct,earned:Math.round(ibnPct/100*3*10)/10,st:ROADS.ibn.status||"Not Started",c:"#3B82F6"},
-    {nm:"Prince Sattam Road",wt:3,pct:satPct,earned:Math.round(satPct/100*3*10)/10,st:ROADS.sattam.status||"Not Started",c:"#3B82F6"},
-    {nm:"Fill Slope",wt:0.7,pct:Math.round(calcFsEarned()/0.7*100),earned:Math.round(calcFsEarned()*100)/100,st:calcFsEarned()>=0.7?"Complete":calcFsEarned()>0?"In Progress":"Not Started",c:"#4ECDC4"},
-    {nm:"TOTAL",wt:100,pct:ov,earned:Math.round(ov*10)/10,st:"—",c:"#D4A843"}
-  ];
-  for(var wj3=0;wj3<wt3.length;wj3++){
-    var wr4=wt3[wj3]; var isT=wr4.nm==="TOTAL";
-    var bCls3=wr4.st==="Complete"?"bg":wr4.st==="In Progress"?"bb":wr4.st==="Not Started"?"bs":"";
-    ph+='<tr'+(isT?' style="font-weight:700;background:#fffbeb;"':'')+'>'; 
-    ph+='<td style="'+(isT?"font-weight:700":"")+'">'+wr4.nm+'</td>';
-    ph+='<td style="text-align:center;font-weight:700;color:#0f172a;">'+wr4.wt+'%</td>';
-    ph+='<td style="min-width:130px;">';
-    if(!isT){
-      ph+='<div style="display:flex;align-items:center;gap:5px;">';
-      ph+='<div class="bar-wrap"><div class="bar-fill" style="width:'+wr4.pct+'%;background:'+wr4.c+';"></div></div>';
-      ph+='<span style="font-size:7pt;font-weight:700;color:'+wr4.c+';">'+wr4.pct+'%</span></div>';
-    } else { ph+='<b style="color:#D4A843;">'+wr4.pct+'%</b>'; }
-    ph+='</td>';
-    ph+='<td style="text-align:center;font-weight:700;color:#D4A843;">'+wr4.earned+'%</td>';
-    ph+='<td>'+(bCls3?'<span class="badge '+bCls3+'">'+wr4.st+'</span>':wr4.st)+'</td>';
-    ph+='</tr>';
-  }
+  // ══════════════════════════════════════════════════════════
+  // PAGE 7 — LOOKAHEAD & SIGN-OFF
+  // ══════════════════════════════════════════════════════════
+  ph+='<div class="page">';
+  ph+='<div class="sec-hdr">6. 14-Day Lookahead &amp; Next Steps</div>';
+  ph+='<div class="sub-hdr">6.1 Planned Activities (Next 14 Days)</div>';
+  ph+='<ul>';
+  ph+='<li><strong>Bridge Works:</strong> Continue pile cap construction and pier shaft concreting for active bridges. Target minimum 2 piers to advance to next stage.</li>';
+  ph+='<li><strong>Bridge Bearings:</strong> Confirm bearing pads delivery schedule and coordinate with structural engineer for installation approval.</li>';
+  ph+='<li><strong>Girder Works:</strong> Review girder erection sequence with contractor for bridges approaching STR stage.</li>';
+  ph+='<li><strong>Roads \u2013 Ibn Saud:</strong> Complete sub-base compaction in areas where earthworks are accepted. Progress to base course in approved sections.</li>';
+  ph+='<li><strong>Roads \u2013 Prince Sattam:</strong> Continue pavement works in line with approved material submittals and lab test results.</li>';
+  ph+='<li><strong>Utilities:</strong> Review utility diversion schedule and coordinate with service authorities for any outstanding permissions.</li>';
+  ph+='<li><strong>Fill Slope:</strong> Mobilize fill material and commence compaction works between L\u2013M abutment zone.</li>';
+  ph+='<li><strong>Survey:</strong> Conduct weekly as-built survey for all active disciplines. Update coordinate files and submit to consultant within 48 hours.</li>';
+  ph+='</ul>';
+  ph+='<div class="sub-hdr">6.2 Risks &amp; Dependencies</div>';
+  ph+='<ul>';
+  if(variance<-3) ph+='<li><strong style="color:#721C24;">Schedule Recovery:</strong> Project is '+Math.abs(variance)+'% behind plan. Contractor to submit recovery schedule within 7 days.</li>';
+  ph+='<li><strong>Material Delivery:</strong> Confirm concrete mix design approvals for upcoming pier shaft pours.</li>';
+  ph+='<li><strong>Utility Interfaces:</strong> Verify that utility diversions are complete before starting road base layers in affected zones.</li>';
+  ph+='<li><strong>Weather:</strong> Monitor temperature forecasts for concrete pours. Avoid pouring in temperatures exceeding 35\u00b0C without approved hot-weather concreting plan.</li>';
+  ph+='<li><strong>Approvals Pending:</strong> Follow up on any outstanding RFIs and technical submittals to avoid delays to critical path activities.</li>';
+  ph+='</ul>';
+  ph+='<div class="sub-hdr">6.3 Report Sign-Off</div>';
+  ph+='<table style="margin-top:8pt;">';
+  ph+='<tr><th>Role</th><th>Name</th><th>Signature</th><th>Date</th></tr>';
+  ph+='<tr><td>Head of Surveying</td><td>'+MY_NAME+'</td><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td><td>'+todayStr+'</td></tr>';
+  ph+='<tr><td>Resident Engineer</td><td></td><td>&nbsp;</td><td></td></tr>';
+  ph+='<tr><td>Project Manager</td><td></td><td>&nbsp;</td><td></td></tr>';
   ph+='</table>';
-  ph+='<div style="position:absolute;bottom:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,#D4A843,transparent);"></div>';
+  // SITESYNC branding
+  ph+='<div style="margin-top:16pt;background:#003A70;color:#fff;padding:8pt 12pt;border-radius:4pt;display:flex;align-items:center;justify-content:space-between;">';
+  ph+='<div><div style="font-size:10pt;font-weight:900;letter-spacing:0.5px;">SITESYNC</div><div style="font-size:7pt;color:#C9A44C;margin-top:2pt;">Construction Intelligence Platform</div></div>';
+  ph+='<div style="text-align:right;font-size:7.5pt;"><div>Khatib &amp; Alami Consolidated Engineering</div><div style="color:#C9A44C;margin-top:2pt;">'+genStr+'</div></div>';
   ph+='</div>';
-
-  // ══════════════════════════════════════════════
-  // PAGE 5 — DASHBOARD + BRIDGE SUMMARY
-  // ══════════════════════════════════════════════
-  ph+='<div class="page sp">';
-  ph+='<div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#D4A843,transparent);"></div>';
-  ph+='<svg style="position:absolute;bottom:20px;right:10px;opacity:0.04" width="200" height="120" viewBox="0 0 200 120"><path d="M0 100 Q50 20 100 20 Q150 20 200 100" stroke="#0f172a" stroke-width="3" fill="none"/><line x1="50" y1="55" x2="50" y2="100" stroke="#0f172a" stroke-width="2"/><line x1="150" y1="55" x2="150" y2="100" stroke="#0f172a" stroke-width="2"/></svg>';
-
-  ph+='<div class="sec-hdr"><div class="sec-title">Project Dashboard</div><div class="sec-date">As of '+today3+'</div></div>';
-  ph+='<div class="pn">IC1 Road Improvements &nbsp;·&nbsp; Khatib &amp; Alami &nbsp;|&nbsp; Page 5 of 6</div>';
-
-  // Dashboard: mini donuts row
-  ph+='<div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">';
-  var dashItems=[
-    {lbl:"Overall",pct:ov,c:"#D4A843"},
-    {lbl:"Bridges",pct:brOnlyPct,c:"#2979FF"},
-    {lbl:"Ibn Saud Rd",pct:ibnPct,c:"#3B82F6"},
-    {lbl:"Sattam Rd",pct:satPct,c:"#06C98F"},
-    {lbl:"Time Used",pct:timePct3,c:"#9B5DE5"}
-  ];
-  for(var di=0;di<dashItems.length;di++){
-    var dItem=dashItems[di]; var dCol=dItem.c;
-    var dr=28; var dcirc=2*3.14159*dr; var dfill=Math.round(dcirc*dItem.pct/100);
-    ph+='<div style="flex:1;min-width:90px;text-align:center;background:#f8fafc;border-radius:10px;padding:10px 8px;border:1px solid #e2e8f0;">';
-    ph+='<svg width="70" height="70" viewBox="0 0 70 70" style="display:block;margin:0 auto;">';
-    ph+='<circle cx="35" cy="35" r="'+dr+'" fill="none" stroke="#E2E8F0" stroke-width="6"/>';
-    ph+='<circle cx="35" cy="35" r="'+dr+'" fill="none" stroke="'+dCol+'" stroke-width="6" stroke-dasharray="'+dfill+' '+dcirc+'" stroke-linecap="round" transform="rotate(-90 35 35)"/>';
-    ph+='<text x="35" y="32" text-anchor="middle" font-family="Arial" font-weight="900" font-size="11" fill="'+dCol+'">'+dItem.pct+'%</text>';
-    ph+='<text x="35" y="44" text-anchor="middle" font-family="Arial" font-size="6" fill="#94a3b8">COMPLETE</text>';
-    ph+='</svg>';
-    ph+='<div style="font-size:7.5pt;font-weight:700;color:#475569;margin-top:4px;">'+dItem.lbl+'</div></div>';
-  }
+  ph+=footer(7,totalPages);
   ph+='</div>';
-
-  // Bridge progress table
-  ph+='<div class="stitle">Bridge Progress</div>';
-  ph+='<table>';
-  ph+='<tr><th>#</th><th>Bridge</th><th>Piers</th><th>Type</th><th>Foundation</th><th>Structure</th><th>Superstr.</th><th>Progress</th><th>Proj%</th><th>Status</th></tr>';
-
-  for(var bj3=0;bj3<BRIDGES.length;bj3++){
-    var brJ3=BRIDGES[bj3]; var bpJ3=calcBrPct(brJ3.id);
-    var brC3=bpJ3===100?"#06C98F":bpJ3>0?"#D4A843":"#94a3b8";
-    var bSt3=bpJ3===100?"Complete":bpJ3>0?"In Progress":"Not Started";
-    var bCls3b=bpJ3===100?"bg":bpJ3>0?"bb":"bs";
-    var isDrBr=DIRECT.indexOf(brJ3.piers[0])>-1;
-
-    function grpPct3(stages){
-      var ge=0,gt=0;
-      for(var gpi=0;gpi<brJ3.piers.length;gpi++){
-        var gpr=brJ3.piers[gpi]; var gdr=DIRECT.indexOf(gpr)>-1;
-        for(var gsi=0;gsi<stages.length;gsi++){
-          if(stages[gsi]==="PIL"&&gdr) continue;
-          gt++;
-          var gsv2=gps(gpr,stages[gsi]);
-          if(gsv2==="Complete"||gsv2==="Inspected") ge++;
-          else if(gsv2==="In Progress") ge+=0.3;
-        }
-      }
-      return gt>0?Math.round(ge/gt*100):0;
-    }
-    var fdnP3=grpPct3(["PRB","EXC","BLD","FRB","FRC","PIL"]);
-    var strP3=grpPct3(["STR","BRG"]);
-    var supP3=grpPct3(["GRD","ERE","DEC"]);
-    var projP3=projPct(bpJ3);
-    var bType3=DIRECT.indexOf(brJ3.piers[0])>-1?"Direct":"Piled";
-
-    function miniBar3(pct,col){
-      return '<div style="display:flex;align-items:center;gap:5px;">'
-        +'<div style="width:48px;height:8px;background:#EDF2F7;border-radius:4px;overflow:hidden;">'
-        +'<div style="width:'+pct+'%;height:8px;background:linear-gradient(90deg,#0B1D35,#C9A84C);border-radius:4px;"></div></div>'
-        +'<span style="font-size:6.5pt;font-weight:700;color:'+col+';">'+pct+'%</span></div>';
-    }
-
-    ph+='<tr>';
-    ph+='<td style="color:#94a3b8;font-size:7pt;">'+(bj3+1)+'</td>';
-    ph+='<td style="font-weight:700;color:#0f172a;">Br '+brJ3.id+'</td>';
-    ph+='<td style="text-align:center;">'+brJ3.piers.length+'</td>';
-    ph+='<td><span style="font-size:6.5pt;color:#64748b;">'+bType3+'</span></td>';
-    ph+='<td>'+miniBar3(fdnP3,'#4CC9F0')+'</td>';
-    ph+='<td>'+miniBar3(strP3,'#2979FF')+'</td>';
-    ph+='<td>'+miniBar3(supP3,'#06C98F')+'</td>';
-    ph+='<td>'+miniBar3(bpJ3,brC3)+'</td>';
-    ph+='<td style="text-align:center;font-weight:700;color:#D4A843;font-size:7.5pt;">'+projP3+'%</td>';
-    ph+='<td><span class="badge '+bCls3b+'">'+bSt3+'</span></td>';
-    ph+='</tr>';
-  }
-  ph+='</table>';
-  // Roads
-  ph+='<div class="stitle" style="margin-top:12px;">Road Works</div>';
-  ph+='<table><tr><th>Road</th><th style="text-align:center">Weight</th><th>Progress</th><th style="text-align:center">Earned</th><th>Status</th></tr>';
-  var rds3=[{nm:"Ibn Saud Road",pct:ibnPct,st:ROADS.ibn.status||"Not Started"},{nm:"Prince Sattam Road",pct:satPct,st:ROADS.sattam.status||"Not Started"}];
-  for(var ri3=0;ri3<rds3.length;ri3++){
-    var rr3=rds3[ri3]; var rCls3=rr3.st==="Complete"?"bg":rr3.st==="In Progress"?"bb":"bs";
-    ph+='<tr><td style="font-weight:700;">'+rr3.nm+'</td><td style="text-align:center;">5%</td>';
-    ph+='<td><div style="display:flex;align-items:center;gap:5px;"><div style="width:80px;height:5px;background:#E2E8F0;border-radius:2px;"><div style="width:'+rr3.pct+'%;height:5px;background:#3B82F6;border-radius:2px;"></div></div><span style="font-size:7pt;font-weight:700;color:#3B82F6;">'+rr3.pct+'%</span></div></td>';
-    ph+='<td style="text-align:center;font-weight:700;color:#D4A843;">'+Math.round(rr3.pct/100*3*10)/10+'%</td>';
-    ph+='<td><span class="badge '+rCls3+'">'+rr3.st+'</span></td></tr>';
-  }
-  ph+='</table>';
-  
-  // ── Fill Slope section ────────────────────────────────────
-  ph+='<div class="stitle" style="margin-top:12px;">Fill Slope — Between Abutments</div>';
-  ph+='<table><tr><th>Item</th><th style="text-align:center">Weight</th><th>Status</th><th style="text-align:center">Earned</th></tr>';
-  var fsItems=[
-    {key:"lm_r",label:"L–M Right"},
-    {key:"lm_l",label:"L–M Left"},
-    {key:"mn_r",label:"M–N Right"},
-    {key:"mn_l",label:"M–N Left"}
-  ];
-  var fsTotalEarned=0;
-  for(var fpi=0;fpi<fsItems.length;fpi++){
-    var fpItem=fsItems[fpi];
-    var fpSt=FILL_SLOPE[fpItem.key]||"Not Started";
-    var fpEarned=fpSt==="Complete"?0.175:fpSt==="In Progress"?0.0875:0;
-    fsTotalEarned+=fpEarned;
-    var fpCls=fpSt==="Complete"?"bg":fpSt==="In Progress"?"bb":"bs";
-    ph+='<tr>';
-    ph+='<td style="font-weight:600;">⛰️ '+fpItem.label+'</td>';
-    ph+='<td style="text-align:center;font-weight:700;">0.175%</td>';
-    ph+='<td><span class="badge '+fpCls+'">'+fpSt+'</span></td>';
-    ph+='<td style="text-align:center;font-weight:700;color:#4ECDC4;">'+Math.round(fpEarned*1000)/1000+'%</td>';
-    ph+='</tr>';
-  }
-  ph+='<tr style="font-weight:700;background:#fffbeb;">';
-  ph+='<td>FILL SLOPE TOTAL</td>';
-  ph+='<td style="text-align:center;">0.7%</td>';
-  ph+='<td></td>';
-  ph+='<td style="text-align:center;font-weight:700;color:#4ECDC4;">'+Math.round(fsTotalEarned*1000)/1000+'%</td>';
-  ph+='</tr>';
-  ph+='</table>';
-
-
-  ph+='<div style="position:absolute;bottom:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,#D4A843,transparent);"></div>';
-  ph+='</div>';
-
-  // ══════════════════════════════════════════════
-  // PAGE 6 — PROJECT SUMMARY (closing) (white, clean)
-  // ══════════════════════════════════════════════
-  ph+='<div class="page" style="background:#ffffff!important;color:#1e293b;position:relative;overflow:hidden;display:flex;flex-direction:column;">';
-  // Gold top bar
-  ph+='<div style="height:5px;background:linear-gradient(90deg,#D4A843,#f0c866,#D4A843);"></div>';
-
-  // ── Header strip ─────────────────────────────────────────
-  ph+='<div style="padding:28px 44px 22px;border-bottom:1px solid #e2e8f0;">';
-  ph+='<div style="display:flex;align-items:center;justify-content:space-between;">';
-  ph+='<div>';
-  ph+='<div style="font-size:7.5pt;color:#D4A843;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:5px;">IC1 Road Improvements · Diriyah</div>';
-  ph+='<div style="font-size:18pt;font-weight:900;color:#0f172a;letter-spacing:-0.3px;">Project Progress Summary</div>';
-  ph+='<div style="width:44px;height:3px;background:#D4A843;border-radius:2px;margin-top:10px;"></div>';
-  ph+='</div>';
-  ph+='<div style="font-size:8pt;color:#94a3b8;">'+today3+'</div>';
-  ph+='</div></div>';
-
-  // ── Main content ─────────────────────────────────────────
-  ph+='<div style="padding:24px 44px;flex:1;">';
-
-  // Big completion display
-  ph+='<div style="display:flex;align-items:center;gap:36px;margin-bottom:28px;padding:20px 24px;background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;">';
-  // Large donut
-  var r6=52; var circ6=2*3.14159*r6; var fill6=Math.round(circ6*ov/100);
-  ph+='<svg width="124" height="124" viewBox="0 0 124 124" style="flex-shrink:0;">';
-  ph+='<circle cx="62" cy="62" r="'+r6+'" fill="none" stroke="#e2e8f0" stroke-width="10"/>';
-  ph+='<circle cx="62" cy="62" r="'+r6+'" fill="none" stroke="#D4A843" stroke-width="10" stroke-dasharray="'+fill6+' '+circ6+'" stroke-linecap="round" transform="rotate(-90 62 62)"/>';
-  ph+='<text x="62" y="56" text-anchor="middle" font-family="Arial" font-weight="900" font-size="20" fill="#D4A843">'+ov+'%</text>';
-  ph+='<text x="62" y="72" text-anchor="middle" font-family="Arial" font-size="7.5" fill="#94a3b8" font-weight="600">COMPLETE</text>';
-  ph+='</svg>';
-  // Summary stats
-  ph+='<div style="flex:1;">';
-  ph+='<div style="font-size:11pt;font-weight:700;color:#0f172a;margin-bottom:12px;">Overall Completion as of '+today3+'</div>';
-  var sumStats=[
-    {lbl:"Time Elapsed",val:timePct3+'%',sub:elapsed3+' of '+totalDays3+' days',c:"#3B82F6"},
-    {lbl:"Days Remaining",val:remaining3,sub:"To handover Sep 2027",c:"#06C98F"},
-    {lbl:"Schedule Variance",val:(variance3>=0?"+":"")+variance3+'%',sub:variance3>=0?"Ahead of schedule":"Behind schedule",c:vCol3}
-  ];
-  ph+='<div style="display:flex;gap:12px;">';
-  for(var ss=0;ss<sumStats.length;ss++){
-    ph+='<div style="flex:1;background:#fff;border-radius:8px;border-top:3px solid '+sumStats[ss].c+';padding:9px 11px;">';
-    ph+='<div style="font-size:14pt;font-weight:900;color:'+sumStats[ss].c+';">'+sumStats[ss].val+'</div>';
-    ph+='<div style="font-size:6.5pt;color:#64748b;text-transform:uppercase;letter-spacing:0.3px;margin-top:2px;">'+sumStats[ss].lbl+'</div>';
-    ph+='<div style="font-size:6.5pt;color:#94a3b8;margin-top:1px;">'+sumStats[ss].sub+'</div>';
-    ph+='</div>';
-  }
-  ph+='</div></div></div>';
-
-  // Project scope summary table
-  ph+='<div style="margin-bottom:22px;">';
-  ph+='<div style="font-size:8pt;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;padding-left:2px;">Scope Summary</div>';
-  ph+='<table style="font-size:8pt;border-collapse:collapse;width:100%;">';
-  ph+='<tr style="background:#0f172a;"><th style="padding:7px 10px;text-align:left;color:#fff;font-size:7.5pt;border-radius:4px 0 0 0;">Component</th>';
-  ph+='<th style="padding:7px 10px;text-align:center;color:#fff;font-size:7.5pt;">Weight</th>';
-  ph+='<th style="padding:7px 10px;color:#fff;font-size:7.5pt;min-width:120px;">Progress</th>';
-  ph+='<th style="padding:7px 10px;text-align:center;color:#fff;font-size:7.5pt;">Earned</th>';
-  ph+='<th style="padding:7px 10px;text-align:center;color:#fff;font-size:7.5pt;border-radius:0 4px 0 0;">Status</th></tr>';
-  var sumRows=[
-    {nm:"Preliminary Works",wt:PRE_PCT,pct:PRE_PCT,c:"#06C98F",st:"Complete"},
-    {nm:"Bridge Works ("+BRIDGES.length+" bridges · 90 piers)",wt:BR_W,pct:brOnlyPct,c:"#D4A843",st:brOnlyPct>0?"In Progress":"Not Started"},
-    {nm:"Ibn Saud Road",wt:3,pct:ibnPct,c:"#3B82F6",st:ROADS.ibn.status||"Not Started"},
-    {nm:"Prince Sattam Road",wt:3,pct:satPct,c:"#3B82F6",st:ROADS.sattam.status||"Not Started"},
-    {nm:"Fill Slope (L–M, M–N)",wt:0.7,pct:Math.round(calcFsEarned()/0.7*100),c:"#4ECDC4",st:calcFsEarned()>=0.7?"Complete":calcFsEarned()>0?"In Progress":"Not Started"},
-    {nm:"TOTAL",wt:100,pct:ov,c:"#D4A843",st:""}
-  ];
-  for(var sr=0;sr<sumRows.length;sr++){
-    var sRow=sumRows[sr]; var isT2=sRow.nm==="TOTAL";
-    var sEarn=Math.round(sRow.pct/100*sRow.wt*10)/10;
-    var sCls=sRow.st==="Complete"?"background:#dcfce7;color:#166534":sRow.st==="In Progress"?"background:#dbeafe;color:#1d4ed8":"background:#f1f5f9;color:#475569";
-    ph+='<tr style="'+(isT2?"font-weight:700;background:#fffbeb;":"")+'border-bottom:1px solid #f1f5f9;">';
-    ph+='<td style="padding:6px 10px;color:'+(isT2?"#0f172a":"#334155")+';">'+sRow.nm+'</td>';
-    ph+='<td style="padding:6px 10px;text-align:center;font-weight:700;color:#0f172a;">'+sRow.wt+'%</td>';
-    ph+='<td style="padding:6px 10px;">';
-    if(!isT2){
-      ph+='<div style="display:flex;align-items:center;gap:5px;">';
-      ph+='<div style="flex:1;height:6px;background:#e2e8f0;border-radius:3px;"><div style="width:'+sRow.pct+'%;height:6px;background:'+sRow.c+';border-radius:3px;"></div></div>';
-      ph+='<span style="font-size:7.5pt;font-weight:700;color:'+sRow.c+';min-width:28px;">'+sRow.pct+'%</span></div>';
-    } else { ph+='<b style="color:#D4A843;">'+sRow.pct+'%</b>'; }
-    ph+='</td>';
-    ph+='<td style="padding:6px 10px;text-align:center;font-weight:700;color:#D4A843;">'+sEarn+'%</td>';
-    ph+='<td style="padding:6px 10px;text-align:center;">'+(sRow.st?'<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:6.5pt;font-weight:700;'+sCls+'">'+sRow.st+'</span>':"—")+'</td>';
-    ph+='</tr>';
-  }
-  ph+='</table></div>';
-
-  // QR code row
-  ph+='<div style="display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-bottom:8px;">';
-  ph+='<div style="text-align:right;">';
-  ph+='<div style="font-size:7.5pt;color:#64748b;font-weight:600;margin-bottom:4px;">Scan to open the live app</div>';
-  ph+='<div style="font-size:7pt;color:#94a3b8;">kameldimachkie.github.io/ic1-bridges</div>';
-  ph+='</div>';
-  var qrU3='https://api.qrserver.com/v1/create-qr-code/?size=90x90&data='+encodeURIComponent('https://kameldimachkie.github.io/ic1-bridges/');
-  ph+='<img src="'+qrU3+'" width="90" height="90" style="border:2px solid #e2e8f0;border-radius:6px;display:block;flex-shrink:0;">';
-  ph+='</div>';
-
-  ph+='</div>';
-
-  // ── Professional footer ───────────────────────────────────
-  ph+='<div style="border-top:2px solid #e2e8f0;padding:14px 44px;display:flex;align-items:center;justify-content:space-between;background:#f8fafc;">';
-  ph+='<div>';
-  ph+='<div style="font-size:8.5pt;font-weight:700;color:#0f172a;">KAMEL DIMACHKIE</div>';
-  ph+='<div style="font-size:7.5pt;color:#64748b;margin-top:1px;">Head of Surveying Department · Khatib &amp; Alami</div>';
-  ph+='</div>';
-  ph+='<div style="width:1px;height:32px;background:#e2e8f0;"></div>';
-  ph+='<div style="text-align:center;">';
-  ph+='<div style="font-size:7.5pt;font-weight:700;color:#D4A843;letter-spacing:1px;">SITESYNC</div>';
-  ph+='<div style="font-size:6.5pt;color:#94a3b8;margin-top:1px;">Construction Progress Management</div>';
-  ph+='</div>';
-  ph+='<div style="width:1px;height:32px;background:#e2e8f0;"></div>';
-  ph+='<div style="text-align:right;">';
-  ph+='<div style="font-size:7.5pt;color:#64748b;">Generated: '+today3+'</div>';
-  ph+='<div style="font-size:6.5pt;color:#94a3b8;margin-top:1px;">CONFIDENTIAL · FOR INTERNAL USE</div>';
-  ph+='</div>';
-  ph+='</div>';
-
-  ph+='<div style="height:4px;background:linear-gradient(90deg,#D4A843,#f0c866,#D4A843);"></div>';
-  ph+='</div>';
-
 
   ph+='</body></html>';
 
-  // ── Wrap report in a print-ready shell with toolbar ──────
-  var shell='<!DOCTYPE html><html><head><meta charset="UTF-8">';
-  shell+='<meta name="viewport" content="width=device-width,initial-scale=1">';
-  shell+='<title>IC1 Progress Report — '+today3+'</title>';
-  shell+='<style>';
-  shell+='*{box-sizing:border-box;margin:0;padding:0}';
-  shell+='body{font-family:Arial,sans-serif;background:#e2e8f0}';
-  shell+='.toolbar{position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(90deg,#0d1520,#1a2540);border-bottom:2px solid #D4A843;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;box-shadow:0 2px 12px #0006}';
-  shell+='.toolbar-left{display:flex;align-items:center;gap:10px}';
-  shell+='.toolbar-title{color:#D4A843;font-weight:900;font-size:13pt;letter-spacing:0.5px}';
-  shell+='.toolbar-sub{color:#64748b;font-size:8pt;margin-top:1px}';
-  shell+='.btn{padding:9px 18px;border-radius:8px;font-weight:700;font-size:11pt;cursor:pointer;border:none;font-family:Arial,sans-serif;display:inline-flex;align-items:center;gap:6px;text-decoration:none}';
-  shell+='.btn-gold{background:#D4A843;color:#000}';
-  shell+='.btn-outline{background:transparent;color:#D4A843;border:2px solid #D4A843}';
-  shell+='.btn-gray{background:#1e293b;color:#94a3b8;border:1px solid #334155}';
-  shell+='.report-wrap{margin-top:64px;padding:10px;display:flex;justify-content:center}';
-  shell+='.report-inner{max-width:820px;width:100%;background:#fff;border-radius:4px;box-shadow:0 4px 32px #0008}';
-  shell+='@media print{.toolbar{display:none!important}.report-wrap{margin:0;padding:0;background:#fff!important}.report-inner{box-shadow:none;border-radius:0;max-width:100%}body,html{background:#fff!important}}';
-  shell+='</style></head><body>';
-
-  // Toolbar
-  shell+='<div class="toolbar">';
-  shell+='<div class="toolbar-left">';
-  shell+='<svg width="32" height="32" viewBox="0 0 48 48" fill="none"><path d="M3 36 Q13 9 24 9 Q35 9 45 36" stroke="#D4A843" stroke-width="3" fill="none" stroke-linecap="round"/><line x1="15" y1="23" x2="15" y2="36" stroke="#D4A843" stroke-width="2.5" stroke-linecap="round"/><line x1="33" y1="23" x2="33" y2="36" stroke="#D4A843" stroke-width="2.5" stroke-linecap="round"/><rect x="2" y="36" width="44" height="6" rx="2" fill="#D4A843" opacity="0.3"/></svg>';
-  shell+='<div><div class="toolbar-title">IC1 Progress Report</div><div class="toolbar-sub">'+today3+' &nbsp;·&nbsp; Khatib &amp; Alami</div></div>';
-  shell+='</div>';
-  shell+='<div style="display:flex;gap:8px;">';
-  shell+='<button class="btn btn-gold" onclick="window.print()">🖨️ Print / Save PDF</button>';
-  shell+='<button class="btn btn-outline" onclick="saveHTML()">💾 Save HTML</button>';
-  shell+='<button class="btn btn-gray" onclick="window.close()">✕ Close</button>';
-  shell+='</div></div>';
-
-  // Report content wrapped
-  shell+='<div class="report-wrap"><div class="report-inner">';
-  shell+=ph;
-  shell+='</div></div>';
-
-  // Save HTML function
-  shell+='<script>';
-  shell+='function saveHTML(){';
-  shell+='  var b=new Blob([document.querySelector(".report-inner").innerHTML],{type:"text/html;charset=utf-8"});';
-  shell+='  var a=document.createElement("a");';
-  shell+='  a.href=URL.createObjectURL(b);';
-  shell+='  a.download="IC1_Report_'+today3+'.html";';
-  shell+='  a.click();';
-  shell+='}';
-  shell+='<\/script>';
-  shell+='</body></html>';
-
-  var blob=new Blob([shell],{type:"text/html;charset=utf-8"});
+  var blob=new Blob([ph],{type:'text/html'});
   var url=URL.createObjectURL(blob);
-  var a=document.createElement("a");
-  a.href=url; a.target="_blank"; a.rel="noopener"; a.click();
-  setTimeout(function(){URL.revokeObjectURL(url);},30000);
+  var a=document.createElement('a');
+  a.href=url;
+  a.download='IC1_Project_Overview_'+today.getFullYear()+(today.getMonth()+1<10?'0'+(today.getMonth()+1):(today.getMonth()+1))+today.getDate()+'.html';
+  a.click();
+  URL.revokeObjectURL(url);
+  flash('PDF Report downloaded \u2705');
 }
 
 function rIs(){
