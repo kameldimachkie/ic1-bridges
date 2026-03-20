@@ -3556,16 +3556,14 @@ function rFr(){
     h+='<input type="text" id="fr-ph-cap" placeholder="e.g. Bridge A - Pier 3: Formwork complete" ';
     h+='style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:13px;font-family:inherit;outline:none;margin-bottom:10px;">';
 
-    // Camera button — opens device camera
+    // Camera/Gallery buttons — use hidden inputs triggered by buttons
+    h+='<input type="file" accept="image/*" capture="environment" id="fr-cam" style="display:none;">';
+    h+='<input type="file" accept="image/*" id="fr-gal" style="display:none;">';
     h+='<div style="display:flex;gap:8px;">';
-    h+='<label style="flex:1;padding:11px;background:var(--blue);border-radius:8px;color:#fff;font-weight:700;font-size:13px;cursor:pointer;text-align:center;">';
-    h+='📷 Camera';
-    h+='<input type="file" accept="image/*" capture="environment" id="fr-cam" onchange="frAddPhoto(this);" style="display:none;">';
-    h+='</label>';
-    h+='<label style="flex:1;padding:11px;background:var(--panel);border:1px solid var(--border);border-radius:8px;color:var(--dimL);font-weight:700;font-size:13px;cursor:pointer;text-align:center;">';
-    h+='🖼 Gallery';
-    h+='<input type="file" accept="image/*" id="fr-gal" onchange="frAddPhoto(this);" style="display:none;">';
-    h+='</label>';
+    h+='<button onclick="document.getElementById(\'fr-cam\').click();" ';
+    h+='style="flex:1;padding:11px;background:var(--blue);border:none;border-radius:8px;color:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;">📷 Camera</button>';
+    h+='<button onclick="document.getElementById(\'fr-gal\').click();" ';
+    h+='style="flex:1;padding:11px;background:var(--panel);border:1px solid var(--border);border-radius:8px;color:var(--dimL);font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;">🖼 Gallery</button>';
     h+='</div>';
     h+='</div>';
 
@@ -3654,6 +3652,11 @@ function rFr(){
   }
 
   document.getElementById('pg-fr').innerHTML=h;
+  // Attach file input listeners after render (required for Android)
+  var camEl=document.getElementById('fr-cam');
+  var galEl=document.getElementById('fr-gal');
+  if(camEl) camEl.addEventListener('change',function(){frAddPhoto(this);});
+  if(galEl) galEl.addEventListener('change',function(){frAddPhoto(this);});
 }
 
 // ── Field Report handlers ──────────────────────────────────────
