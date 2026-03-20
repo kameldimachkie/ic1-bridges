@@ -300,7 +300,7 @@ body{display:flex;flex-direction:column;}
     
     
     <button class="nb"     id="tab-pl" onclick="nav('pl')">📅 Plan</button>
-    <button class="nb"     id="tab-ai" onclick="nav('ai')">🤖 AI Report</button>
+    <button class="nb"     id="tab-fr" onclick="nav('fr')">📋 Field</button>
     <button class="nb"     id="tab-rp" onclick="nav('rp')">Report</button>
     <button class="nb"     id="tab-mp" onclick="nav('mp')"><svg width="16" height="14" viewBox="0 0 22 18" fill="none" style="vertical-align:-3px;margin-right:4px"><line x1="1" y1="9" x2="21" y2="9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" opacity="0.75"/><line x1="8" y1="1" x2="8" y2="17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/><line x1="16" y1="1" x2="16" y2="17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/><path d="M3 9 Q7 4 11 4 Q15 4 19 9" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="11" cy="9" r="2.8" fill="currentColor" opacity="0.9"/><circle cx="11" cy="9" r="1.2" fill="#07090d"/></svg>Map</button>
     <button class="nb" id="tab-ch" onclick="nav('ch')">💬 Chat</button>
@@ -326,7 +326,7 @@ body{display:flex;flex-direction:column;}
   
   <div class="pg"    id="pg-tl"></div>
   <div class="pg"    id="pg-pl"></div>
-  <div class="pg"    id="pg-ai"></div>
+  <div class="pg"    id="pg-fr"></div>
   <div class="pg"    id="pg-rp"></div>
   <div class="pg"    id="pg-is"></div>
 <div class="pg"    id="pg-gn"></div>
@@ -530,12 +530,19 @@ var ROADS={ibn:{pct:0,status:"Not Started"},sattam:{pct:0,status:"Not Started"}}
 var FILL_SLOPE={lm_r:false,lm_l:false,mn_r:false,mn_l:false};
 var UTILITIES=[];  // legacy shim — new system uses UTIL_NETWORKS
 // ── DAILY REPORT DATA ─────────────────────────────────────────
+// ── FIELD REPORT DATA ─────────────────────────────────────────
+var FIELD = {
+  photos:  [],  // [{id,date,discipline,caption,thumb,ts}]
+  diary:   [],  // [{id,date,discipline,activity,status,notes,ts}]
+};
+
 var DAILY = {
   photos: [],        // [{id, base64, thumb, caption, discipline, activity, ts, date}]
   entries: [],       // [{id, discipline, activity, status, notes, ts, date}]
   reports: [],       // [{id, date, summary, delays, pdf_html}]
   snapshots: [],     // [{date, pct}] for stagnation detection
-  apiKey: ''         // Anthropic API key (stored locally)
+  apiKey: '',
+  workerUrl: localStorage.getItem('ic1_worker_url')||''
 };
 var DAILY_GENERATING = false;
 
@@ -588,6 +595,7 @@ function loadData(){
   // loadUtNetworks called after DOMContentLoaded
   try{CUSTOM_WEIGHTS=JSON.parse(localStorage.getItem("ic1b3_cw")||JSON.stringify(CUSTOM_WEIGHTS));}catch(e){}
   try{MESSAGES=JSON.parse(localStorage.getItem('ic1b3_msg')||'[]');}catch(e){MESSAGES=[];}
+  try{var _fld=localStorage.getItem('ic1b3_field');if(_fld){var _ff=JSON.parse(_fld);FIELD.photos=_ff.photos||[];FIELD.diary=_ff.diary||[];}}catch(e){}
   try{var _dly=localStorage.getItem('ic1b3_daily');if(_dly){var _dd=JSON.parse(_dly);DAILY.photos=_dd.photos||[];DAILY.entries=_dd.entries||[];DAILY.reports=_dd.reports||[];DAILY.snapshots=_dd.snapshots||[];DAILY.apiKey=_dd.apiKey||'';}}catch(e){}
   try{var _p=localStorage.getItem('ic1b3_plan');if(_p){var _pp=JSON.parse(_p);PLAN.curve=_pp.curve||[];PLAN.activities=_pp.activities||PLAN.activities;}}catch(e){}
   try{ANTHROPIC_KEY=localStorage.getItem("ic1_ak")||"";}catch(e){}
@@ -604,6 +612,7 @@ function persist(){
   try{localStorage.setItem("ic1b3_cw",JSON.stringify(CUSTOM_WEIGHTS));}catch(e){}
   try{localStorage.setItem('ic1b3_msg',JSON.stringify(MESSAGES.slice(-20)));}catch(e){}
   try{localStorage.setItem('ic1b3_plan',JSON.stringify(PLAN));}catch(e){}
+  try{localStorage.setItem('ic1b3_field',JSON.stringify({photos:FIELD.photos.slice(-100),diary:FIELD.diary.slice(-500)}));}catch(e){}
   try{localStorage.setItem('ic1b3_daily',JSON.stringify({photos:DAILY.photos.slice(-50),entries:DAILY.entries.slice(-200),reports:DAILY.reports.slice(-30),snapshots:DAILY.snapshots.slice(-90),apiKey:DAILY.apiKey}));}catch(e){}
   // Record location and auto-push on every change
   if(typeof pushSync==="function"){
@@ -2626,7 +2635,7 @@ function buildAIContext(){
 // ── Generate AI Daily Report ───────────────────────────────────
 async function generateAIReport(){
   if(DAILY_GENERATING){flash('Report generation in progress…');return;}
-  // No API key required — handled by platform
+  if(!DAILY.workerUrl){aiSwitch('settings');flash('Configure Worker URL in Setup tab first');return;}
 
   DAILY_GENERATING=true;
   var btn=document.getElementById('ai-gen-btn');
@@ -2636,21 +2645,27 @@ async function generateAIReport(){
   var prompt=ctx+'\n\nBased on the project data above, write a professional daily progress report for the IC1 Road Improvements project. Structure your response EXACTLY as follows using these section headers:\n\n[ACHIEVEMENTS]\n(2-4 bullet points of what was accomplished today or recently)\n\n[DELAYS]\n(2-4 bullet points of any delays, if none write "No significant delays detected")\n\n[RISKS]\n(2-3 bullet points of upcoming risks)\n\n[TOMORROWS_PLAN]\n(3-4 bullet points of planned activities for tomorrow)\n\n[EXECUTIVE_SENTENCE]\n(One professional sentence summarizing the overall project status in consultant-grade language)\n\nKeep each bullet point concise (max 2 lines). Tone: professional, direct, consultant-grade. Do not repeat the data verbatim — synthesize and interpret it.';
 
   try{
-    var resp=await fetch('https://api.anthropic.com/v1/messages',{
+    // Use Cloudflare Worker proxy (key is server-side, never exposed)
+    var workerUrl=DAILY.workerUrl||localStorage.getItem('ic1_worker_url')||'';
+    if(!workerUrl){
+      DAILY_GENERATING=false;
+      if(btn){btn.textContent='🤖 Generate Report';btn.disabled=false;}
+      aiSwitch('settings');
+      flash('Enter the Worker URL in Settings first');
+      return;
+    }
+
+    var resp=await fetch(workerUrl,{
       method:'POST',
-      headers:{'Content-Type':'application/json','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
-        max_tokens:1000,
-        messages:[{role:'user',content:prompt}]
-      })
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({prompt:prompt})
     });
     var data=await resp.json();
     var text='';
-    if(data.content&&data.content[0]&&data.content[0].text){
-      text=data.content[0].text;
+    if(data.ok&&data.text){
+      text=data.text;
     } else if(data.error){
-      throw new Error(data.error.message||'API error');
+      throw new Error(data.error);
     }
     // Parse sections
     var report=parseAIReport(text);
@@ -2726,8 +2741,11 @@ function rAi(){
   h+='<div class="ct" style="margin-bottom:2px;">🤖 AI Daily Report</div>';
   h+='<div style="font-size:10px;color:var(--dimL);">'+today+' &nbsp;·&nbsp; Powered by Claude</div>';
   h+='</div>';
-  h+='<button id="ai-gen-btn" onclick="aiGenClick();" style="padding:9px 14px;background:var(--blue);border:none;border-radius:8px;color:#fff;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;">';
-  h+=(DAILY_GENERATING?'⏳ Generating...':'🤖 Generate Report')+'</button>';
+  var wUrl=DAILY.workerUrl||'';
+  var btnBg=wUrl?'var(--blue)':'var(--border)';
+  var btnTitle=wUrl?'':'Configure worker URL in Setup tab first';
+  h+='<button id="ai-gen-btn" onclick="aiGenClick();" title="'+btnTitle+'" style="padding:9px 14px;background:'+btnBg+';border:none;border-radius:8px;color:#fff;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;">';
+  h+=(DAILY_GENERATING?'⏳ Generating...':wUrl?'🤖 Generate Report':'⚙ Setup Required')+'</button>';
   h+='</div>';
 
   // Alert strip
@@ -2746,7 +2764,7 @@ function rAi(){
 
   // ── Sub-tabs ─────────────────────────────────────────────────
   h+='<div style="display:flex;gap:4px;margin-bottom:12px;overflow-x:auto;">';
-  var aiTabs=[['report','📄 Report'],['entries','📝 Site Log'],['photos','📸 Photos'],['delays','⚠️ Delays'],['history','🗂 History']];
+  var aiTabs=[['report','📄 Report'],['entries','📝 Site Log'],['photos','📸 Photos'],['delays','⚠️ Delays'],['history','🗂 History'],['settings','⚙ Setup']];
   for(var st=0;st<aiTabs.length;st++){
     var isOn=_aiTab===aiTabs[st][0];
     h+='<button data-tab="'+aiTabs[st][0]+'" onclick="aiSwitch(this.dataset.tab);" ';
@@ -2980,36 +2998,41 @@ function rAi(){
 
   // ── SETTINGS TAB ─────────────────────────────────────────────
   else if(_aiTab==='settings'){
-    h+='<div class="card" style="border-left:3px solid var(--gold);">';
-    h+='<div class="ct">⚙ Report Settings</div>';
-    h+='<div style="display:flex;align-items:center;gap:10px;padding:10px 0;margin-bottom:8px;border-bottom:1px solid var(--border);">';
-    h+='<div style="width:32px;height:32px;background:var(--green)22;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;">✅</div>';
+    var hasWorker=DAILY.workerUrl&&DAILY.workerUrl.length>10;
+    // Worker status card
+    h+='<div class="card" style="border-left:3px solid '+(hasWorker?'var(--green)':'var(--amber)') +';">';
+    h+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">';
+    h+='<div style="font-size:22px;">'+(hasWorker?'✅':'⚙️')+'</div>';
     h+='<div>';
-    h+='<div style="font-size:12px;font-weight:700;color:var(--fg);">AI Engine Ready</div>';
-    h+='<div style="font-size:10px;color:var(--dimL);">Powered by Claude — no configuration required</div>';
+    h+='<div style="font-size:13px;font-weight:800;color:var(--fg);">AI Worker '+(hasWorker?'Connected':'Not Configured')+'</div>';
+    h+='<div style="font-size:10px;color:var(--dimL);">'+(hasWorker?'Reports will generate using your Cloudflare Worker':'Configure your worker URL to enable AI reports')+'</div>';
     h+='</div></div>';
-    h+='<div style="font-size:11px;color:var(--dimL);line-height:1.7;">The AI report engine is pre-configured and ready to use. Simply tap <b style="color:var(--blue);">Generate Report</b> on the Report tab.</div>';
+    h+='<div class="ct" style="margin-bottom:6px;">🔗 Cloudflare Worker URL</div>';
+    h+='<div style="font-size:11px;color:var(--dimL);margin-bottom:8px;line-height:1.6;">Deploy the worker file to Cloudflare, then paste your worker URL here. Your Anthropic key stays server-side — users never see it.</div>';
+    h+='<input id="ai-worker-url" type="url" value="'+(DAILY.workerUrl||'')+'" ';
+    h+='placeholder="https://sitesync-ai.yourname.workers.dev" ';
+    h+='style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:12px;font-family:inherit;outline:none;margin-bottom:8px;">';
+    h+='<button onclick="aiSaveWorker();" style="width:100%;padding:10px;background:var(--gold);border:none;border-radius:8px;color:#000;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;">💾 Save Worker URL</button>';
     h+='</div>';
-    // Report preferences
+    // Instructions
     h+='<div class="card">';
-    h+='<div class="ct">📋 Report Preferences</div>';
-    h+='<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">';
-    h+='<div style="font-size:12px;color:var(--fg);">Auto-snapshot progress daily</div>';
-    h+='<span style="font-size:10px;color:var(--green);font-weight:700;">Enabled</span>';
-    h+='</div>';
-    h+='<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">';
-    h+='<div style="font-size:12px;color:var(--fg);">Delay detection</div>';
-    h+='<span style="font-size:10px;color:var(--green);font-weight:700;">Active</span>';
-    h+='</div>';
-    h+='<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;">';
-    h+='<div style="font-size:12px;color:var(--fg);">K&A Branding in PDF</div>';
-    h+='<span style="font-size:10px;color:var(--green);font-weight:700;">Always on</span>';
-    h+='</div>';
+    h+='<div class="ct">📋 Setup Instructions</div>';
+    var steps=[
+      '1. Download the <b>sitesync-worker.js</b> file from the Report tab',
+      '2. Go to <b>dash.cloudflare.com</b> → Workers & Pages → Create Worker',
+      '3. Paste the worker code and click <b>Deploy</b>',
+      '4. Go to Settings → Variables → Add: <code>ANTHROPIC_KEY = sk-ant-...</code>',
+      '5. Copy your worker URL and paste it above',
+      '6. Tap Save — AI reports will work for everyone instantly'
+    ];
+    for(var si6=0;si6<steps.length;si6++){
+      h+='<div style="padding:5px 0;border-bottom:1px solid var(--border);font-size:11px;color:var(--fg);">'+steps[si6]+'</div>';
+    }
+    h+='<button onclick="dlWorkerFile();" style="width:100%;padding:9px;background:var(--blue);border:none;border-radius:8px;color:#fff;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;margin-top:10px;">📥 Download Worker File</button>';
     h+='</div>';
     // Data management
     h+='<div class="card">';
     h+='<div class="ct" style="color:var(--red);">🗑 Data Management</div>';
-    h+='<div style="font-size:11px;color:var(--dimL);margin-bottom:8px;">Clear all locally stored daily report data (photos, entries, reports, snapshots)</div>';
     h+='<button onclick="aiClearAll();" style="width:100%;padding:9px;border-radius:8px;border:1px solid var(--red);background:transparent;color:var(--red);font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;">🗑 Clear All Daily Report Data</button>';
     h+='</div>';
   }
@@ -3022,7 +3045,7 @@ function aiSwitch(tab){ _aiTab=tab; rAi(); }
 
 function aiGenClick(){
   if(DAILY_GENERATING) return;
-  // No API key required
+  if(!DAILY.workerUrl){aiSwitch('settings');flash('Configure Worker URL in Setup tab first');return;}
   snapshotProgress();
   generateAIReport();
 }
@@ -3347,6 +3370,563 @@ function dlDailyPDF(){
   flash('Daily Report PDF downloaded ✅');
 }
 
+
+function aiSaveWorker(){
+  var inp=document.getElementById('ai-worker-url');
+  if(!inp) return;
+  var url=inp.value.trim();
+  DAILY.workerUrl=url;
+  try{localStorage.setItem('ic1_worker_url',url);}catch(e){}
+  flash(url?'Worker URL saved ✅':'Worker URL cleared');
+  rAi();
+}
+
+function dlWorkerFile(){
+  var workerCode=`/**
+ * SiteSync AI Proxy — Cloudflare Worker
+ * SETUP:
+ * 1. Go to dash.cloudflare.com → Workers & Pages → Create Worker
+ * 2. Paste this file → Deploy
+ * 3. Settings → Variables → Add: ANTHROPIC_KEY = sk-ant-YOUR-KEY
+ * 4. Copy worker URL → paste in SiteSync AI Report Settings
+ */
+
+export default {
+  async fetch(request, env) {
+    const cors = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+      'Content-Type': 'application/json'
+    };
+    if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
+    if (request.method !== 'POST') return new Response(JSON.stringify({ error: 'POST only' }), { status: 405, headers: cors });
+
+    let body;
+    try { body = await request.json(); } catch(e) { return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400, headers: cors }); }
+    if (!body.prompt) return new Response(JSON.stringify({ error: 'Missing prompt' }), { status: 400, headers: cors });
+
+    const apiKey = env.ANTHROPIC_KEY;
+    if (!apiKey || !apiKey.startsWith('sk-ant-')) {
+      return new Response(JSON.stringify({ error: 'Add ANTHROPIC_KEY to worker variables' }), { status: 500, headers: cors });
+    }
+
+    try {
+      const r = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1000, messages: [{ role: 'user', content: body.prompt }] })
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error?.message || 'Anthropic error ' + r.status);
+      return new Response(JSON.stringify({ text: d.content?.[0]?.text || '', ok: true }), { headers: cors });
+    } catch(err) {
+      return new Response(JSON.stringify({ error: err.message }), { status: 502, headers: cors });
+    }
+  }
+};`;
+  var blob=new Blob([workerCode],{type:'text/javascript'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url;a.download='sitesync-worker.js';a.click();
+  URL.revokeObjectURL(url);
+  flash('Worker file downloaded ✅');
+}
+
+
+// ══════════════════════════════════════════════════════════════
+// FIELD REPORT MODULE — Photos + Diary + PDF
+// ══════════════════════════════════════════════════════════════
+
+var _frTab = 'diary'; // 'diary' | 'photos' | 'report'
+var _frDiaryStatus = 'Completed';
+
+function rFr(){
+  var today = new Date().toISOString().slice(0,10);
+  var todayPhotos = FIELD.photos.filter(function(p){return p.date===today;});
+  var todayDiary  = FIELD.diary.filter(function(d){return d.date===today;});
+
+  var h = '';
+
+  // ── Header ─────────────────────────────────────────────────
+  h+='<div class="card" style="border-left:3px solid var(--gold);">';
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">';
+  h+='<div>';
+  h+='<div class="ct" style="margin-bottom:2px;">📋 Field Report</div>';
+  h+='<div style="font-size:10px;color:var(--dimL);">'+today+' &nbsp;·&nbsp; '+todayDiary.length+' entries &nbsp;·&nbsp; '+todayPhotos.length+' photos</div>';
+  h+='</div>';
+  h+='<button onclick="dlFieldPDF();" style="padding:8px 14px;background:var(--gold);border:none;border-radius:8px;color:#000;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;">📥 PDF</button>';
+  h+='</div>';
+  h+='</div>';
+
+  // ── Sub-tabs ────────────────────────────────────────────────
+  h+='<div style="display:flex;gap:4px;margin-bottom:12px;">';
+  var frTabs=[['diary','📝 Diary'],['photos','📸 Photos'],['report','📄 Preview']];
+  for(var i=0;i<frTabs.length;i++){
+    var isOn=_frTab===frTabs[i][0];
+    h+='<button data-tab="'+frTabs[i][0]+'" onclick="frSwitch(this.dataset.tab);" ';
+    h+='style="flex:1;padding:9px;border-radius:8px;border:1px solid '+(isOn?'var(--gold)':'var(--border)')+';';
+    h+='background:'+(isOn?'var(--gold)':'transparent')+';';
+    h+='color:'+(isOn?'#000':'var(--dimL)')+';font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">';
+    h+=frTabs[i][1]+'</button>';
+  }
+  h+='</div>';
+
+  // ══ DIARY TAB ══════════════════════════════════════════════
+  if(_frTab==='diary'){
+    // Quick entry form
+    h+='<div class="card">';
+    h+='<div class="ct">📝 Log Activity</div>';
+
+    // Discipline selector
+    h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Discipline</label>';
+    h+='<select id="fr-disc" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:13px;font-family:inherit;margin-bottom:8px;">';
+    var discs5=[['bridges','🌉 Bridges'],['roads','🛣 Roads'],['utilities','🔧 Utilities'],['fillslope','⛰️ Fill Slope'],['survey','📐 Survey'],['general','📋 General']];
+    for(var di=0;di<discs5.length;di++) h+='<option value="'+discs5[di][0]+'">'+discs5[di][1]+'</option>';
+    h+='</select>';
+
+    // Activity input
+    h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Activity</label>';
+    h+='<input type="text" id="fr-act" placeholder="e.g. Pier 3A — Pile Cap Concreting" ';
+    h+='style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:13px;font-family:inherit;outline:none;margin-bottom:8px;">';
+
+    // Status buttons
+    h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Status</label>';
+    h+='<div style="display:flex;gap:5px;margin-bottom:8px;">';
+    var statuses6=['Completed','In Progress','Delayed','Blocked'];
+    var sCols6=['var(--green)','var(--blue)','var(--amber)','var(--red)'];
+    for(var si=0;si<statuses6.length;si++){
+      var isSel6=_frDiaryStatus===statuses6[si];
+      h+='<button data-st="'+statuses6[si]+'" onclick="frSetStatus(this);" ';
+      h+='style="flex:1;padding:6px 3px;border-radius:7px;border:2px solid '+sCols6[si]+';';
+      h+='background:'+(isSel6?sCols6[si]:'transparent')+';';
+      h+='color:'+(isSel6?'#000':'var(--dimL)')+';';
+      h+='font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;">'+statuses6[si]+'</button>';
+    }
+    h+='</div>';
+
+    // Notes
+    h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Notes (optional)</label>';
+    h+='<textarea id="fr-notes" placeholder="Observations, quantities, issues..." ';
+    h+='style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:12px;font-family:inherit;height:64px;resize:none;outline:none;margin-bottom:10px;"></textarea>';
+
+    h+='<button onclick="frAddDiary();" style="width:100%;padding:11px;background:var(--gold);border:none;border-radius:8px;color:#000;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;">+ Log Activity</button>';
+    h+='</div>';
+
+    // Today's diary
+    h+='<div class="card">';
+    h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">';
+    h+='<div class="ct" style="margin-bottom:0;">Today\'s Log ('+todayDiary.length+')</div>';
+    if(todayDiary.length) h+='<span style="font-size:10px;color:var(--dimL);">tap ✕ to delete</span>';
+    h+='</div>';
+    if(!todayDiary.length){
+      h+='<div style="text-align:center;padding:16px;color:var(--dimL);font-size:12px;">No entries yet — log your first activity above</div>';
+    } else {
+      for(var di2=todayDiary.length-1;di2>=0;di2--){
+        var e=todayDiary[di2];
+        var eCol=e.status==='Completed'?'var(--green)':e.status==='In Progress'?'var(--blue)':e.status==='Delayed'?'var(--amber)':'var(--red)';
+        h+='<div style="padding:9px 0;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:flex-start;">';
+        h+='<div style="flex-shrink:0;margin-top:2px;">';
+        h+='<span style="font-size:9px;font-weight:700;color:'+eCol+';background:'+eCol+'22;padding:2px 7px;border-radius:5px;">'+e.status+'</span>';
+        h+='</div>';
+        h+='<div style="flex:1;">';
+        h+='<div style="font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">'+e.discipline+'</div>';
+        h+='<div style="font-size:12px;font-weight:700;color:var(--fg);">'+e.activity+'</div>';
+        if(e.notes) h+='<div style="font-size:11px;color:var(--dimL);margin-top:2px;">'+e.notes+'</div>';
+        h+='</div>';
+        h+='<button data-eid="'+e.id+'" onclick="frDeleteDiary(this.dataset.eid);" ';
+        h+='style="padding:3px 8px;border-radius:5px;border:1px solid var(--border);background:transparent;color:var(--dimL);font-size:10px;cursor:pointer;flex-shrink:0;">✕</button>';
+        h+='</div>';
+      }
+    }
+    h+='</div>';
+  }
+
+  // ══ PHOTOS TAB ═════════════════════════════════════════════
+  else if(_frTab==='photos'){
+    h+='<div class="card">';
+    h+='<div class="ct">📸 Capture Site Photo</div>';
+
+    h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Discipline</label>';
+    h+='<select id="fr-ph-disc" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:13px;font-family:inherit;margin-bottom:8px;">';
+    for(var di3=0;di3<discs5.length;di3++) h+='<option value="'+discs5[di3][0]+'">'+discs5[di3][1]+'</option>';
+    h+='</select>';
+
+    h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Caption</label>';
+    h+='<input type="text" id="fr-ph-cap" placeholder="e.g. Bridge A - Pier 3: Formwork complete" ';
+    h+='style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:13px;font-family:inherit;outline:none;margin-bottom:10px;">';
+
+    // Camera button — opens device camera
+    h+='<div style="display:flex;gap:8px;">';
+    h+='<label style="flex:1;padding:11px;background:var(--blue);border-radius:8px;color:#fff;font-weight:700;font-size:13px;cursor:pointer;text-align:center;">';
+    h+='📷 Camera';
+    h+='<input type="file" accept="image/*" capture="environment" id="fr-cam" onchange="frAddPhoto(this);" style="display:none;">';
+    h+='</label>';
+    h+='<label style="flex:1;padding:11px;background:var(--panel);border:1px solid var(--border);border-radius:8px;color:var(--dimL);font-weight:700;font-size:13px;cursor:pointer;text-align:center;">';
+    h+='🖼 Gallery';
+    h+='<input type="file" accept="image/*" id="fr-gal" onchange="frAddPhoto(this);" style="display:none;">';
+    h+='</label>';
+    h+='</div>';
+    h+='</div>';
+
+    // Today's photos grid
+    h+='<div class="card">';
+    h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">';
+    h+='<div class="ct" style="margin-bottom:0;">Today\'s Photos ('+todayPhotos.length+')</div>';
+    h+='</div>';
+    if(!todayPhotos.length){
+      h+='<div style="text-align:center;padding:20px;color:var(--dimL);font-size:12px;">';
+      h+='<div style="font-size:32px;margin-bottom:8px;">📷</div>';
+      h+='No photos yet — tap 📷 Camera above';
+      h+='</div>';
+    } else {
+      h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
+      for(var pi=0;pi<todayPhotos.length;pi++){
+        var ph=todayPhotos[pi];
+        h+='<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;">';
+        h+='<img src="'+ph.thumb+'" style="width:100%;height:110px;object-fit:cover;" alt="'+ph.caption+'">';
+        h+='<div style="padding:6px 8px;">';
+        h+='<div style="font-size:9px;color:var(--dimL);text-transform:uppercase;font-weight:700;">'+ph.discipline+'</div>';
+        h+='<div style="font-size:11px;color:var(--fg);font-weight:600;margin-top:1px;">'+ph.caption+'</div>';
+        h+='<button data-pid="'+ph.id+'" onclick="frDeletePhoto(this.dataset.pid);" ';
+        h+='style="margin-top:4px;padding:2px 8px;border-radius:5px;border:1px solid var(--border);background:transparent;color:var(--dimL);font-size:9px;cursor:pointer;">✕ Delete</button>';
+        h+='</div></div>';
+      }
+      h+='</div>';
+    }
+    h+='</div>';
+  }
+
+  // ══ REPORT PREVIEW TAB ═════════════════════════════════════
+  else if(_frTab==='report'){
+    var ov5=calcOverallPct();
+    var comp5=comparePlannedActual();
+    var variance5=comp5.variance;
+    var vCol5=variance5!==null&&variance5>=0?'var(--green)':'var(--red)';
+
+    h+='<div class="card" style="border-left:3px solid var(--gold);">';
+    h+='<div class="ct">📄 Daily Report Preview</div>';
+    h+='<div style="font-size:11px;color:var(--dimL);margin-bottom:12px;">Summary of today\'s field activities — tap PDF to download</div>';
+
+    // Overall progress strip
+    h+='<div style="display:flex;gap:8px;margin-bottom:10px;">';
+    var rpKpis=[
+      {v:ov5+'%',l:'Progress',c:'var(--gold)'},
+      {v:variance5!==null?(variance5>=0?'+':'')+variance5+'%':'—',l:'Variance',c:vCol5},
+      {v:todayDiary.length+'',l:'Activities',c:'var(--blue)'},
+      {v:todayPhotos.length+'',l:'Photos',c:'var(--dimL)'},
+    ];
+    for(var ki=0;ki<rpKpis.length;ki++){
+      h+='<div style="flex:1;background:var(--panel);border-radius:8px;padding:7px;text-align:center;">';
+      h+='<div style="font-size:16px;font-weight:900;color:'+rpKpis[ki].c+';">'+rpKpis[ki].v+'</div>';
+      h+='<div style="font-size:8px;color:var(--dimL);text-transform:uppercase;letter-spacing:0.5px;margin-top:2px;">'+rpKpis[ki].l+'</div>';
+      h+='</div>';
+    }
+    h+='</div>';
+
+    // Diary entries preview
+    h+='<div style="font-size:10px;font-weight:700;color:var(--dimL);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Activities Logged Today</div>';
+    if(!todayDiary.length){
+      h+='<div style="font-size:11px;color:var(--dimL);font-style:italic;padding:4px 0;">No entries — go to Diary tab to log activities</div>';
+    } else {
+      for(var di4=0;di4<todayDiary.length;di4++){
+        var e2=todayDiary[di4];
+        var eC2=e2.status==='Completed'?'var(--green)':e2.status==='In Progress'?'var(--blue)':e2.status==='Delayed'?'var(--amber)':'var(--red)';
+        h+='<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--border);">';
+        h+='<span style="font-size:9px;color:'+eC2+';font-weight:700;background:'+eC2+'22;padding:1px 6px;border-radius:4px;flex-shrink:0;">'+e2.status+'</span>';
+        h+='<span style="font-size:11px;color:var(--fg);">'+e2.activity+'</span>';
+        h+='</div>';
+      }
+    }
+
+    // Photos preview
+    if(todayPhotos.length){
+      h+='<div style="font-size:10px;font-weight:700;color:var(--dimL);text-transform:uppercase;letter-spacing:1px;margin:10px 0 6px;">Photos ('+todayPhotos.length+')</div>';
+      h+='<div style="display:flex;gap:6px;overflow-x:auto;">';
+      for(var pi2=0;pi2<todayPhotos.length;pi2++){
+        h+='<img src="'+todayPhotos[pi2].thumb+'" style="height:60px;width:80px;object-fit:cover;border-radius:6px;flex-shrink:0;border:1px solid var(--border);">';
+      }
+      h+='</div>';
+    }
+    h+='</div>';
+
+    h+='<button onclick="dlFieldPDF();" style="width:100%;padding:13px;background:var(--gold);border:none;border-radius:10px;color:#000;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;margin-top:4px;">📥 Download Daily Field Report PDF</button>';
+  }
+
+  document.getElementById('pg-fr').innerHTML=h;
+}
+
+// ── Field Report handlers ──────────────────────────────────────
+function frSwitch(tab){ _frTab=tab; rFr(); }
+
+function frSetStatus(btn){
+  _frDiaryStatus=btn.dataset.st;
+  var btns=btn.parentElement.querySelectorAll('button');
+  var sCols7=['var(--green)','var(--blue)','var(--amber)','var(--red)'];
+  var sSts=['Completed','In Progress','Delayed','Blocked'];
+  for(var k=0;k<btns.length;k++){
+    var isSel=btns[k].dataset.st===_frDiaryStatus;
+    btns[k].style.background=isSel?sCols7[k]:'transparent';
+    btns[k].style.color=isSel?'#000':'var(--dimL)';
+  }
+}
+
+function frAddDiary(){
+  var act=document.getElementById('fr-act');
+  if(!act||!act.value.trim()){flash('Enter activity description');return;}
+  var disc=document.getElementById('fr-disc');
+  var notes=document.getElementById('fr-notes');
+  var today=new Date().toISOString().slice(0,10);
+  FIELD.diary.push({
+    id:'fd_'+Date.now(),
+    date:today,
+    discipline:disc?disc.value:'general',
+    activity:act.value.trim(),
+    status:_frDiaryStatus,
+    notes:notes?notes.value.trim():'',
+    ts:Date.now()
+  });
+  act.value='';
+  if(notes) notes.value='';
+  persist();rFr();flash('Activity logged ✅');
+}
+
+function frDeleteDiary(id){
+  FIELD.diary=FIELD.diary.filter(function(e){return e.id!==id;});
+  persist();rFr();
+}
+
+function frAddPhoto(input){
+  if(!input.files||!input.files[0]) return;
+  var disc=document.getElementById('fr-ph-disc');
+  var cap=document.getElementById('fr-ph-cap');
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var base64=e.target.result;
+    var img=new Image();
+    img.onload=function(){
+      var canvas=document.createElement('canvas');
+      var MAX=400;
+      var ratio=Math.min(MAX/img.width,MAX/img.height);
+      canvas.width=Math.round(img.width*ratio);
+      canvas.height=Math.round(img.height*ratio);
+      var ctx2=canvas.getContext('2d');
+      ctx2.drawImage(img,0,0,canvas.width,canvas.height);
+      var thumb=canvas.toDataURL('image/jpeg',0.75);
+      var today=new Date().toISOString().slice(0,10);
+      FIELD.photos.push({
+        id:'fp_'+Date.now(),
+        date:today,
+        discipline:disc?disc.value:'general',
+        caption:cap&&cap.value.trim()?cap.value.trim():'Site photo',
+        thumb:thumb,
+        ts:Date.now()
+      });
+      if(cap) cap.value='';
+      persist();rFr();flash('Photo saved ✅');
+    };
+    img.src=base64;
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+function frDeletePhoto(id){
+  FIELD.photos=FIELD.photos.filter(function(p){return p.id!==id;});
+  persist();rFr();
+}
+
+
+function dlFieldPDF(){
+  var today=new Date();
+  var todayStr=today.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+  var timeStr=today.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  var todayIso=today.toISOString().slice(0,10);
+  var genStr='Generated '+todayStr+' at '+timeStr;
+
+  var todayDiary2=FIELD.diary.filter(function(d){return d.date===todayIso;});
+  var todayPhotos2=FIELD.photos.filter(function(p){return p.date===todayIso;});
+  var delays3=detectDelays();
+  var comp4=comparePlannedActual();
+  var ov4=calcOverallPct();
+  var tp4=timePct?timePct():0;
+
+  // Discipline stats for summary
+  var discStats={};
+  var discsMap={bridges:'🌉 Bridges',roads:'🛣 Roads',utilities:'🔧 Utilities',fillslope:'⛰️ Fill Slope',survey:'📐 Survey',general:'📋 General'};
+  for(var k in discsMap) discStats[k]=[];
+  for(var i=0;i<todayDiary2.length;i++){
+    var disc6=todayDiary2[i].discipline||'general';
+    if(!discStats[disc6]) discStats[disc6]=[];
+    discStats[disc6].push(todayDiary2[i]);
+  }
+
+  var css2=[
+    '@page{size:A4 portrait;margin:18mm 14mm 14mm 14mm}',
+    '*{box-sizing:border-box;margin:0;padding:0}',
+    'body{font-family:"Segoe UI",Arial,sans-serif;font-size:9pt;color:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact}',
+    '.page{width:182mm;min-height:257mm;position:relative;page-break-after:always;padding-bottom:14mm}',
+    '.page:last-child{page-break-after:auto}',
+    '.sec{background:#003A70;color:#fff;padding:5pt 10pt;font-size:10pt;font-weight:700;margin-bottom:8pt;border-left:4pt solid #C9A44C;margin-top:6pt}',
+    '.sub{background:#E8F0F8;color:#003A70;padding:4pt 8pt;font-size:9pt;font-weight:700;margin-bottom:5pt;border-left:3pt solid #003A70}',
+    'table{width:100%;border-collapse:collapse;font-size:8pt;margin-bottom:8pt}',
+    'th{background:#003A70;color:#fff;padding:5pt 7pt;text-align:left;font-size:7pt;text-transform:uppercase;letter-spacing:0.5px}',
+    'td{padding:5pt 7pt;border-bottom:1px solid #E0E0E0;vertical-align:top}',
+    'tr:nth-child(even) td{background:#F5F8FC}',
+    '.badge{display:inline-block;padding:1.5pt 6pt;border-radius:3pt;font-size:6.5pt;font-weight:700}',
+    '.done{background:#D4EDDA;color:#155724}.ip{background:#CCE5FF;color:#004085}.del{background:#FFF3CD;color:#856404}.blk{background:#F8D7DA;color:#721C24}',
+    '.footer{font-size:6.5pt;color:#777;border-top:1px solid #D9D9D9;padding-top:4pt;display:flex;justify-content:space-between;position:absolute;bottom:6mm;left:0;right:0}',
+    '.kpi{flex:1;border:1px solid #D9D9D9;border-radius:3pt;padding:8pt;text-align:center;border-top:3pt solid #003A70}',
+    '.kval{font-size:18pt;font-weight:900;color:#003A70;line-height:1}',
+    '.klbl{font-size:6.5pt;color:#555;text-transform:uppercase;letter-spacing:0.5px;margin-top:3pt}',
+    '.photo-grid{display:flex;flex-wrap:wrap;gap:5pt;margin-bottom:8pt}',
+    '.photo-box{width:82pt;text-align:center}',
+    '.photo-box img{width:82pt;height:65pt;object-fit:cover;border:1px solid #D9D9D9;border-radius:2pt}',
+    '.photo-cap{font-size:6pt;color:#555;margin-top:2pt;line-height:1.3}',
+    'ul{padding-left:12pt;margin-bottom:6pt}',
+    'li{font-size:8.5pt;line-height:1.7}',
+    'p{font-size:8.5pt;line-height:1.7;margin-bottom:5pt}',
+  ].join('');
+
+  function foot(pg,tot){
+    return '<div class="footer"><span>SITESYNC - Khatib &amp; Alami | IC1 Road Improvements</span><span style="text-align:center;">Page '+pg+' of '+tot+'</span><span>'+genStr+'</span></div>';
+  }
+
+  var totalPgs2 = 1 + (todayDiary2.length>0?1:0) + (todayPhotos2.length>0?1:0) + (delays3.length>0?1:0);
+  if(totalPgs2<2) totalPgs2=2;
+
+  var ph3='<!DOCTYPE html><html><head><meta charset="UTF-8"><style>'+css2+'</style></head><body>';
+
+  // ── PAGE 1: COVER ──────────────────────────────────────────
+  ph3+='<div class="page" style="background:#0a1628;display:flex;flex-direction:column;align-items:center;justify-content:center;">';
+  ph3+='<div style="position:absolute;top:0;left:0;right:0;height:5mm;background:linear-gradient(90deg,#003A70,#C9A44C);"></div>';
+  ph3+='<div style="text-align:center;color:#fff;padding:15pt;">';
+  ph3+='<div style="font-size:24pt;font-weight:900;color:#C9A44C;letter-spacing:1px;margin-bottom:3pt;">SITESYNC</div>';
+  ph3+='<div style="font-size:8pt;color:#94a3b8;letter-spacing:3px;margin-bottom:18pt;">CONSTRUCTION FIELD REPORT</div>';
+  ph3+='<div style="font-size:16pt;font-weight:800;color:#fff;margin-bottom:3pt;">IC1 Road Improvements</div>';
+  ph3+='<div style="font-size:9pt;color:#C9A44C;margin-bottom:18pt;">Interchange 1 — Diriyah, Riyadh</div>';
+  // Central KPI
+  ph3+='<div style="background:#1e3a5f;border-radius:8pt;padding:12pt 22pt;margin:0 auto 18pt;display:inline-block;">';
+  ph3+='<div style="font-size:28pt;font-weight:900;color:#C9A44C;line-height:1;">'+ov4+'%</div>';
+  ph3+='<div style="font-size:7pt;color:#94a3b8;text-transform:uppercase;letter-spacing:2px;margin-top:3pt;">Overall Progress</div>';
+  if(comp4.hasBaseline&&comp4.variance!==null){
+    var vC5=comp4.variance>=0?'#06C98F':'#EF4444';
+    ph3+='<div style="font-size:9pt;font-weight:700;color:'+vC5+';margin-top:3pt;">'+(comp4.variance>=0?'▲ +':'▼ ')+comp4.variance+'% vs Plan</div>';
+  }
+  ph3+='</div>';
+  // Details
+  ph3+='<div style="display:flex;gap:16pt;justify-content:center;">';
+  var cov=[['Date',todayStr],['Prepared By',MY_NAME],['Role','Head of Surveying'],['Time',timeStr]];
+  for(var ci=0;ci<cov.length;ci++){
+    ph3+='<div style="text-align:center;"><div style="font-size:7pt;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;">'+cov[ci][0]+'</div><div style="font-size:9pt;font-weight:700;color:#fff;margin-top:2pt;">'+cov[ci][1]+'</div></div>';
+  }
+  ph3+='</div></div>';
+  ph3+='<div style="position:absolute;bottom:0;left:0;right:0;height:5mm;background:linear-gradient(90deg,#003A70,#C9A44C);"></div>';
+  ph3+='</div>';
+
+  // ── PAGE 2: SUMMARY + DIARY ────────────────────────────────
+  ph3+='<div class="page">';
+  ph3+='<div class="sec">1. Daily Summary</div>';
+  // KPI row
+  ph3+='<div style="display:flex;gap:6pt;margin-bottom:10pt;">';
+  var kpis4=[
+    {v:ov4+'%',l:'Overall',c:'#003A70'},
+    {v:tp4+'%',l:'Time Elapsed',c:'#003A70'},
+    {v:todayDiary2.length+'',l:'Activities',c:'#003A70'},
+    {v:todayPhotos2.length+'',l:'Photos',c:'#003A70'},
+    {v:delays3.length+'',l:'Alerts',c:delays3.length>0?'#721C24':'#155724'},
+  ];
+  for(var ki2=0;ki2<kpis4.length;ki2++){
+    ph3+='<div class="kpi" style="border-top-color:'+kpis4[ki2].c+';">';
+    ph3+='<div class="kval" style="color:'+kpis4[ki2].c+';">'+kpis4[ki2].v+'</div>';
+    ph3+='<div class="klbl">'+kpis4[ki2].l+'</div>';
+    ph3+='</div>';
+  }
+  ph3+='</div>';
+
+  // Discipline breakdown
+  ph3+='<div class="sec">2. Activity Log</div>';
+  if(!todayDiary2.length){
+    ph3+='<p style="color:#555;font-style:italic;">No activities logged today.</p>';
+  } else {
+    ph3+='<table><tr><th>Discipline</th><th>Activity</th><th>Status</th><th>Notes</th></tr>';
+    for(var di5=0;di5<todayDiary2.length;di5++){
+      var e3=todayDiary2[di5];
+      var bClass=e3.status==='Completed'?'done':e3.status==='In Progress'?'ip':e3.status==='Delayed'?'del':'blk';
+      ph3+='<tr>';
+      ph3+='<td style="font-weight:700;color:#003A70;">'+discsMap[e3.discipline]+'</td>';
+      ph3+='<td>'+e3.activity+'</td>';
+      ph3+='<td><span class="badge '+bClass+'">'+e3.status+'</span></td>';
+      ph3+='<td style="color:#555;font-style:italic;">'+(e3.notes||'—')+'</td>';
+      ph3+='</tr>';
+    }
+    ph3+='</table>';
+  }
+  ph3+=foot(2,totalPgs2);
+  ph3+='</div>';
+
+  // ── PAGE 3: PHOTOS ─────────────────────────────────────────
+  if(todayPhotos2.length){
+    ph3+='<div class="page">';
+    ph3+='<div class="sec">3. Site Photos ('+todayPhotos2.length+')</div>';
+    ph3+='<div class="photo-grid">';
+    for(var pi3=0;pi3<todayPhotos2.length;pi3++){
+      var ph4=todayPhotos2[pi3];
+      ph3+='<div class="photo-box">';
+      ph3+='<img src="'+ph4.thumb+'" alt="'+ph4.caption+'">';
+      ph3+='<div class="photo-cap"><strong>'+(discsMap[ph4.discipline]||ph4.discipline).toUpperCase()+'</strong><br>'+ph4.caption+'</div>';
+      ph3+='</div>';
+    }
+    ph3+='</div>';
+    ph3+=foot(3,totalPgs2);
+    ph3+='</div>';
+  }
+
+  // ── PAGE 4: DELAYS + SIGN-OFF ──────────────────────────────
+  ph3+='<div class="page">';
+  ph3+='<div class="sec">'+(todayPhotos2.length?'4':'3')+'. Delay Detection</div>';
+  if(!delays3.length){
+    ph3+='<div style="background:#D4EDDA;border-left:4pt solid #155724;padding:8pt;margin-bottom:10pt;"><strong style="color:#155724;">✅ No delays detected.</strong></div>';
+  } else {
+    for(var di6=0;di6<delays3.length;di6++){
+      var d5=delays3[di6];
+      var isCrit5=d5.type==='critical';
+      ph3+='<div style="border:1pt solid '+(isCrit5?'#F8D7DA':'#FFF3CD')+';border-radius:3pt;padding:7pt;margin-bottom:7pt;background:'+(isCrit5?'#FFF8F8':'#FFFDF0')+'">';
+      ph3+='<div style="display:flex;justify-content:space-between;margin-bottom:3pt;">';
+      ph3+='<strong style="color:'+(isCrit5?'#721C24':'#856404')+';">'+d5.title+'</strong>';
+      ph3+='<span class="badge '+(isCrit5?'blk':'del')+'">'+d5.type.toUpperCase()+'</span>';
+      ph3+='</div>';
+      ph3+='<p style="margin-bottom:2pt;font-size:8pt;"><strong>'+d5.discipline+':</strong> '+d5.detail+'</p>';
+      ph3+='<p style="font-size:8pt;color:#003A70;font-weight:700;">→ '+d5.action+'</p>';
+      ph3+='</div>';
+    }
+  }
+
+  ph3+='<div class="sec">'+(todayPhotos2.length?'5':'4')+'. Sign-Off</div>';
+  ph3+='<table><tr><th>Role</th><th>Name</th><th>Signature</th><th>Date</th></tr>';
+  ph3+='<tr><td>Head of Surveying</td><td>'+MY_NAME+'</td><td style="min-width:50pt;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td><td>'+todayStr+'</td></tr>';
+  ph3+='<tr><td>Resident Engineer</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>';
+  ph3+='<tr><td>Project Manager</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>';
+  ph3+='</table>';
+
+  ph3+='<div style="background:#003A70;color:#fff;padding:8pt 12pt;border-radius:4pt;display:flex;justify-content:space-between;align-items:center;margin-top:10pt;">';
+  ph3+='<div><div style="font-size:11pt;font-weight:900;letter-spacing:0.5px;">SITESYNC</div><div style="font-size:7pt;color:#C9A44C;">Khatib &amp; Alami</div></div>';
+  ph3+='<div style="text-align:right;font-size:7.5pt;"><div>IC1 Road Improvements — Field Report</div><div style="color:#C9A44C;margin-top:2pt;">'+genStr+'</div></div>';
+  ph3+='</div>';
+  ph3+=foot(totalPgs2,totalPgs2);
+  ph3+='</div>';
+
+  ph3+='</body></html>';
+
+  var blob2=new Blob([ph3],{type:'text/html'});
+  var url2=URL.createObjectURL(blob2);
+  var a2=document.createElement('a');
+  a2.href=url2;
+  a2.download='IC1_Field_Report_'+todayIso+'.html';
+  a2.click();
+  URL.revokeObjectURL(url2);
+  flash('Field Report downloaded ✅');
+}
+
 function buildTicker(){
   var items=[];
 
@@ -3419,7 +3999,7 @@ function countAllPiers(){
 // ═══════════════════════════════════════════════════════════════
 // NAVIGATION
 // ═══════════════════════════════════════════════════════════════
-var ALL_TABS=["ov","tr","rd","fs","ut","lg","rp","pl","ai","mp","ch","ws"];
+var ALL_TABS=["ov","tr","rd","fs","ut","lg","rp","pl","fr","mp","ch","ws"];
 
 function nav(id){
   for(var i=0;i<ALL_TABS.length;i++){
@@ -3450,7 +4030,7 @@ function nav(id){
   else if(id==="tl") rTl();
   else if(id==="rp") rRp();
   else if(id==="pl") rPl();
-  else if(id==="ai") rAi();
+  else if(id==="fr") rFr();
   else if(id==="is") rIs();
   else if(id==="rd") rRd();
   else if(id==="mp") rMp();
@@ -5536,6 +6116,7 @@ function pullSync(){
   try{localStorage.setItem("ic1b3_cw",JSON.stringify(CUSTOM_WEIGHTS));}catch(e){}
   try{localStorage.setItem('ic1b3_msg',JSON.stringify(MESSAGES.slice(-20)));}catch(e){}
   try{localStorage.setItem('ic1b3_plan',JSON.stringify(PLAN));}catch(e){}
+  try{localStorage.setItem('ic1b3_field',JSON.stringify({photos:FIELD.photos.slice(-100),diary:FIELD.diary.slice(-500)}));}catch(e){}
   try{localStorage.setItem('ic1b3_daily',JSON.stringify({photos:DAILY.photos.slice(-50),entries:DAILY.entries.slice(-200),reports:DAILY.reports.slice(-30),snapshots:DAILY.snapshots.slice(-90),apiKey:DAILY.apiKey}));}catch(e){}
       // Update sync label
       var lsEl=document.getElementById("last-sync-lbl");
