@@ -7289,153 +7289,195 @@ function setRdAct(key, val){
 }
 
 function rRd(){
+  var roads=[
+    {key:'ibn',    label:'Ibn Saud Road',      icon:'🛣',  weight:3, col:'#58A6FF'},
+    {key:'sattam', label:'Prince Sattam Road',  icon:'🛤',  weight:3, col:'#A78BFA'},
+  ];
+  var statusColors={'Not Started':'#4a5568','In Progress':'#58A6FF','Complete':'#06D6A0'};
+  var statusBg={'Not Started':'rgba(74,85,104,0.15)','In Progress':'rgba(88,166,255,0.15)','Complete':'rgba(6,214,160,0.15)'};
+  var actIcons=['⛏','🏗','🪨','🧱','🛣','🛣','🚧','🏗','💧','🚦','⛰️'];
+
   var h='';
 
-  // Header
-  h+='<div class="card" style="border-left:3px solid var(--blue);">';
-  h+='<div class="ct">🛣 Road Works</div>';
-  h+='<div style="font-size:11px;color:var(--dimL);">Imam Ibn Saud Road &amp; Prince Sattam Road — New curbs, sidewalks &amp; pavement layers</div>';
-  h+='<div style="font-size:11px;color:var(--dimL);margin-top:4px;">Combined weight: <b style="color:var(--gold);">6%</b> of total project value</div>';
+  // ── Module Header ──────────────────────────────────────────
+  h+='<div style="background:linear-gradient(135deg,#0a1628 0%,#0d2444 60%,#0a1628 100%);';
+  h+='border-radius:14px;padding:16px;margin-bottom:14px;border:1px solid rgba(88,166,255,0.2);';
+  h+='position:relative;overflow:hidden;">';
+  h+='<div style="position:absolute;top:0;right:0;width:80px;height:80px;';
+  h+='background:radial-gradient(circle at top right,rgba(88,166,255,0.12),transparent 70%);pointer-events:none;"></div>';
+  h+='<div style="display:flex;align-items:flex-start;justify-content:space-between;">';
+  h+='<div>';
+  h+='<div style="font-size:11px;color:rgba(88,166,255,0.8);font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">IC1 Road Improvements</div>';
+  h+='<div style="font-size:20px;font-weight:900;color:#f1f5f9;letter-spacing:-0.5px;">Road Works</div>';
+  h+='<div style="display:flex;align-items:center;gap:6px;margin-top:6px;">';
+  h+='<span style="background:rgba(88,166,255,0.15);border:1px solid rgba(88,166,255,0.3);color:#58A6FF;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;">2 Roads</span>';
+  h+='<span style="background:rgba(6,214,160,0.12);border:1px solid rgba(6,214,160,0.25);color:#06D6A0;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;">'+ROAD_ACTS.length+' Activities</span>';
+  h+='<span style="background:rgba(212,168,67,0.12);border:1px solid rgba(212,168,67,0.25);color:#D4A843;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;">6% Weight</span>';
+  h+='</div></div>';
+  // Combined progress
+  var ibnPct=Math.round((ROADS.ibn.pct||0)*10)/10;
+  var satPct=Math.round((ROADS.sattam.pct||0)*10)/10;
+  var combined=Math.round((ibnPct+satPct)/2*10)/10;
+  var combCol=combined>=75?'#06D6A0':combined>=30?'#D4A843':'#58A6FF';
+  var r2=28,stroke2=6,circ2=2*Math.PI*r2;
+  var dashF2=circ2*(combined/100),dashG2=circ2-dashF2;
+  h+='<div style="position:relative;width:72px;height:72px;">';
+  h+='<svg width="72" height="72" viewBox="0 0 72 72">';
+  h+='<circle cx="36" cy="36" r="'+r2+'" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="'+stroke2+'"/>';
+  h+='<circle cx="36" cy="36" r="'+r2+'" fill="none" stroke="'+combCol+'" stroke-width="'+stroke2+'" ';
+  h+='stroke-dasharray="'+Math.round(dashF2)+' '+Math.round(dashG2)+'" stroke-dashoffset="'+(circ2*0.25)+'" ';
+  h+='transform="rotate(-90 36 36)" stroke-linecap="round"/>';
+  h+='<text x="36" y="33" text-anchor="middle" font-family="Segoe UI,Arial" font-size="11" font-weight="900" fill="'+combCol+'">'+combined+'%</text>';
+  h+='<text x="36" y="46" text-anchor="middle" font-family="Segoe UI,Arial" font-size="7" fill="rgba(255,255,255,0.4)">ROADS</text>';
+  h+='</svg></div></div>';
   h+='</div>';
 
-  ROAD_ACTS=[
-    {name:"Demolition & Clearing",        w:3},
-    {name:"Earthworks",                   w:7},
-    {name:"Sub-base",                     w:8},
-    {name:"Base Course",                  w:12.8},
-    {name:"Asphalt Binder Course",        w:11},
-    {name:"Asphalt Wearing Course",       w:12},
-    {name:"Curb & Kerb",                  w:14.8},
-    {name:"Sidewalk Concrete",            w:18.7},
-    {name:"Drainage",                     w:4},
-    {name:"Road Markings & Lighting",     w:8},
-    {name:"Fill Slope Between Abutments", w:0.7}
-  ];
-
-  var roads=[
-    {key:"ibn",   label:"Imam Ibn Saud Road",   icon:"🛣", weight:3},
-    {key:"sattam",label:"Prince Sattam Road",    icon:"🛤", weight:3}
-  ];
-
-  var statuses=["Not Started","In Progress","Complete"];
-  var sColors=["var(--dim)","var(--blue)","var(--green)"];
+  // ── Road Summary Cards ──────────────────────────────────────
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">';
 
   for(var ri=0;ri<roads.length;ri++){
-    var rd=roads[ri];
-    var rData=ROADS[rd.key]||{pct:0,status:"Not Started"};
+    var road=roads[ri];
+    var rdPct=Math.round((ROADS[road.key].pct||0)*10)/10;
+    var rdPctCol=rdPct>=75?'#06D6A0':rdPct>=30?road.col:'#4a5568';
+    var rdStatus=rdPct>=100?'Complete':rdPct>0?'In Progress':'Not Started';
+    var rdR=22,rdStroke=5,rdCirc=2*Math.PI*rdR;
+    var rdDashF=rdCirc*(rdPct/100),rdDashG=rdCirc-rdDashF;
 
-    // Recalc from activities
-    var earned=0;
-    for(var ai=0;ai<ROAD_ACTS.length;ai++){
-      var actKey=rd.key+".act."+ai;
-      var actSt=ROADS[actKey]||"Not Started";
-      // Migrate old 'done' values
-      if(actSt==="done"){actSt="Complete"; ROADS[actKey]="Complete";}
-      if(actSt==="Complete") earned+=ROAD_ACTS[ai].w;
-      else if(actSt==="In Progress") earned+=ROAD_ACTS[ai].w*0.3;
-    }
-    ROADS[rd.key].pct=Math.round(earned*10)/10;
-    var autoStatus=earned>=99.9?"Complete":earned>0?"In Progress":"Not Started";
-    ROADS[rd.key].status=autoStatus;
-    var rPct=Math.round(earned*10)/10;
-    var rCol=autoStatus==="Complete"?"var(--green)":autoStatus==="In Progress"?"var(--blue)":"var(--dim)";
-
-    h+='<div class="card" style="margin-top:12px;">';
-
-    // Road header
+    h+='<div style="background:linear-gradient(135deg,var(--card),#0d1f3c);border:1px solid '+(rdPct>0?road.col+'44':'var(--border)')+';border-radius:14px;padding:13px;border-left:3px solid '+road.col+';">';
     h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">';
     h+='<div>';
-    h+='<div style="font-size:16px;font-weight:900;color:var(--gold);">'+rd.icon+' '+rd.label+'</div>';
-    h+='<div style="font-size:10px;color:var(--dimL);">Weight: '+rd.weight+'% of total project</div>';
+    h+='<div style="font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px;">'+road.icon+' Road</div>';
+    h+='<div style="font-size:13px;font-weight:900;color:var(--text);line-height:1.2;">'+road.label.split(' ')[0]+'<br>'+road.label.split(' ').slice(1).join(' ')+'</div>';
     h+='</div>';
-    h+='<div style="text-align:right;">';
-    h+='<div style="font-size:28px;font-weight:900;color:'+rCol+';">'+rPct+'%</div>';
-    h+='<div style="font-size:11px;color:'+rCol+';background:'+rCol+'22;padding:2px 8px;border-radius:10px;">'+autoStatus+'</div>';
-    h+='</div></div>';
-
+    h+='<svg width="54" height="54" viewBox="0 0 54 54">';
+    h+='<circle cx="27" cy="27" r="'+rdR+'" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="'+rdStroke+'"/>';
+    h+='<circle cx="27" cy="27" r="'+rdR+'" fill="none" stroke="'+rdPctCol+'" stroke-width="'+rdStroke+'" ';
+    h+='stroke-dasharray="'+Math.round(rdDashF)+' '+Math.round(rdDashG)+'" stroke-dashoffset="'+(rdCirc*0.25)+'" ';
+    h+='transform="rotate(-90 27 27)" stroke-linecap="round"/>';
+    h+='<text x="27" y="24" text-anchor="middle" font-family="Segoe UI,Arial" font-size="9" font-weight="900" fill="'+rdPctCol+'">'+rdPct+'%</text>';
+    h+='<text x="27" y="35" text-anchor="middle" font-family="Segoe UI,Arial" font-size="6" fill="rgba(255,255,255,0.35)">done</text>';
+    h+='</svg></div>';
+    // Status badge
+    h+='<div style="margin-bottom:8px;">';
+    h+='<span style="font-size:9px;font-weight:700;padding:3px 8px;border-radius:8px;';
+    h+='background:'+statusBg[rdStatus]+';color:'+statusColors[rdStatus]+';border:1px solid '+statusColors[rdStatus]+'33;">'+rdStatus+'</span>';
+    h+='<span style="font-size:9px;color:var(--dimL);margin-left:6px;">Weight: '+road.weight+'%</span>';
+    h+='</div>';
     // Progress bar
-    h+='<div style="height:8px;background:var(--panel);border-radius:4px;margin-bottom:12px;">';
-    h+='<div style="width:'+rPct+'%;height:8px;background:var(--blue);border-radius:4px;transition:width 0.3s;"></div></div>';
-
-    // Earned weight
-    var earnedWt=Math.round(rPct/100*rd.weight*10)/10;
-    h+='<div style="display:flex;justify-content:space-between;margin-bottom:14px;padding:7px 12px;background:var(--panel);border-radius:8px;">';
-    h+='<span style="font-size:11px;color:var(--dimL);">Earned project weight</span>';
-    h+='<span style="font-size:12px;font-weight:900;color:var(--gold);">'+earnedWt+'% / '+rd.weight+'%</span>';
+    h+='<div style="height:5px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;margin-bottom:8px;">';
+    h+='<div style="width:'+Math.min(100,rdPct)+'%;height:5px;background:'+road.col+';border-radius:3px;transition:width 0.4s;"></div>';
     h+='</div>';
-    // Action buttons for road
-    h+='<div style="display:flex;gap:6px;margin-bottom:12px;">';
-    h+='<button onclick="openRoadWeights(\''+rd.key+'\');" style="flex:1;padding:7px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--dimL);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">⚙️ Edit Weights</button>';
-    h+='<button onclick="resetRoadAll(\''+rd.key+'\');" style="flex:1;padding:7px;border-radius:8px;border:1px solid var(--red);background:transparent;color:var(--red);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">🔄 Reset Road</button>';
+    // Action buttons
+    h+='<div style="display:flex;gap:5px;">';
+    h+='<button data-rk2="'+road.key+'" onclick="openRoadWeights(this.dataset.rk2);" ';
+    h+='style="flex:1;padding:5px;border-radius:7px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);';
+    h+='color:var(--dimL);font-size:9px;font-weight:700;cursor:pointer;font-family:inherit;">⚖️ Weights</button>';
+    h+='<button data-rk="'+road.key+'" onclick="rdReset(this.dataset.rk);" ';
+    h+='style="flex:1;padding:5px;border-radius:7px;border:1px solid rgba(231,76,60,0.3);background:rgba(231,76,60,0.07);';
+    h+='color:#E74C3C;font-size:9px;font-weight:700;cursor:pointer;font-family:inherit;">🔄 Reset</button>';
+    h+='</div></div>';
+  }
+  h+='</div>';
+
+  // ── Activity Stage Cards ────────────────────────────────────
+  h+='<div style="font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;">Activities &amp; Stages</div>';
+
+  for(var ai=0;ai<ROAD_ACTS.length;ai++){
+    var act=ROAD_ACTS[ai];
+    var ibnSt=ROADS['ibn.act.'+ai]||'Not Started';
+    var satSt=ROADS['sattam.act.'+ai]||'Not Started';
+    var icon=actIcons[ai]||'📋';
+
+    // Progress contribution
+    var ibnContrib=ibnSt==='Complete'?act.w:ibnSt==='In Progress'?Math.round(act.w*0.3*10)/10:0;
+    var satContrib=satSt==='Complete'?act.w:satSt==='In Progress'?Math.round(act.w*0.3*10)/10:0;
+
+    // Card border based on any progress
+    var anyProgress=ibnSt!=='Not Started'||satSt!=='Not Started';
+    var bothDone=ibnSt==='Complete'&&satSt==='Complete';
+    var cardBorder=bothDone?'rgba(6,214,160,0.35)':anyProgress?'rgba(88,166,255,0.25)':'var(--border)';
+
+    h+='<div style="background:var(--card);border:1px solid '+cardBorder+';border-radius:12px;padding:13px 14px;margin-bottom:8px;';
+    if(bothDone) h+='border-left:3px solid #06D6A0;';
+    else if(anyProgress) h+='border-left:3px solid #58A6FF;';
+    else h+='border-left:3px solid rgba(255,255,255,0.1);';
+    h+='">';
+
+    // Stage header
+    h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">';
+    h+='<div style="display:flex;align-items:center;gap:8px;">';
+    h+='<div style="width:34px;height:34px;border-radius:8px;background:rgba(255,255,255,0.06);';
+    h+='display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">'+icon+'</div>';
+    h+='<div>';
+    h+='<div style="font-size:13px;font-weight:800;color:var(--text);">'+act.name+'</div>';
+    h+='<span style="font-size:9px;font-weight:700;color:var(--gold);background:rgba(212,168,67,0.12);';
+    h+='border:1px solid rgba(212,168,67,0.25);padding:1px 7px;border-radius:6px;">'+act.w+'%</span>';
+    h+='</div></div>';
+    if(bothDone) h+='<span style="font-size:11px;">✅</span>';
+    else if(anyProgress) h+='<span style="font-size:11px;">🔨</span>';
     h+='</div>';
 
-    // Activities with 3-state status
-    h+='<div class="ct" style="font-size:11px;margin-bottom:10px;">Activities — Select Stage:</div>';
-    for(var aj=0;aj<ROAD_ACTS.length;aj++){
-      var act=ROAD_ACTS[aj];
-      var aKey=rd.key+".act."+aj;
-      var actSt2=ROADS[aKey]||"Not Started";
-      if(actSt2==="done") actSt2="Complete";
-      var aCol2=SCOL[actSt2]||"var(--dim)";
-      var aBg2=actSt2==="Complete"?"var(--green)11":actSt2==="In Progress"?"var(--blue)11":"var(--panel)";
-      var aBorder2=actSt2==="Complete"?"var(--green)":actSt2==="In Progress"?"var(--blue)":"var(--border)";
-      var contrib=actSt2==="Complete"?act.w:actSt2==="In Progress"?Math.round(act.w*0.3*10)/10:0;
+    // Dual road status selectors
+    for(var rri=0;rri<roads.length;rri++){
+      var rd2=roads[rri];
+      var rdKey2='roads_'+rd2.key;
+      var curSt=ROADS[rd2.key+'.act.'+ai]||'Not Started';
+      var stList=['Not Started','In Progress','Complete'];
+      var stCols=['#4a5568','#58A6FF','#06D6A0'];
 
-      h+='<div style="border:1px solid '+aBorder2+';border-radius:10px;padding:10px 12px;margin-bottom:7px;background:'+aBg2+';">';
-      // Label + weight badge
-      h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;">';
-      h+='<div style="font-size:12px;font-weight:600;color:var(--fg);">'+act.name+'</div>';
-      h+='<div style="display:flex;align-items:center;gap:5px;">';
-      if(contrib>0) h+='<span style="font-size:10px;color:'+aCol2+';font-weight:700;">+'+contrib+'%</span>';
-      h+='<span style="font-size:11px;font-weight:700;color:var(--dimL);background:var(--panel);padding:2px 8px;border-radius:8px;">'+act.w+'%</span>';
-      h+='</div></div>';
-      // 3 status buttons
+      h+='<div style="margin-bottom:'+(rri<roads.length-1?'8':'0')+'px;">';
+      h+='<div style="font-size:10px;color:var(--dimL);font-weight:700;margin-bottom:5px;">'+rd2.icon+' '+rd2.label+'</div>';
       h+='<div style="display:flex;gap:5px;">';
-      for(var si2=0;si2<statuses.length;si2++){
-        var isSel2=actSt2===statuses[si2];
-        var btnKey2=rd.key+".act."+aj;
-        var btnSt2=statuses[si2];
-        h+='<button onclick="setRdAct(\''+btnKey2+'\',\''+btnSt2+'\')" ';
-        h+='style="flex:1;padding:5px 3px;border-radius:7px;border:2px solid '+sColors[si2]+';';
-        h+='background:'+(isSel2?sColors[si2]:'transparent')+';';
-        h+='color:'+(isSel2?'#000':'var(--dimL)')+';';
-        h+='font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;">'+statuses[si2]+'</button>';
+      for(var k=0;k<stList.length;k++){
+        var isSel2=curSt===stList[k];
+        h+='<button data-rdkey="'+rd2.key+'" data-ai="'+ai+'" data-st="'+stList[k]+'" ';
+        h+='onclick="rdSetAct(this);" ';
+        h+='style="flex:1;padding:8px 4px;border-radius:8px;';
+        h+='border:1.5px solid '+stCols[k]+';';
+        h+='background:'+(isSel2?stCols[k]:'transparent')+';';
+        h+='color:'+(isSel2?'#fff':'rgba(255,255,255,0.35)')+';';
+        h+='font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;';
+        h+='min-height:36px;">'+stList[k].replace('Not Started','— None').replace('In Progress','🔨 WIP').replace('Complete','✅ Done')+'</button>';
       }
       h+='</div>';
-      h+='</div>';
+      // Mini progress bar
+      h+='<div style="height:3px;background:rgba(255,255,255,0.06);border-radius:2px;margin-top:5px;overflow:hidden;">';
+      var fillPct3=curSt==='Complete'?100:curSt==='In Progress'?30:0;
+      h+='<div style="width:'+fillPct3+'%;height:3px;background:'+rd2.col+';border-radius:2px;transition:width 0.3s;"></div>';
+      h+='</div></div>';
     }
-
-    // Activities summary
-    var doneC=0; var ipC=0;
-    for(var ak=0;ak<ROAD_ACTS.length;ak++){
-      var stk=ROADS[rd.key+".act."+ak]||"Not Started";
-      if(stk==="Complete"||stk==="done") doneC++;
-      else if(stk==="In Progress") ipC++;
-    }
-    h+='<div style="margin-top:8px;display:flex;justify-content:space-between;font-size:11px;color:var(--dimL);padding:8px 0;">';
-    h+='<span>'+doneC+' complete · '+ipC+' in progress · '+(ROAD_ACTS.length-doneC-ipC)+' pending</span>';
-    h+='<span style="color:var(--blue);font-weight:700;">'+rPct+'% earned</span>';
-    h+='</div>';
-
     h+='</div>';
   }
 
-  // Preliminary Works card
-  h+='<div class="card" style="margin-top:12px;border-left:3px solid var(--green);">';
-  h+='<div style="display:flex;justify-content:space-between;align-items:center;">';
-  h+='<div>';
-  h+='<div style="font-size:14px;font-weight:700;color:var(--green);">✅ Preliminary Works</div>';
-  h+='<div style="font-size:10px;color:var(--dimL);">Completed: Jun 2025 – Feb 2026</div>';
-  h+='</div>';
-  h+='<div style="font-size:28px;font-weight:900;color:var(--green);">'+PRE_PCT+'%</div>';
-  h+='</div>';
-  h+='<div style="margin-top:8px;font-size:11px;color:var(--dimL);font-weight:700;">Baseline weight (%):</div>';
-  h+='<input type="number" value="'+PRE_PCT+'" min="0" max="30" ';
-  h+='onchange="PRE_PCT=parseFloat(this.value)||7;persist();rRd();rOv();" ';
-  h+='style="width:60px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:13px;text-align:center;">';
-  h+='</div>';
+  h+='<div style="height:20px;"></div>';
+  document.getElementById('pg-rd').innerHTML=h;
+}
 
-  document.getElementById("pg-rd").innerHTML=h;
+function rdSetAct(btn){
+  var rdKey=btn.dataset.rdkey;
+  var ai=parseInt(btn.dataset.ai);
+  var st=btn.dataset.st;
+  ROADS[rdKey+'.act.'+ai]=st;
+  // Recalc pct for this road
+  var ROAD_ACTS2=[{w:3},{w:7},{w:8},{w:12.8},{w:11},{w:12},{w:14.8},{w:18.7},{w:4},{w:8},{w:0.7}];
+  var earned3=0,total3=0;
+  for(var i=0;i<ROAD_ACTS2.length;i++){
+    total3+=ROAD_ACTS2[i].w;
+    var s3=ROADS[rdKey+'.act.'+i]||'Not Started';
+    if(s3==='Complete') earned3+=ROAD_ACTS2[i].w;
+    else if(s3==='In Progress') earned3+=ROAD_ACTS2[i].w*0.3;
+  }
+  ROADS[rdKey].pct=total3>0?Math.round(earned3/total3*100*10)/10:0;
+  persist();
+  rRd();
+  buildTicker();
+}
+
+function rdReset(rdKey){
+  if(!confirm('Reset all stages for '+rdKey+' road?')) return;
+  for(var i=0;i<ROAD_ACTS.length;i++) delete ROADS[rdKey+'.act.'+i];
+  ROADS[rdKey].pct=0;
+  persist();rRd();buildTicker();flash('Road reset ✅');
 }
 
 function editPre(){nav("rd");}
