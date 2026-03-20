@@ -2140,280 +2140,355 @@ var _plTab='curve'; // 'curve' | 'activities' | 'compare'
 
 function rPl(){
   var comp=comparePlannedActual();
+  var today=new Date().toISOString().slice(0,10);
+  var todayStr=new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+  var ov=calcOverallPct();
+  var tp=timePct?timePct():0;
+  var dr=daysLeft?daysLeft():'--';
+  var variance=comp.variance!==null?comp.variance:null;
+  var vAbs=variance!==null?Math.abs(variance):null;
+  var vAhead=variance!==null&&variance>=0;
+  var vCol=variance===null?'#4a5568':vAhead?'#06D6A0':'#E74C3C';
+  var vBg=variance===null?'rgba(74,85,104,0.12)':vAhead?'rgba(6,214,160,0.1)':'rgba(231,76,60,0.1)';
+  var vBorder=variance===null?'rgba(74,85,104,0.3)':vAhead?'rgba(6,214,160,0.3)':'rgba(231,76,60,0.3)';
+
   var h='';
 
-  // ── Header ─────────────────────────────────────────────────
-  h+='<div class="card" style="border-left:3px solid var(--blue);">';
-  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">';
-  h+='<div class="ct" style="margin-bottom:0;">📅 Planned Progress Baseline</div>';
-  var vBadge=comp.hasBaseline?
-    (comp.variance>=0?'<span style="background:var(--green)22;color:var(--green);border:1px solid var(--green)33;border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700;">▲ +'+comp.variance+'% ahead</span>':
-     '<span style="background:var(--red)22;color:var(--red);border:1px solid var(--red)33;border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700;">▼ '+Math.abs(comp.variance)+'% behind</span>'):
-    '<span style="background:var(--panel);color:var(--dimL);border:1px solid var(--border);border-radius:6px;padding:2px 8px;font-size:10px;">No baseline</span>';
-  h+=vBadge;
-  h+='</div>';
-  h+='<div style="font-size:11px;color:var(--dimL);">Define the planned S-curve and activities per discipline. Used for delay detection in Phase 4.</div>';
-  h+='</div>';
+  // ── Module Header ──────────────────────────────────────────
+  h+='<div style="background:linear-gradient(135deg,#0a1628 0%,#0d1e3a 60%,#0a1628 100%);';
+  h+='border-radius:14px;padding:16px;margin-bottom:14px;border:1px solid rgba(167,139,250,0.2);';
+  h+='position:relative;overflow:hidden;">';
+  h+='<div style="position:absolute;top:0;right:0;width:80px;height:80px;';
+  h+='background:radial-gradient(circle at top right,rgba(167,139,250,0.12),transparent 70%);pointer-events:none;"></div>';
+  h+='<div style="display:flex;align-items:flex-start;justify-content:space-between;">';
+  h+='<div>';
+  h+='<div style="font-size:11px;color:rgba(167,139,250,0.8);font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">IC1 Road Improvements</div>';
+  h+='<div style="font-size:20px;font-weight:900;color:#f1f5f9;letter-spacing:-0.5px;">Planning &amp; Baseline</div>';
+  h+='<div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:3px;">S-Curve &nbsp;·&nbsp; Activities &nbsp;·&nbsp; Comparison</div>';
+  h+='<div style="display:flex;align-items:center;gap:6px;margin-top:8px;">';
+  h+='<span style="background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.3);color:#A78BFA;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;">'+PLAN.curve.length+' Points</span>';
+  var totalActs=0;
+  var discsP=['bridges','roads','utilities','fillslope'];
+  for(var di=0;di<discsP.length;di++) totalActs+=(PLAN.activities[discsP[di]]||[]).length;
+  h+='<span style="background:rgba(212,168,67,0.12);border:1px solid rgba(212,168,67,0.25);color:#D4A843;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;">'+totalActs+' Activities</span>';
+  h+='</div></div>';
+  // Variance pill — right side
+  h+='<div style="text-align:right;">';
+  if(variance!==null){
+    h+='<div style="font-size:22px;font-weight:900;color:'+vCol+';">'+(vAhead?'▲':'▼')+' '+vAbs+'%</div>';
+    h+='<div style="font-size:9px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px;margin-top:2px;">'+(vAhead?'Ahead':'Behind')+' Schedule</div>';
+  } else {
+    h+='<div style="font-size:14px;font-weight:700;color:#4a5568;">No Baseline</div>';
+    h+='<div style="font-size:9px;color:rgba(255,255,255,0.3);margin-top:2px;">Set curve first</div>';
+  }
+  h+='</div></div></div>';
 
-  // ── Sub-tabs ────────────────────────────────────────────────
-  h+='<div style="display:flex;gap:4px;margin-bottom:12px;">';
-  var subTabs=[['curve','📈 S-Curve'],['activities','📋 Activities'],['compare','⚖️ Compare']];
-  for(var st=0;st<subTabs.length;st++){
-    var isOn=_plTab===subTabs[st][0];
-    h+='<button data-tab="'+subTabs[st][0]+'" onclick="plSwitchTab(this.dataset.tab);" ';
-    h+='style="flex:1;padding:8px;border-radius:8px;border:1px solid '+(isOn?'var(--blue)':'var(--border)')+';';
-    h+='background:'+(isOn?'var(--blue)':'transparent')+';';
-    h+='color:'+(isOn?'#fff':'var(--dimL)')+';font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">';
-    h+=subTabs[st][1]+'</button>';
+  // ── Central Variance Card ──────────────────────────────────
+  h+='<div style="background:linear-gradient(135deg,'+vBg+',rgba(0,0,0,0));';
+  h+='border:1px solid '+vBorder+';border-radius:14px;padding:16px;margin-bottom:14px;';
+  h+='border-left:4px solid '+vCol+';">';
+  // Big variance label
+  if(variance!==null){
+    h+='<div style="font-size:26px;font-weight:900;color:'+vCol+';margin-bottom:4px;">';
+    h+=(vAhead?'▲ ':'▼ ')+vAbs+'% '+(vAhead?'Ahead of Schedule':'Behind Schedule');
+    h+='</div>';
+    h+='<div style="font-size:11px;color:rgba(255,255,255,0.4);margin-bottom:14px;">Variance calculated from the baseline S-curve &nbsp;·&nbsp; '+todayStr+'</div>';
+  } else {
+    h+='<div style="font-size:16px;font-weight:800;color:#4a5568;margin-bottom:4px;">No Baseline Defined</div>';
+    h+='<div style="font-size:11px;color:rgba(255,255,255,0.3);margin-bottom:14px;">Go to S-Curve tab to generate or import your planned baseline</div>';
+  }
+  // 4 KPI metrics
+  h+='<div style="display:flex;gap:8px;">';
+  var plKpis=[
+    {v:comp.planned!==null?comp.planned+'%':'—',l:'Planned Today',c:'#A78BFA',icon:'📋'},
+    {v:ov+'%',l:'Actual Today',c:'#D4A843',icon:'📊'},
+    {v:variance!==null?(vAhead?'+':'')+variance+'%':'—',l:'Variance',c:vCol,icon:vAhead?'▲':'▼'},
+    {v:dr+'d',l:'Days Left',c:'#58A6FF',icon:'📅'},
+  ];
+  for(var ki=0;ki<plKpis.length;ki++){
+    h+='<div style="flex:1;background:rgba(255,255,255,0.05);border-radius:10px;padding:10px 8px;text-align:center;border:1px solid rgba(255,255,255,0.07);">';
+    h+='<div style="font-size:10px;margin-bottom:4px;">'+plKpis[ki].icon+'</div>';
+    h+='<div style="font-size:16px;font-weight:900;color:'+plKpis[ki].c+';line-height:1;">'+plKpis[ki].v+'</div>';
+    h+='<div style="font-size:8px;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.5px;margin-top:3px;">'+plKpis[ki].l+'</div>';
+    h+='</div>';
+  }
+  h+='</div></div>';
+
+  // ── Pill Tab Bar ────────────────────────────────────────────
+  h+='<div style="display:flex;gap:5px;margin-bottom:14px;background:rgba(255,255,255,0.04);border-radius:12px;padding:4px;">';
+  var plTabs=[['curve','📈 S-Curve'],['activities','📋 Activities'],['compare','⚖️ Compare']];
+  for(var ti=0;ti<plTabs.length;ti++){
+    var isOn=_plTab===plTabs[ti][0];
+    h+='<button data-tab="'+plTabs[ti][0]+'" onclick="plSwitchTab(this.dataset.tab);" ';
+    h+='style="flex:1;padding:9px;border-radius:9px;';
+    h+='border:none;';
+    h+='background:'+(isOn?'#A78BFA':'transparent')+';';
+    h+='color:'+(isOn?'#000':'rgba(255,255,255,0.4)')+';';
+    h+='font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;';
+    h+='box-shadow:'+(isOn?'0 2px 8px rgba(167,139,250,0.4)':'none')+';';
+    h+='transition:all 0.15s;">'+plTabs[ti][1]+'</button>';
   }
   h+='</div>';
 
-  // ── S-CURVE TAB ─────────────────────────────────────────────
+  // ══ S-CURVE TAB ════════════════════════════════════════════
   if(_plTab==='curve'){
-    // Summary
     var sorted=PLAN.curve.slice().sort(function(a,b){return a.date<b.date?-1:1;});
-    h+='<div class="card">';
-    h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">';
-    h+='<div class="ct" style="margin-bottom:0;">📈 Baseline S-Curve</div>';
-    h+='<span style="font-size:10px;color:var(--dimL);">'+PLAN.curve.length+' data points</span>';
+
+    // Auto-generate card
+    h+='<div style="background:linear-gradient(135deg,var(--card),#0d1a30);border:1px solid rgba(167,139,250,0.2);border-radius:14px;padding:14px;margin-bottom:10px;border-left:4px solid #A78BFA;">';
+    h+='<div class="ct" style="margin-bottom:10px;color:#A78BFA;">⚡ Auto-Generate Baseline</div>';
+    h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">';
+    h+='<div><label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Start Date</label>';
+    h+='<input type="date" id="pl-gen-start" value="2025-06-01" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:var(--fg);font-size:12px;"></div>';
+    h+='<div><label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">End Date</label>';
+    h+='<input type="date" id="pl-gen-end" value="2027-09-01" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:var(--fg);font-size:12px;"></div>';
+    h+='</div>';
+    h+='<select id="pl-gen-shape" style="width:100%;padding:9px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:var(--fg);font-size:12px;font-family:inherit;margin-bottom:10px;">';
+    h+='<option value="scurve">S-Curve — Slow start, peak middle, slow end (Recommended)</option>';
+    h+='<option value="linear">Linear — Equal progress every month</option>';
+    h+='<option value="front">Front-Loaded — Fast start, slow end</option>';
+    h+='<option value="back">Back-Loaded — Slow start, fast end</option>';
+    h+='</select>';
+    h+='<button onclick="plGenCurve();" style="width:100%;padding:10px;background:linear-gradient(90deg,#A78BFA,#7C3AED);border:none;border-radius:9px;color:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;">⚡ Generate Baseline Curve</button>';
     h+='</div>';
 
-    // Auto-generate section
-    h+='<div style="background:var(--panel);border-radius:8px;padding:10px;margin-bottom:12px;">';
-    h+='<div style="font-size:11px;font-weight:700;color:var(--dimL);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">Auto-Generate Curve</div>';
-    h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">';
-    h+='<div><label style="font-size:10px;color:var(--dimL);">Start Date</label>';
-    h+='<input type="date" id="pl-gen-start" value="2025-06-01" style="width:100%;padding:6px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--fg);font-size:12px;"></div>';
-    h+='<div><label style="font-size:10px;color:var(--dimL);">End Date</label>';
-    h+='<input type="date" id="pl-gen-end" value="2027-09-01" style="width:100%;padding:6px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--fg);font-size:12px;"></div>';
-    h+='</div>';
-    h+='<div style="margin-bottom:8px;"><label style="font-size:10px;color:var(--dimL);">Curve Shape</label>';
-    h+='<select id="pl-gen-shape" style="width:100%;padding:6px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--fg);font-size:12px;">';
-    h+='<option value="scurve">S-Curve (Recommended — slow start, peak middle, slow end)</option>';
-    h+='<option value="linear">Linear (Equal progress every month)</option>';
-    h+='<option value="front">Front-Loaded (Fast start, slow end)</option>';
-    h+='<option value="back">Back-Loaded (Slow start, fast end)</option>';
-    h+='</select></div>';
-    h+='<button onclick="plGenCurve();" style="width:100%;padding:8px;background:var(--blue);border:none;border-radius:8px;color:#fff;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;">⚡ Generate Curve</button>';
-    h+='</div>';
-
-    // Manual entry
-    h+='<div style="background:var(--panel);border-radius:8px;padding:10px;margin-bottom:12px;">';
-    h+='<div style="font-size:11px;font-weight:700;color:var(--dimL);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">Add / Edit Point</div>';
-    h+='<div style="display:flex;gap:6px;align-items:flex-end;">';
-    h+='<div style="flex:1;"><label style="font-size:10px;color:var(--dimL);">Date</label>';
-    h+='<input type="date" id="pl-pt-date" style="width:100%;padding:6px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--fg);font-size:12px;"></div>';
-    h+='<div style="width:80px;"><label style="font-size:10px;color:var(--dimL);">Planned %</label>';
-    h+='<input type="number" id="pl-pt-pct" min="0" max="100" step="0.1" placeholder="0–100" style="width:100%;padding:6px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--fg);font-size:12px;text-align:center;"></div>';
-    h+='<button onclick="plAddPoint();" style="padding:7px 12px;background:var(--gold);border:none;border-radius:8px;color:#000;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;">+ Add</button>';
+    // Manual add point
+    h+='<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px;">';
+    h+='<div class="ct" style="margin-bottom:10px;">✏️ Add / Edit Point</div>';
+    h+='<div style="display:flex;gap:8px;align-items:flex-end;">';
+    h+='<div style="flex:1;"><label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Date</label>';
+    h+='<input type="date" id="pl-pt-date" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:var(--fg);font-size:12px;"></div>';
+    h+='<div style="width:80px;"><label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Planned %</label>';
+    h+='<input type="number" id="pl-pt-pct" min="0" max="100" step="0.1" placeholder="0–100" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:var(--fg);font-size:12px;text-align:center;"></div>';
+    h+='<button onclick="plAddPoint();" style="padding:9px 14px;background:var(--gold);border:none;border-radius:9px;color:#000;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;">+ Add</button>';
     h+='</div></div>';
 
     // CSV import
-    h+='<div style="background:var(--panel);border-radius:8px;padding:10px;margin-bottom:12px;">';
-    h+='<div style="font-size:11px;font-weight:700;color:var(--dimL);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">📥 Import CSV</div>';
-    h+='<div style="font-size:10px;color:var(--dimL);margin-bottom:6px;">Format: <code style="background:var(--bg);padding:1px 5px;border-radius:3px;">YYYY-MM-DD,planned%</code> — one row per line</div>';
-    h+='<input type="file" id="pl-csv" accept=".csv,.txt" onchange="plImportCSV(this);" style="width:100%;padding:5px;font-size:11px;color:var(--fg);">';
-    h+='<div style="font-size:10px;color:var(--dimL);margin-top:4px;">Example: 2025-06-01,0 &nbsp;→&nbsp; 2025-12-01,25 &nbsp;→&nbsp; 2026-06-01,60</div>';
+    h+='<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px;">';
+    h+='<div class="ct" style="margin-bottom:8px;">📥 Import CSV</div>';
+    h+='<div style="font-size:11px;color:var(--dimL);margin-bottom:8px;">Format: <code style="background:rgba(255,255,255,0.07);padding:2px 6px;border-radius:4px;">YYYY-MM-DD,planned%</code> one per line</div>';
+    h+='<input type="file" id="pl-csv" accept=".csv,.txt" onchange="plImportCSV(this);" style="width:100%;padding:6px;font-size:11px;color:var(--fg);">';
     h+='</div>';
 
-    // Curve table
+    // Baseline table
     if(sorted.length){
-      h+='<div style="font-size:11px;font-weight:700;color:var(--dimL);margin-bottom:6px;">Current Baseline ('+sorted.length+' points)</div>';
-      h+='<div style="max-height:220px;overflow-y:auto;">';
-      h+='<table class="tbl"><tr><th>Date</th><th>Planned %</th><th>Actual %</th><th>Variance</th><th></th></tr>';
+      h+='<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;">';
+      h+='<div style="padding:14px 14px 10px;display:flex;align-items:center;justify-content:space-between;">';
+      h+='<div class="ct" style="margin-bottom:0;">📊 Baseline Curve ('+sorted.length+' points)</div>';
+      h+='<button onclick="plClearCurve();" style="padding:5px 10px;border-radius:7px;border:1px solid rgba(231,76,60,0.4);background:transparent;color:#E74C3C;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;">🗑 Clear</button>';
+      h+='</div>';
+      h+='<div style="overflow-x:auto;">';
+      h+='<table class="tbl" style="margin-bottom:0;">';
+      h+='<tr>';
+      h+='<th style="background:#0d1f3c;color:#A78BFA;padding:10px 12px;">Date</th>';
+      h+='<th style="background:#0d1f3c;color:#A78BFA;padding:10px 12px;text-align:center;">Planned</th>';
+      h+='<th style="background:#0d1f3c;color:#A78BFA;padding:10px 12px;text-align:center;">Actual</th>';
+      h+='<th style="background:#0d1f3c;color:#A78BFA;padding:10px 12px;text-align:center;">Variance</th>';
+      h+='<th style="background:#0d1f3c;padding:10px 12px;text-align:center;"></th>';
+      h+='</tr>';
+      var todayD=new Date().toISOString().slice(0,10);
+      var actualNow=calcOverallPct();
       for(var pi=0;pi<sorted.length;pi++){
         var pt=sorted[pi];
-        var actPt=getPlannedPctForDate(pt.date);
-        // Get actual for this date if it's in the past
-        var ptDate=new Date(pt.date);
-        var isPast=ptDate<=new Date();
-        var actualForDate=isPast?calcOverallPct():null; // simplified
-        var ptVar=actPt!==null&&actualForDate!==null?Math.round((actualForDate-actPt)*10)/10:null;
-        var ptVarCol=ptVar===null?'var(--dimL)':ptVar>=0?'var(--green)':'var(--red)';
-        h+='<tr>';
-        h+='<td>'+pt.date+'</td>';
-        h+='<td style="text-align:center;font-weight:700;color:var(--blue);">'+pt.pct+'%</td>';
-        h+='<td style="text-align:center;color:var(--dimL);">'+(isPast?calcOverallPct()+'%':'—')+'</td>';
-        h+='<td style="text-align:center;color:'+ptVarCol+';">'+(ptVar!==null?(ptVar>=0?'+':'')+ptVar+'%':'—')+'</td>';
-        h+='<td><button data-dt="'+pt.date+'" onclick="plDeletePoint(this.dataset.dt);" style="padding:2px 8px;border-radius:5px;border:1px solid var(--red);background:transparent;color:var(--red);font-size:10px;cursor:pointer;">✕</button></td>';
-        h+='</tr>';
+        var isPast=pt.date<=todayD;
+        var ptActual=isPast?actualNow:null;
+        var ptVar=isPast?Math.round((actualNow-pt.pct)*10)/10:null;
+        var ptVCol=ptVar===null?'rgba(255,255,255,0.25)':ptVar>=0?'#06D6A0':'#E74C3C';
+        var ptVIcon=ptVar===null?'—':ptVar>=0?'▲':'▼';
+        var rowBg=pi%2===0?'rgba(255,255,255,0.02)':'transparent';
+        h+='<tr style="background:'+rowBg+';">';
+        h+='<td style="padding:10px 12px;font-size:12px;font-weight:600;color:var(--fg);">'+pt.date+'</td>';
+        h+='<td style="padding:10px 12px;text-align:center;font-weight:700;color:#A78BFA;">'+pt.pct+'%</td>';
+        h+='<td style="padding:10px 12px;text-align:center;color:'+(isPast?'#D4A843':'rgba(255,255,255,0.25)');+';">'+( isPast?ptActual+'%':'—')+'</td>';
+        h+='<td style="padding:10px 12px;text-align:center;font-weight:800;color:'+ptVCol+';">';
+        h+=ptVar!==null?ptVIcon+' '+Math.abs(ptVar)+'%':'—';
+        h+='</td>';
+        h+='<td style="padding:8px 12px;text-align:center;">';
+        h+='<button data-dt="'+pt.date+'" onclick="plDeletePoint(this.dataset.dt);" ';
+        h+='style="padding:3px 8px;border-radius:6px;border:1px solid rgba(231,76,60,0.35);background:transparent;color:#E74C3C;font-size:10px;cursor:pointer;">✕</button>';
+        h+='</td></tr>';
       }
       h+='</table></div>';
       // Validation
       var errors=validatePlanCurve();
+      h+='<div style="padding:10px 14px;border-top:1px solid rgba(255,255,255,0.06);font-size:11px;">';
       if(errors.length){
-        h+='<div style="margin-top:8px;padding:8px 10px;background:var(--red)22;border-radius:8px;border-left:3px solid var(--red);font-size:11px;color:var(--red);">';
-        h+='⚠️ '+errors.join(' &nbsp;·&nbsp; ')+'</div>';
+        h+='<span style="color:#E74C3C;">⚠️ '+errors.join(' · ')+'</span>';
       } else {
-        h+='<div style="margin-top:8px;padding:6px 10px;background:var(--green)22;border-radius:8px;font-size:11px;color:var(--green);">✅ Curve is valid</div>';
+        h+='<span style="color:#06D6A0;">✅ Baseline curve is valid</span>';
       }
+      h+='</div></div>';
     } else {
-      h+='<div style="text-align:center;padding:20px;color:var(--dimL);font-size:12px;">No baseline defined yet — generate or import a curve above</div>';
-    }
-    h+='</div>';
-
-    // Clear button
-    if(PLAN.curve.length){
-      h+='<button onclick="plClearCurve();" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--red);background:transparent;color:var(--red);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:8px;">🗑 Clear Entire Curve</button>';
+      h+='<div style="text-align:center;padding:28px;background:var(--card);border:1px solid var(--border);border-radius:14px;">';
+      h+='<div style="font-size:32px;margin-bottom:8px;">📈</div>';
+      h+='<div style="font-size:13px;font-weight:700;color:var(--fg);margin-bottom:4px;">No baseline defined</div>';
+      h+='<div style="font-size:11px;color:var(--dimL);">Generate or import a curve above</div>';
+      h+='</div>';
     }
   }
 
-  // ── ACTIVITIES TAB ──────────────────────────────────────────
+  // ══ ACTIVITIES TAB ══════════════════════════════════════════
   else if(_plTab==='activities'){
-    var disciplineList=[
-      {id:'bridges',   label:'🌉 Bridges',   examples:['Pile Cap Concrete','Pier Shaft Concrete','Girder Erection','Deck Slab']},
-      {id:'roads',     label:'🛣 Roads',      examples:['Sub-base Compaction','Base Course','Asphalt Binder','Asphalt Wearing']},
-      {id:'utilities', label:'🔧 Utilities',  examples:['Trenching','Pipe Installation','Backfilling','Testing']},
-      {id:'fillslope', label:'⛰️ Fill Slope', examples:['Fill & Compaction','Grading','Erosion Protection']},
+    var discList=[
+      {id:'bridges',   label:'🌉 Bridges',   col:'#D4A843', examples:['Pile Cap Concrete','Pier Shaft Concrete','Girder Erection','Deck Slab']},
+      {id:'roads',     label:'🛣 Roads',      col:'#58A6FF', examples:['Sub-base','Base Course','Asphalt Binder','Wearing Course']},
+      {id:'utilities', label:'🔧 Utilities',  col:'#38BDF8', examples:['Trenching','Pipe Installation','Backfilling']},
+      {id:'fillslope', label:'⛰️ Fill Slope', col:'#4ECDC4', examples:['Fill & Compaction','Grading']},
     ];
 
-    h+='<div class="card">';
-    h+='<div class="ct">Add Planned Activity</div>';
-    h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;">Discipline</label>';
-    h+='<select id="pl-act-disc" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:13px;margin-bottom:8px;">';
-    for(var dl=0;dl<disciplineList.length;dl++){
-      h+='<option value="'+disciplineList[dl].id+'">'+disciplineList[dl].label+'</option>';
-    }
+    // Add activity form
+    h+='<div style="background:linear-gradient(135deg,var(--card),#0d1a30);border:1px solid rgba(167,139,250,0.2);border-radius:14px;padding:14px;margin-bottom:10px;border-left:4px solid #A78BFA;">';
+    h+='<div class="ct" style="margin-bottom:12px;color:#A78BFA;">+ Add Planned Activity</div>';
+    h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Discipline</label>';
+    h+='<select id="pl-act-disc" style="width:100%;padding:9px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:var(--fg);font-size:13px;font-family:inherit;margin-bottom:8px;">';
+    for(var dl=0;dl<discList.length;dl++) h+='<option value="'+discList[dl].id+'">'+discList[dl].label+'</option>';
     h+='</select>';
-    h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;">Activity Name</label>';
+    h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Activity Name</label>';
     h+='<input type="text" id="pl-act-name" placeholder="e.g. Pile Cap Concrete — Bridge A" ';
-    h+='style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:13px;margin-bottom:8px;">';
-    h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">';
-    h+='<div><label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;">Start Date</label>';
-    h+='<input type="date" id="pl-act-start" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:13px;"></div>';
-    h+='<div><label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;">End Date</label>';
-    h+='<input type="date" id="pl-act-end" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:13px;"></div>';
+    h+='style="width:100%;padding:9px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:var(--fg);font-size:13px;font-family:inherit;outline:none;margin-bottom:8px;">';
+    h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">';
+    h+='<div><label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Start Date</label>';
+    h+='<input type="date" id="pl-act-start" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:var(--fg);font-size:12px;"></div>';
+    h+='<div><label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">End Date</label>';
+    h+='<input type="date" id="pl-act-end" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:var(--fg);font-size:12px;"></div>';
     h+='</div>';
-    h+='<div style="display:grid;grid-template-columns:2fr 1fr;gap:6px;margin-bottom:10px;">';
-    h+='<div><label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;">Expected Daily Output</label>';
+    h+='<div style="display:grid;grid-template-columns:2fr 1fr;gap:8px;margin-bottom:10px;">';
+    h+='<div><label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Daily Output</label>';
     h+='<input type="number" id="pl-act-output" placeholder="e.g. 2" min="0" step="0.1" ';
-    h+='style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:13px;"></div>';
-    h+='<div><label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;">Unit</label>';
+    h+='style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:var(--fg);font-size:13px;font-family:inherit;"></div>';
+    h+='<div><label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Unit</label>';
     h+='<input type="text" id="pl-act-unit" placeholder="piers/day" ';
-    h+='style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:13px;"></div>';
+    h+='style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:var(--fg);font-size:13px;font-family:inherit;"></div>';
     h+='</div>';
-    h+='<button onclick="plAddAct();" style="width:100%;padding:10px;background:var(--gold);border:none;border-radius:8px;color:#000;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;">+ Add Planned Activity</button>';
+    h+='<button onclick="plAddAct();" style="width:100%;padding:11px;background:linear-gradient(90deg,#A78BFA,#7C3AED);border:none;border-radius:9px;color:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;">+ Add Activity</button>';
     h+='</div>';
 
-    // Activity list per discipline
-    for(var dl=0;dl<disciplineList.length;dl++){
-      var disc=disciplineList[dl];
+    // Activities per discipline
+    var todayD2=new Date().toISOString().slice(0,10);
+    for(var dl=0;dl<discList.length;dl++){
+      var disc=discList[dl];
       var acts=PLAN.activities[disc.id]||[];
-      h+='<div class="card">';
-      h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">';
-      h+='<div class="ct" style="margin-bottom:0;">'+disc.label+'</div>';
-      h+='<span style="font-size:10px;color:var(--dimL);">'+acts.length+' planned</span>';
+      h+='<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px;border-left:4px solid '+disc.col+';">';
+      h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">';
+      h+='<div class="ct" style="margin-bottom:0;color:'+disc.col+';">'+disc.label+'</div>';
+      h+='<span style="font-size:10px;color:var(--dimL);background:rgba(255,255,255,0.06);padding:2px 8px;border-radius:6px;">'+acts.length+' planned</span>';
       h+='</div>';
       if(!acts.length){
-        h+='<div style="font-size:11px;color:var(--dimL);font-style:italic;padding:4px 0;">No activities planned — add above</div>';
-        h+='<div style="font-size:10px;color:var(--dimL);margin-top:4px;">Examples: '+disc.examples.join(', ')+'</div>';
+        h+='<div style="font-size:11px;color:var(--dimL);padding:4px 0;">No activities — examples: '+disc.examples.join(', ')+'</div>';
       } else {
-        h+='<table class="tbl"><tr><th>Activity</th><th>Start</th><th>End</th><th>Output</th><th></th></tr>';
         for(var ai=0;ai<acts.length;ai++){
           var act=acts[ai];
-          var today2=new Date().toISOString().slice(0,10);
-          var isActive=act.start<=today2&&act.end>=today2;
-          var isFuture=act.start>today2;
-          var rowBg=isActive?'background:var(--blue)11;':'';
-          h+='<tr style="'+rowBg+'">';
-          h+='<td><span style="font-weight:600;">'+(isActive?'🟢 ':isFuture?'🔵 ':'✅ ')+act.name+'</span></td>';
-          h+='<td style="font-size:10px;">'+act.start+'</td>';
-          h+='<td style="font-size:10px;">'+act.end+'</td>';
-          h+='<td style="font-size:10px;">'+(act.output?act.output+' '+act.unit:'—')+'</td>';
-          h+='<td><button data-disc="'+disc.id+'" data-id="'+act.id+'" onclick="plDeleteAct(this.dataset.disc,this.dataset.id);" ';
-          h+='style="padding:2px 8px;border-radius:5px;border:1px solid var(--red);background:transparent;color:var(--red);font-size:10px;cursor:pointer;">✕</button></td>';
-          h+='</tr>';
+          var isActive2=act.start<=todayD2&&act.end>=todayD2;
+          var isFuture=act.start>todayD2;
+          var isPast2=act.end<todayD2;
+          var actStatusIcon=isActive2?'🟢':isFuture?'🔵':'⚪';
+          var actBg=isActive2?'rgba(6,214,160,0.06)':'rgba(255,255,255,0.02)';
+          h+='<div style="display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:9px;background:'+actBg+';border:1px solid rgba(255,255,255,0.07);margin-bottom:6px;">';
+          h+='<span style="font-size:12px;flex-shrink:0;">'+actStatusIcon+'</span>';
+          h+='<div style="flex:1;">';
+          h+='<div style="font-size:12px;font-weight:700;color:var(--fg);">'+act.name+'</div>';
+          h+='<div style="font-size:10px;color:var(--dimL);">'+act.start+' → '+act.end+(act.output?' &nbsp;·&nbsp; '+act.output+' '+act.unit:'')+'</div>';
+          h+='</div>';
+          h+='<button data-disc="'+disc.id+'" data-id="'+act.id+'" onclick="plDeleteAct(this.dataset.disc,this.dataset.id);" ';
+          h+='style="padding:4px 8px;border-radius:6px;border:1px solid rgba(231,76,60,0.3);background:transparent;color:#E74C3C;font-size:10px;cursor:pointer;flex-shrink:0;">✕</button>';
+          h+='</div>';
         }
-        h+='</table>';
       }
       h+='</div>';
     }
   }
 
-  // ── COMPARE TAB ──────────────────────────────────────────────
+  // ══ COMPARE TAB ════════════════════════════════════════════
   else if(_plTab==='compare'){
-    var comp2=comparePlannedActual();
-    h+='<div class="card">';
-    h+='<div class="ct">⚖️ Planned vs Actual Comparison</div>';
-    if(!comp2.hasBaseline){
-      h+='<div style="text-align:center;padding:20px;">';
-      h+='<div style="font-size:28px;margin-bottom:8px;">📈</div>';
-      h+='<div style="font-size:13px;font-weight:700;color:var(--fg);margin-bottom:6px;">No baseline defined</div>';
-      h+='<div style="font-size:12px;color:var(--dimL);">Go to S-Curve tab and generate or import your planned progress curve</div>';
+    if(!comp.hasBaseline){
+      h+='<div style="text-align:center;padding:32px;background:var(--card);border:1px solid var(--border);border-radius:14px;">';
+      h+='<div style="font-size:32px;margin-bottom:10px;">📊</div>';
+      h+='<div style="font-size:14px;font-weight:700;color:var(--fg);margin-bottom:6px;">No Baseline Defined</div>';
+      h+='<div style="font-size:12px;color:var(--dimL);margin-bottom:16px;">Go to S-Curve tab to generate your planned baseline</div>';
+      h+='<button onclick="plSwitchTab(\'curve\');" style="padding:10px 24px;background:linear-gradient(90deg,#A78BFA,#7C3AED);border:none;border-radius:9px;color:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;">📈 Set Up Baseline</button>';
       h+='</div>';
     } else {
-      // Comparison KPIs
-      var vC3=comp2.variance>=0?'var(--green)':'var(--red)';
-      h+='<div style="display:flex;gap:8px;margin-bottom:12px;">';
-      h+='<div style="flex:1;background:var(--panel);border-radius:8px;padding:10px;text-align:center;">';
-      h+='<div style="font-size:9px;color:var(--dimL);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Planned Today</div>';
-      h+='<div style="font-size:22px;font-weight:900;color:var(--blue);">'+(comp2.planned!==null?comp2.planned+'%':'N/A')+'</div>';
-      h+='</div>';
-      h+='<div style="flex:1;background:var(--panel);border-radius:8px;padding:10px;text-align:center;">';
-      h+='<div style="font-size:9px;color:var(--dimL);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Actual Today</div>';
-      h+='<div style="font-size:22px;font-weight:900;color:var(--gold);">'+comp2.actual+'%</div>';
-      h+='</div>';
-      h+='<div style="flex:1;background:var(--panel);border-radius:8px;padding:10px;text-align:center;">';
-      h+='<div style="font-size:9px;color:var(--dimL);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Variance</div>';
-      h+='<div style="font-size:22px;font-weight:900;color:'+vC3+';">'+(comp2.variance>=0?'+':'')+comp2.variance+'%</div>';
-      h+='</div>';
+      // Comparison summary card
+      h+='<div style="background:linear-gradient(135deg,'+vBg+',transparent);border:1px solid '+vBorder+';border-radius:14px;padding:14px;margin-bottom:10px;border-left:4px solid '+vCol+';">';
+      h+='<div class="ct" style="margin-bottom:8px;color:'+vCol+';">⚖️ Planned vs Actual</div>';
+      h+='<div style="display:flex;gap:8px;margin-bottom:10px;">';
+      var compKpis=[
+        {v:comp.planned+'%',l:'Planned',c:'#A78BFA'},
+        {v:comp.actual+'%',l:'Actual',c:'#D4A843'},
+        {v:(vAhead?'+':'')+variance+'%',l:'Variance',c:vCol},
+        {v:tp+'%',l:'Time Elapsed',c:'#58A6FF'},
+      ];
+      for(var ki2=0;ki2<compKpis.length;ki2++){
+        h+='<div style="flex:1;background:rgba(255,255,255,0.05);border-radius:9px;padding:9px 6px;text-align:center;">';
+        h+='<div style="font-size:16px;font-weight:900;color:'+compKpis[ki2].c+';">'+compKpis[ki2].v+'</div>';
+        h+='<div style="font-size:8px;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.5px;margin-top:2px;">'+compKpis[ki2].l+'</div>';
+        h+='</div>';
+      }
       h+='</div>';
       // Status banner
-      var sIcon=comp2.status==='ahead'?'✅':comp2.status==='behind'?'⚠️':'ℹ️';
-      var sBg=comp2.status==='ahead'?'var(--green)22':comp2.status==='behind'?'var(--red)22':'var(--panel)';
-      var sCol=comp2.status==='ahead'?'var(--green)':comp2.status==='behind'?'var(--red)':'var(--dimL)';
-      h+='<div style="padding:10px 12px;background:'+sBg+';border-radius:8px;border-left:3px solid '+sCol+';margin-bottom:12px;font-size:12px;color:'+sCol+';font-weight:700;">';
-      h+=sIcon+' '+( comp2.status==='ahead'?'Project is '+comp2.variance+'% ahead of the baseline schedule.':
-                     comp2.status==='behind'?'Project is '+Math.abs(comp2.variance)+'% behind the baseline schedule.':
-                     'On schedule.')+'</div>';
-      // Full curve comparison table
-      if(comp2.curve.length){
-        h+='<div style="font-size:11px;font-weight:700;color:var(--dimL);margin-bottom:6px;">Baseline Curve vs Actual</div>';
-        h+='<div style="max-height:280px;overflow-y:auto;">';
-        h+='<table class="tbl"><tr><th>Date</th><th>Planned</th><th>Actual</th><th>Variance</th><th>Status</th></tr>';
-        var sortedC=comp2.curve.slice().sort(function(a,b){return a.date<b.date?-1:1;});
-        var todayD=new Date().toISOString().slice(0,10);
-        for(var ci=0;ci<sortedC.length;ci++){
-          var cp=sortedC[ci];
-          var isPast2=cp.date<=todayD;
-          var cActual=isPast2?comp2.actual:null;
-          var cVar=isPast2?Math.round((cActual-cp.pct)*10)/10:null;
-          var cVCol=cVar===null?'var(--dimL)':cVar>=0?'var(--green)':'var(--red)';
-          var cSt=cVar===null?'—':cVar>=0?'✅ Ahead':'⚠️ Behind';
-          h+='<tr><td>'+cp.date+'</td>';
-          h+='<td style="text-align:center;color:var(--blue);font-weight:700;">'+cp.pct+'%</td>';
-          h+='<td style="text-align:center;color:var(--gold);">'+(isPast2?cActual+'%':'—')+'</td>';
-          h+='<td style="text-align:center;color:'+cVCol+';">'+(cVar!==null?(cVar>=0?'+':'')+cVar+'%':'—')+'</td>';
-          h+='<td style="text-align:center;font-size:10px;">'+cSt+'</td></tr>';
-        }
-        h+='</table></div>';
+      h+='<div style="padding:9px 12px;background:'+(vAhead?'rgba(6,214,160,0.12)':'rgba(231,76,60,0.12)')+';border-radius:9px;font-size:12px;color:'+vCol+';font-weight:700;">';
+      h+=(vAhead?'✅ Project is '+vAbs+'% ahead of the baseline schedule.':'⚠️ Project is '+vAbs+'% behind the baseline schedule.');
+      h+='</div></div>';
+
+      // Full comparison table
+      var sortedC=comp.curve.slice().sort(function(a,b){return a.date<b.date?-1:1;});
+      h+='<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;">';
+      h+='<div style="padding:14px 14px 10px;"><div class="ct" style="margin-bottom:0;">Baseline vs Actual — All Points</div></div>';
+      h+='<div style="overflow-x:auto;">';
+      h+='<table class="tbl" style="margin-bottom:0;">';
+      h+='<tr>';
+      h+='<th style="background:#0d1f3c;color:#A78BFA;padding:10px 12px;">Date</th>';
+      h+='<th style="background:#0d1f3c;color:#A78BFA;padding:10px 12px;text-align:center;">Planned</th>';
+      h+='<th style="background:#0d1f3c;color:#D4A843;padding:10px 12px;text-align:center;">Actual</th>';
+      h+='<th style="background:#0d1f3c;padding:10px 12px;text-align:center;">Variance</th>';
+      h+='<th style="background:#0d1f3c;padding:10px 12px;text-align:center;">Status</th>';
+      h+='</tr>';
+      var todayD3=new Date().toISOString().slice(0,10);
+      var actualNow2=calcOverallPct();
+      for(var ci=0;ci<sortedC.length;ci++){
+        var cp=sortedC[ci];
+        var cpPast=cp.date<=todayD3;
+        var cpActual=cpPast?actualNow2:null;
+        var cpVar=cpPast?Math.round((actualNow2-cp.pct)*10)/10:null;
+        var cpVCol=cpVar===null?'rgba(255,255,255,0.2)':cpVar>=0?'#06D6A0':'#E74C3C';
+        var cpStatus=cpVar===null?'—':cpVar>=0?'✅ Ahead':'⚠️ Behind';
+        var rowBg2=ci%2===0?'rgba(255,255,255,0.02)':'transparent';
+        h+='<tr style="background:'+rowBg2+';">';
+        h+='<td style="padding:10px 12px;font-size:12px;font-weight:600;color:var(--fg);">'+cp.date+'</td>';
+        h+='<td style="padding:10px 12px;text-align:center;font-weight:700;color:#A78BFA;">'+cp.pct+'%</td>';
+        h+='<td style="padding:10px 12px;text-align:center;color:'+(cpPast?'#D4A843':'rgba(255,255,255,0.25)')+';">'+( cpPast?cpActual+'%':'—')+'</td>';
+        h+='<td style="padding:10px 12px;text-align:center;font-weight:800;color:'+cpVCol+';">';
+        h+=cpVar!==null?(cpVar>=0?'▲ +':'▼ ')+Math.abs(cpVar)+'%':'—';
+        h+='</td>';
+        h+='<td style="padding:10px 12px;text-align:center;font-size:11px;color:'+cpVCol+';">'+cpStatus+'</td>';
+        h+='</tr>';
       }
+      h+='</table></div></div>';
     }
-    h+='</div>';
 
     // Today planned activities
-    var todayPlan2=getPlannedToday();
-    h+='<div class="card">';
-    h+='<div class="ct">📋 Today\'s Planned Activities</div>';
-    if(!todayPlan2.activities.length){
+    var todayPlan=getPlannedToday();
+    h+='<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-top:10px;">';
+    h+='<div class="ct" style="margin-bottom:10px;">📋 Today\'s Planned Activities</div>';
+    if(!todayPlan.activities.length){
       h+='<div style="font-size:12px;color:var(--dimL);">No activities planned for today</div>';
     } else {
-      for(var tai=0;tai<todayPlan2.activities.length;tai++){
-        var ta=todayPlan2.activities[tai];
-        h+='<div style="padding:7px 0;border-bottom:1px solid var(--border);font-size:12px;">';
-        h+='<span style="color:var(--dimL);">'+ta.discipline.toUpperCase()+'</span> &nbsp;→&nbsp; ';
-        h+='<span style="font-weight:700;color:var(--fg);">'+ta.name+'</span>';
-        if(ta.output) h+='<span style="color:var(--dimL);"> &nbsp;('+ta.output+' '+ta.unit+')</span>';
+      for(var tai=0;tai<todayPlan.activities.length;tai++){
+        var ta=todayPlan.activities[tai];
+        h+='<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);">';
+        h+='<span style="font-size:9px;font-weight:700;color:#A78BFA;background:rgba(167,139,250,0.12);padding:2px 7px;border-radius:5px;text-transform:uppercase;">'+ta.discipline+'</span>';
+        h+='<span style="font-size:12px;font-weight:700;color:var(--fg);flex:1;">'+ta.name+'</span>';
+        if(ta.output) h+='<span style="font-size:10px;color:var(--dimL);">'+ta.output+' '+ta.unit+'</span>';
         h+='</div>';
       }
     }
     h+='</div>';
   }
 
+  h+='<div style="height:20px;"></div>';
   document.getElementById('pg-pl').innerHTML=h;
 }
 
-// ── Sub-tab switch ─────────────────────────────────────────────
 function plSwitchTab(tab){ _plTab=tab; rPl(); }
 
 // ── Button handlers ────────────────────────────────────────────
