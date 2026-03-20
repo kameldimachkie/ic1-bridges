@@ -4386,109 +4386,282 @@ function sPier(id){curPier=id;rTr();}
 
 function rTr(){
   var h='';
-  // Bridge selector
-  h+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">';
-  for(var i=0;i<BRIDGES.length;i++){
-    var br=BRIDGES[i]; var bp=brPct(br.id);
-    var on=br.id===curBr;
-    h+='<button onclick="sBr(\''+br.id+'\')" style="padding:7px 11px;border-radius:7px;border:1px solid '+(on?"var(--gold)":"var(--border)")+';background:'+(on?"var(--gold)":"var(--card)")+';color:'+(on?"#000":"var(--dimL)")+';font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">';
-    h+='BR-'+br.id+' <small style="font-size:8px;display:block;font-weight:400;">'+bp+'%</small></button>';
+  var selBr=curBr||BRIDGES[0].id;
+
+  // Find selected bridge
+  var brObj=null;
+  for(var i=0;i<BRIDGES.length;i++) if(BRIDGES[i].id===selBr) brObj=BRIDGES[i];
+  if(!brObj) brObj=BRIDGES[0];
+
+  // ── Module header ───────────────────────────────────────────
+  h+='<div style="background:linear-gradient(135deg,#0a1628 0%,#0d2444 60%,#0a1628 100%);';
+  h+='border-radius:14px;padding:16px;margin-bottom:14px;border:1px solid rgba(212,168,67,0.2);';
+  h+='position:relative;overflow:hidden;">';
+  // Decorative corner accent
+  h+='<div style="position:absolute;top:0;right:0;width:80px;height:80px;';
+  h+='background:radial-gradient(circle at top right,rgba(212,168,67,0.15),transparent 70%);pointer-events:none;"></div>';
+  h+='<div style="display:flex;align-items:flex-start;justify-content:space-between;">';
+  h+='<div>';
+  h+='<div style="font-size:11px;color:rgba(212,168,67,0.8);font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">IC1 Road Improvements</div>';
+  h+='<div style="font-size:20px;font-weight:900;color:#f1f5f9;letter-spacing:-0.5px;">Bridges Module</div>';
+  h+='<div style="display:flex;align-items:center;gap:6px;margin-top:6px;">';
+  h+='<span style="background:rgba(6,214,160,0.15);border:1px solid rgba(6,214,160,0.3);color:#06D6A0;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:0.5px;">'+BRIDGES.length+' Bridges</span>';
+  var totalPiers=0; for(var b=0;b<BRIDGES.length;b++) totalPiers+=BRIDGES[b].piers.length;
+  h+='<span style="background:rgba(88,166,255,0.15);border:1px solid rgba(88,166,255,0.3);color:#58A6FF;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:0.5px;">'+totalPiers+' Piers</span>';
+  h+='</div></div>';
+  // Right: overall bridge pct
+  var overallBrPct=0;
+  var brPcts=[];
+  for(var b2=0;b2<BRIDGES.length;b2++){
+    var bp=brPct2?brPct2(BRIDGES[b2].id):0;
+    brPcts.push(bp);
+    overallBrPct+=bp;
   }
+  overallBrPct=BRIDGES.length>0?Math.round(overallBrPct/BRIDGES.length*10)/10:0;
+  h+='<div style="text-align:right;">';
+  h+='<div style="font-size:28px;font-weight:900;color:#D4A843;line-height:1;">'+overallBrPct+'%</div>';
+  h+='<div style="font-size:9px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px;margin-top:2px;">Avg Progress</div>';
+  h+='</div></div>';
   h+='</div>';
-  // Pier chips
-  var curBrO=null;
-  for(var j=0;j<BRIDGES.length;j++){if(BRIDGES[j].id===curBr){curBrO=BRIDGES[j];break;}}
-  h+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">';
-  if(curBrO){
-    for(var k=0;k<curBrO.piers.length;k++){
-      var pier=curBrO.piers[k];
-      var dc=pCol(pier); var isSel=pier===curPier;
-      var isDr=DIRECT.indexOf(pier)>-1;
-      var hasEmb=EMB_PIERS.indexOf(pier)>-1;
-      h+='<div onclick="sPier(\''+pier+'\')" style="padding:7px 5px;border-radius:8px;border:2px solid '+(isSel?dc:"var(--border)")+';background:var(--card);cursor:pointer;text-align:center;min-width:54px;">';
-      h+='<div style="font-size:10px;font-weight:700;color:'+(isSel?"var(--gold)":"var(--dimL)")+';">'+pier+'</div>';
-      if(isDr) h+='<div style="font-size:7px;color:var(--dim);">DIR</div>';
-      // Stage dots
-      h+='<div style="display:flex;flex-wrap:wrap;gap:2px;justify-content:center;margin-top:3px;">';
-      var pStages=getStagesForPier(pier);
-      for(var m=0;m<pStages.length;m++){
-        var sv=gps(pier,pStages[m].id);
-        var done=sv==="Complete"||sv==="Inspected";
-        var ip=sv==="In Progress";
-        var dc2=done?pStages[m].col:ip?pStages[m].col+"66":"#1a2233";
-        h+='<div style="width:7px;height:7px;border-radius:2px;background:'+dc2+'"></div>';
-      }
-      h+='</div>';
-      // EMB badge
-      if(hasEmb){
-        var ev=gps(pier,"EMB");
-        var ec=ev==="Complete"?"var(--green)":ev==="In Progress"?"var(--blue)":"#555";
-        h+='<div style="font-size:7px;color:'+ec+';margin-top:2px;font-weight:700;">EMB</div>';
-      }
-      h+='</div>';
+
+  // ── Bridge pill selector ────────────────────────────────────
+  h+='<div style="margin-bottom:14px;">';
+  h+='<div style="font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;">Select Bridge</div>';
+  h+='<div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;">';
+
+  for(var bi=0;bi<BRIDGES.length;bi++){
+    var br=BRIDGES[bi];
+    var bp2=brPcts[bi];
+    var isSelected=br.id===selBr;
+    var pctColor=bp2>=75?'#06D6A0':bp2>=30?'#D4A843':'#58A6FF';
+
+    h+='<button data-br="'+br.id+'" onclick="sBr(this.dataset.br);" ';
+    h+='style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:4px;';
+    h+='padding:10px 14px;border-radius:12px;cursor:pointer;font-family:inherit;';
+    h+='min-width:64px;transition:all 0.15s;';
+    if(isSelected){
+      h+='background:linear-gradient(135deg,#1a3a6e,#0d2444);';
+      h+='border:2px solid #D4A843;';
+      h+='box-shadow:0 4px 16px rgba(212,168,67,0.25);';
+    } else {
+      h+='background:var(--card);border:1px solid var(--border);';
     }
+    h+='">';
+    h+='<div style="font-size:13px;font-weight:800;color:'+(isSelected?'#D4A843':'var(--fg)')+';">BR-'+br.id+'</div>';
+    // Mini progress bar
+    h+='<div style="width:100%;height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden;">';
+    h+='<div style="width:'+Math.min(100,bp2)+'%;height:4px;background:'+pctColor+';border-radius:2px;"></div>';
+    h+='</div>';
+    h+='<div style="font-size:10px;font-weight:700;color:'+pctColor+';">'+bp2+'%</div>';
+    h+='</button>';
+  }
+  h+='</div></div>';
+
+  // ── Selected bridge overview card ──────────────────────────
+  var selBrPct=brPct2?brPct2(selBr):0;
+  var selPctColor=selBrPct>=75?'#06D6A0':selBrPct>=30?'#D4A843':'#58A6FF';
+
+  h+='<div style="background:linear-gradient(135deg,var(--card),#0d1f3c);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:14px;border-left:4px solid #D4A843;">';
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">';
+  h+='<div>';
+  h+='<div style="font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">Bridge Overview</div>';
+  h+='<div style="font-size:18px;font-weight:900;color:var(--text);">Bridge '+selBr+'</div>';
+  h+='<div style="font-size:11px;color:var(--dimL);margin-top:2px;">'+brObj.piers.length+' elements &nbsp;·&nbsp; '+(DIRECT.indexOf(brObj.piers[0])>-1?'Direct':'Piled')+' foundation</div>';
+  h+='</div>';
+  // Circular progress indicator (SVG)
+  var r=28,stroke=6,circ=2*Math.PI*r;
+  var dashFill=circ*(selBrPct/100),dashGap=circ-dashFill;
+  h+='<div style="position:relative;width:72px;height:72px;">';
+  h+='<svg width="72" height="72" viewBox="0 0 72 72">';
+  h+='<circle cx="36" cy="36" r="'+r+'" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="'+stroke+'"/>';
+  h+='<circle cx="36" cy="36" r="'+r+'" fill="none" stroke="'+selPctColor+'" stroke-width="'+stroke+'" ';
+  h+='stroke-dasharray="'+Math.round(dashFill)+' '+Math.round(dashGap)+'" stroke-dashoffset="'+(circ*0.25)+'" ';
+  h+='transform="rotate(-90 36 36)" stroke-linecap="round"/>';
+  h+='<text x="36" y="33" text-anchor="middle" font-family="Segoe UI,Arial" font-size="11" font-weight="900" fill="'+selPctColor+'">'+selBrPct+'%</text>';
+  h+='<text x="36" y="46" text-anchor="middle" font-family="Segoe UI,Arial" font-size="7" fill="rgba(255,255,255,0.4)">DONE</text>';
+  h+='</svg></div></div>';
+  // Stage mini legend
+  h+='<div style="display:flex;gap:6px;flex-wrap:wrap;">';
+  var legendItems=[
+    {col:'#4a5568',lbl:'Not Started'},
+    {col:'#58A6FF',lbl:'In Progress'},
+    {col:'#06D6A0',lbl:'Complete'},
+    {col:'#D4A843',lbl:'Inspected'},
+    {col:'#E63946',lbl:'On Hold'},
+  ];
+  for(var li=0;li<legendItems.length;li++){
+    h+='<div style="display:flex;align-items:center;gap:4px;">';
+    h+='<div style="width:8px;height:8px;border-radius:2px;background:'+legendItems[li].col+';flex-shrink:0;"></div>';
+    h+='<span style="font-size:9px;color:var(--dimL);">'+legendItems[li].lbl+'</span>';
+    h+='</div>';
+  }
+  h+='</div></div>';
+
+  // ── Pier Cards Grid ─────────────────────────────────────────
+  h+='<div style="font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;">Pier Progress</div>';
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">';
+
+  for(var pi=0;pi<brObj.piers.length;pi++){
+    var pier=brObj.piers[pi];
+    var isAbt=pier.indexOf('ABT')>-1;
+    var isDr=DIRECT.indexOf(pier)>-1;
+    var stages=getStagesForPier(pier);
+
+    // Calculate pier completion
+    var pierEarned=0,pierTotal=0;
+    for(var si=0;si<stages.length;si++){
+      pierTotal+=stages[si].w;
+      var sv=gps(pier,stages[si].id);
+      if(sv==='Complete'||sv==='Inspected') pierEarned+=stages[si].w;
+      else if(sv==='In Progress') pierEarned+=stages[si].w*0.3;
+    }
+    var pierPct=pierTotal>0?Math.round(pierEarned/pierTotal*100):0;
+
+    // Dominant status
+    var dominantStatus='Not Started';
+    var inProgressCount=0,completeCount=0;
+    for(var si2=0;si2<stages.length;si2++){
+      var sv2=gps(pier,stages[si2].id);
+      if(sv2==='Complete'||sv2==='Inspected') completeCount++;
+      else if(sv2==='In Progress'||sv2==='On Hold') inProgressCount++;
+    }
+    if(completeCount===stages.length) dominantStatus='Complete';
+    else if(completeCount>0||inProgressCount>0) dominantStatus='In Progress';
+
+    var cardBorderCol=dominantStatus==='Complete'?'rgba(6,214,160,0.4)':dominantStatus==='In Progress'?'rgba(88,166,255,0.4)':'var(--border)';
+    var cardGlow=dominantStatus==='Complete'?'rgba(6,214,160,0.06)':dominantStatus==='In Progress'?'rgba(88,166,255,0.06)':'transparent';
+    var pierPctCol=pierPct>=75?'#06D6A0':pierPct>=30?'#D4A843':'#58A6FF';
+
+    var isSelected=curPier===pier;
+    if(isSelected) cardBorderCol='#D4A843'; cardGlow=isSelected?'rgba(212,168,67,0.1)':cardGlow;
+
+    h+='<div data-pier="'+pier+'" onclick="sPier(this.dataset.pier);" ';
+    h+='style="background:var(--card);border:1px solid '+cardBorderCol+';border-radius:12px;padding:12px;cursor:pointer;';
+    h+='background:linear-gradient(135deg,var(--card),'+cardGlow+');';
+    if(isSelected) h+='box-shadow:0 0 0 2px #D4A843,0 4px 16px rgba(212,168,67,0.2);';
+    h+='">';
+
+    // Pier header row
+    h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">';
+    h+='<div>';
+    h+='<div style="font-size:14px;font-weight:900;color:var(--text);letter-spacing:-0.3px;">'+pier+'</div>';
+    h+='<div style="font-size:9px;color:var(--dimL);margin-top:1px;">'+(isAbt?'Abutment':isDr?'Direct':'Piled')+'</div>';
+    h+='</div>';
+    h+='<div style="font-size:16px;font-weight:900;color:'+pierPctCol+';">'+pierPct+'%</div>';
+    h+='</div>';
+
+    // Stage progress bar (segmented)
+    h+='<div style="display:flex;gap:2px;margin-bottom:8px;height:6px;border-radius:3px;overflow:hidden;">';
+    for(var si3=0;si3<stages.length;si3++){
+      var sv3=gps(pier,stages[si3].id);
+      var stCol=sv3==='Complete'?'#06D6A0':sv3==='Inspected'?'#D4A843':sv3==='In Progress'?'#58A6FF':sv3==='On Hold'?'#E63946':'rgba(255,255,255,0.1)';
+      var stWidth=Math.max(stages[si3].w,4);
+      h+='<div style="flex:'+stWidth+';background:'+stCol+';"></div>';
+    }
+    h+='</div>';
+
+    // Stage dots row
+    h+='<div style="display:flex;gap:3px;flex-wrap:wrap;">';
+    for(var si4=0;si4<stages.length;si4++){
+      var sv4=gps(pier,stages[si4].id);
+      var dotCol=sv4==='Complete'?'#06D6A0':sv4==='Inspected'?'#D4A843':sv4==='In Progress'?'#58A6FF':sv4==='On Hold'?'#E63946':'rgba(255,255,255,0.12)';
+      h+='<div title="'+stages[si4].name+': '+sv4+'" ';
+      h+='style="width:18px;height:18px;border-radius:4px;background:'+dotCol+';';
+      h+='display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:rgba(0,0,0,0.7);" ';
+      h+='data-stage="'+stages[si4].id+'" data-pier="'+pier+'">';
+      h+=stages[si4].id.slice(0,3)+'</div>';
+    }
+    h+='</div></div>';
   }
   h+='</div>';
 
-  // Pier detail
+  // ── Stage Detail Panel (if pier selected) ──────────────────
   if(curPier){
-    var isDr2=DIRECT.indexOf(curPier)>-1;
-    var doneC=0;
-    var cPierStages=getStagesForPier(curPier);
-    for(var n=0;n<cPierStages.length;n++){
-      var sv2=gps(curPier,cPierStages[n].id);
-      if(sv2==="Complete"||sv2==="Inspected") doneC++;
-    }
-    h+='<div class="card">';
-    // Pier action buttons
-    h+='<div style="display:flex;gap:6px;margin-bottom:10px;">';
-    h+='<button onclick="openBridgeWeights(\''+curBr+'\');" style="flex:1;padding:6px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--dimL);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">⚙️ Bridge Weights</button>';
-    h+='<button onclick="resetPierStages(\''+curPier+'\');" style="flex:1;padding:6px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--dimL);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">🔄 Reset Pier</button>';
-    h+='<button onclick="resetBridgeAll(\''+curBr+'\');" style="flex:1;padding:6px;border-radius:7px;border:1px solid var(--red);background:transparent;color:var(--red);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">🗑 Reset Bridge</button>';
-    h+='</div>';
-    h+='<div style="margin-bottom:14px;">';
-    h+='<div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.12em;">Selected</div>';
-    h+='<div style="font-size:22px;font-weight:800;color:var(--gold);">Pier '+curPier+'</div>';
-    h+='<div style="font-size:11px;color:var(--dim);">Bridge '+curBr+' &mdash; '+(isDr2?"Direct Foundation":"Piled")+'  &mdash; '+doneC+'/'+cPierStages.length+' stages done</div>';
-    h+='</div>';
-
-    var qPierStages=getStagesForPier(curPier);
-    for(var q=0;q<qPierStages.length;q++){
-      var s=qPierStages[q];
-      var dis=false;
-      var sv3=gps(curPier,s.id);
-      var sc3=SCOL[sv3]||"#888";
-      var sbg3=SBGC[sv3]||"#10161e";
-      var nxtV=nxt(sv3);
-      var ca=dis?"":'onclick="tStage(\''+curPier+'\',\''+s.id+'\')"';
-      h+='<div '+ca+' style="display:flex;align-items:center;gap:9px;padding:11px;border-radius:8px;margin-bottom:6px;cursor:'+(dis?"default":"pointer")+';background:'+sbg3+';border:1px solid '+sc3+'33;opacity:'+(dis?.35:1)+';transition:opacity .15s;">';
-      h+='<div style="width:9px;height:9px;border-radius:2px;background:'+s.col+';flex-shrink:0;"></div>';
-      h+='<div style="flex:1;"><div style="font-size:13px;font-weight:700;color:var(--text);">'+s.name+'</div>';
-      h+='<div style="font-size:10px;color:var(--dim);">'+s.ar+(dis?" &mdash; N/A":" &mdash; tap: "+nxtV)+'</div></div>';
-      h+='<div style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:9px;background:'+sc3+'22;color:'+sc3+';white-space:nowrap;">'+sv3+'</div>';
-      h+='</div>';
-    }
-
-    // Road Widening — standalone
-    if(EMB_PIERS.indexOf(curPier)>-1){
-      var embV=gps(curPier,"EMB");
-      var embSc=SCOL[embV]||"#888";
-      var embBg=SBGC[embV]||"#10161e";
-      h+='<div style="margin-top:12px;padding-top:12px;border-top:2px solid #D4A84333;">';
-      h+='<div style="font-size:9px;color:var(--gold);text-transform:uppercase;letter-spacing:.15em;margin-bottom:8px;">Road Widening</div>';
-      h+='<div onclick="tEmb(\''+curPier+'\')" style="display:flex;align-items:center;gap:9px;padding:11px;border-radius:8px;cursor:pointer;background:'+embBg+';border:2px solid #D4A84344;">';
-      h+='<div style="width:10px;height:10px;border-radius:2px;background:var(--gold);flex-shrink:0;"></div>';
-      h+='<div style="flex:1;"><div style="font-size:13px;font-weight:700;color:var(--text);">Road Widening</div>';
-      h+='<div style="font-size:10px;color:var(--dim);">Tap to update &mdash; next: '+nxt(embV)+'</div></div>';
-      h+='<div style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:9px;background:'+embSc+'22;color:'+embSc+';">'+embV+'</div>';
-      h+='</div></div>';
-    }
-    h+='</div>';
-  } else {
-    h+='<div style="text-align:center;color:var(--dim);padding:22px;font-size:13px;">Tap a pier to manage its stages</div>';
+    h+=trBuildStagePanel(curPier);
   }
 
-  document.getElementById("pg-tr").innerHTML=h;
+  // ── FAB ─────────────────────────────────────────────────────
+  h+='<div style="height:80px;"></div>'; // spacer for FAB
+
+  document.getElementById('pg-tr').innerHTML=h;
+  buildTicker();
+}
+
+function trBuildStagePanel(pier){
+  var stages=getStagesForPier(pier);
+  var isAbt=pier.indexOf('ABT')>-1;
+  var isDr=DIRECT.indexOf(pier)>-1;
+  var h='';
+
+  h+='<div style="margin-top:14px;background:linear-gradient(135deg,#0d1f3c,#0a1628);';
+  h+='border:1px solid rgba(212,168,67,0.3);border-radius:14px;padding:14px;">';
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">';
+  h+='<div>';
+  h+='<div style="font-size:10px;color:rgba(212,168,67,0.8);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;">Stage Update</div>';
+  h+='<div style="font-size:16px;font-weight:900;color:#f1f5f9;margin-top:2px;">'+pier+'</div>';
+  h+='<div style="font-size:10px;color:rgba(255,255,255,0.4);">'+(isAbt?'Abutment Stages':isDr?'Direct Foundation':'Piled Foundation')+'</div>';
+  h+='</div>';
+  h+='<button onclick="curPier=null;rTr();" ';
+  h+='style="width:32px;height:32px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:transparent;';
+  h+='color:var(--dimL);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit;">✕</button>';
+  h+='</div>';
+
+  for(var si=0;si<stages.length;si++){
+    var s=stages[si];
+    var curStatus=gps(pier,s.id);
+    var statusList=['Not Started','In Progress','On Hold','Complete','Inspected'];
+    var statusColors=['#4a5568','#58A6FF','#E63946','#06D6A0','#D4A843'];
+    var curIdx=statusList.indexOf(curStatus);
+
+    h+='<div style="border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:11px 13px;margin-bottom:8px;';
+    h+='background:rgba(255,255,255,0.03);">';
+    h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">';
+    h+='<div style="display:flex;align-items:center;gap:8px;">';
+    h+='<div style="width:8px;height:8px;border-radius:2px;background:'+s.col+';flex-shrink:0;"></div>';
+    h+='<div>';
+    h+='<div style="font-size:12px;font-weight:700;color:var(--fg);">'+s.name+'</div>';
+    h+='<div style="font-size:9px;color:var(--dimL);">Weight: '+s.w+'%</div>';
+    h+='</div></div>';
+    h+='<span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:6px;';
+    h+='background:'+statusColors[Math.max(0,curIdx)]+'22;color:'+statusColors[Math.max(0,curIdx)]+';">'+curStatus+'</span>';
+    h+='</div>';
+
+    // Status selector buttons
+    h+='<div style="display:flex;gap:4px;">';
+    for(var k=0;k<statusList.length;k++){
+      var isSel=curStatus===statusList[k];
+      h+='<button data-pier="'+pier+'" data-sid="'+s.id+'" data-st="'+statusList[k]+'" ';
+      h+='onclick="trSetStage(this);" ';
+      h+='style="flex:1;padding:6px 2px;border-radius:6px;';
+      h+='border:1.5px solid '+statusColors[k]+';';
+      h+='background:'+(isSel?statusColors[k]:'transparent')+';';
+      h+='color:'+(isSel?'#000':'rgba(255,255,255,0.4)')+';';
+      h+='font-size:8px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">';
+      h+=statusList[k].replace('Not Started','—').replace('In Progress','WIP').replace('Inspected','Insp.')+'</button>';
+    }
+    h+='</div></div>';
+  }
+  h+='</div>';
+  return h;
+}
+
+function trSetStage(btn){
+  var pier=btn.dataset.pier;
+  var sid=btn.dataset.sid;
+  var status=btn.dataset.st;
+  if(!PS[pier]) PS[pier]={};
+  PS[pier][sid]=status;
+  // Log it
+  var today=new Date().toISOString().slice(0,10);
+  var brId='?';
+  for(var b=0;b<BRIDGES.length;b++) if(BRIDGES[b].piers.indexOf(pier)>-1){brId=BRIDGES[b].id;break;}
+  var stageName='';
+  for(var s=0;s<STAGES.length;s++) if(STAGES[s].id===sid){stageName=STAGES[s].name;break;}
+  LOGS.unshift({pier:pier,bridge:brId,stage:stageName,status:status,date:today,ts:Date.now()});
+  if(LOGS.length>200) LOGS=LOGS.slice(0,200);
+  persist();
+  rTr();
+  buildTicker();
 }
 
 function tStage(pier,sid){
