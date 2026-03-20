@@ -1787,7 +1787,7 @@ function rUt(){
 
     // Activities — only show if active/has weight
     if(isActive){
-      var stages=getUtilStagesIC1(n);
+      var stages=n.acts||[];
       h+='<div style="border-top:1px solid rgba(255,255,255,0.06);padding:12px 14px 14px;">';
       h+='<div style="font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;">Activities</div>';
 
