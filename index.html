@@ -626,6 +626,7 @@ function persist(){
 loadData();
 window.addEventListener('DOMContentLoaded',function(){
   loadUtNetworks();
+  frInitInputs();
   // Restore custom weights if saved
   if(CUSTOM_WEIGHTS.stages&&Object.keys(CUSTOM_WEIGHTS.stages).length){
     for(var i=0;i<STAGES.length;i++){
@@ -3556,14 +3557,9 @@ function rFr(){
     h+='<input type="text" id="fr-ph-cap" placeholder="e.g. Bridge A - Pier 3: Formwork complete" ';
     h+='style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:13px;font-family:inherit;outline:none;margin-bottom:10px;">';
 
-    // Camera/Gallery buttons — use hidden inputs triggered by buttons
-    h+='<input type="file" accept="image/*" capture="environment" id="fr-cam" style="display:none;">';
-    h+='<input type="file" accept="image/*" id="fr-gal" style="display:none;">';
     h+='<div style="display:flex;gap:8px;">';
-    h+='<button onclick="document.getElementById(\'fr-cam\').click();" ';
-    h+='style="flex:1;padding:11px;background:var(--blue);border:none;border-radius:8px;color:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;">📷 Camera</button>';
-    h+='<button onclick="document.getElementById(\'fr-gal\').click();" ';
-    h+='style="flex:1;padding:11px;background:var(--panel);border:1px solid var(--border);border-radius:8px;color:var(--dimL);font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;">🖼 Gallery</button>';
+    h+='<label for="fr-cam-static" style="flex:1;padding:11px;background:var(--blue);border-radius:8px;color:#fff;font-weight:700;font-size:13px;cursor:pointer;text-align:center;display:block;">📷 Camera</label>';
+    h+='<label for="fr-gal-static" style="flex:1;padding:11px;background:var(--panel);border:1px solid var(--border);border-radius:8px;color:var(--dimL);font-weight:700;font-size:13px;cursor:pointer;text-align:center;display:block;">🖼 Gallery</label>';
     h+='</div>';
     h+='</div>';
 
@@ -3652,11 +3648,7 @@ function rFr(){
   }
 
   document.getElementById('pg-fr').innerHTML=h;
-  // Attach file input listeners after render (required for Android)
-  var camEl=document.getElementById('fr-cam');
-  var galEl=document.getElementById('fr-gal');
-  if(camEl) camEl.addEventListener('change',function(){frAddPhoto(this);});
-  if(galEl) galEl.addEventListener('change',function(){frAddPhoto(this);});
+
 }
 
 // ── Field Report handlers ──────────────────────────────────────
@@ -3928,6 +3920,63 @@ function dlFieldPDF(){
   a2.click();
   URL.revokeObjectURL(url2);
   flash('Field Report downloaded ✅');
+}
+
+
+// ── Camera/Gallery — static inputs outside innerHTML ──────────
+function frInitInputs(){
+  // Called once on load — binds change events to static inputs
+  var cam=document.getElementById('fr-cam-static');
+  var gal=document.getElementById('fr-gal-static');
+  if(cam&&!cam._bound){
+    cam.addEventListener('change',function(){
+      if(this.files&&this.files[0]){frProcessPhoto(this.files[0]);}
+      this.value='';
+    });
+    cam._bound=true;
+  }
+  if(gal&&!gal._bound){
+    gal.addEventListener('change',function(){
+      if(this.files&&this.files[0]){frProcessPhoto(this.files[0]);}
+      this.value='';
+    });
+    gal._bound=true;
+  }
+}
+
+function frProcessPhoto(file){
+  var disc=document.getElementById('fr-ph-disc');
+  var cap=document.getElementById('fr-ph-cap');
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var base64=e.target.result;
+    var img=new Image();
+    img.onload=function(){
+      var canvas=document.createElement('canvas');
+      var MAX=600;
+      var ratio=Math.min(MAX/img.width,MAX/img.height,1);
+      canvas.width=Math.round(img.width*ratio);
+      canvas.height=Math.round(img.height*ratio);
+      var ctx2=canvas.getContext('2d');
+      ctx2.drawImage(img,0,0,canvas.width,canvas.height);
+      var thumb=canvas.toDataURL('image/jpeg',0.75);
+      var today=new Date().toISOString().slice(0,10);
+      FIELD.photos.push({
+        id:'fp_'+Date.now(),
+        date:today,
+        discipline:disc?disc.value:'general',
+        caption:cap&&cap.value.trim()?cap.value.trim():'Site photo',
+        thumb:thumb,
+        ts:Date.now()
+      });
+      if(cap) cap.value='';
+      persist();
+      rFr();
+      flash('Photo saved ✅');
+    };
+    img.src=base64;
+  };
+  reader.readAsDataURL(file);
 }
 
 function buildTicker(){
@@ -7840,5 +7889,8 @@ function rMp(){
   document.getElementById("pg-mp").innerHTML=h;
 }
 </script>
+<!-- Camera inputs — static in HTML, label-triggered (Android-safe) -->
+<input type="file" accept="image/*" capture="environment" id="fr-cam-static" style="position:fixed;left:-9999px;opacity:0;width:1px;height:1px;" tabindex="-1">
+<input type="file" accept="image/*" id="fr-gal-static" style="position:fixed;left:-9999px;opacity:0;width:1px;height:1px;" tabindex="-1">
 </body>
 </html>
