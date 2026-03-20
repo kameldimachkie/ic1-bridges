@@ -3553,220 +3553,342 @@ export default {
 // FIELD REPORT MODULE — Photos + Diary + PDF
 // ══════════════════════════════════════════════════════════════
 
-var _frTab = 'diary'; // 'diary' | 'photos' | 'report'
+var _frTab = 'diary';
+var _frDiaryDisc = 'bridges'; // 'diary' | 'photos' | 'report'
 var _frDiaryStatus = 'Completed';
 
 function rFr(){
   var today = new Date().toISOString().slice(0,10);
-  var todayPhotos = FIELD.photos.filter(function(p){return p.date===today;});
+  var todayStr = new Date().toLocaleDateString('en-GB',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
   var todayDiary  = FIELD.diary.filter(function(d){return d.date===today;});
+  var todayPhotos = FIELD.photos.filter(function(p){return p.date===today;});
 
-  var h = '';
+  // Status config
+  var stCols  = {Completed:'#06D6A0','In Progress':'#58A6FF',Delayed:'#FFC145',Blocked:'#E74C3C'};
+  var stBg    = {Completed:'rgba(6,214,160,0.12)','In Progress':'rgba(88,166,255,0.12)',Delayed:'rgba(255,193,69,0.12)',Blocked:'rgba(231,76,60,0.12)'};
+  var stIcons = {Completed:'✅','In Progress':'🔨',Delayed:'⚠️',Blocked:'🚫'};
+  var discList=[['bridges','🌉 Bridges'],['roads','🛣 Roads'],['utilities','🔧 Utilities'],
+                ['fillslope','⛰️ Fill Slope'],['survey','📐 Survey'],['general','📋 General']];
+  var discCols={bridges:'#D4A843',roads:'#58A6FF',utilities:'#38BDF8',fillslope:'#4ECDC4',survey:'#A78BFA',general:'#94a3b8'};
 
-  // ── Header ─────────────────────────────────────────────────
-  h+='<div class="card" style="border-left:3px solid var(--gold);">';
-  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">';
+  var h='';
+
+  // ── Module Header ──────────────────────────────────────────
+  h+='<div style="background:linear-gradient(135deg,#0a1628 0%,#1a1200 60%,#0a1628 100%);';
+  h+='border-radius:14px;padding:16px;margin-bottom:14px;border:1px solid rgba(255,193,69,0.2);';
+  h+='position:relative;overflow:hidden;">';
+  h+='<div style="position:absolute;top:0;right:0;width:80px;height:80px;';
+  h+='background:radial-gradient(circle at top right,rgba(255,193,69,0.12),transparent 70%);pointer-events:none;"></div>';
+  h+='<div style="display:flex;align-items:flex-start;justify-content:space-between;">';
   h+='<div>';
-  h+='<div class="ct" style="margin-bottom:2px;">📋 Field Report</div>';
-  h+='<div style="font-size:10px;color:var(--dimL);">'+today+' &nbsp;·&nbsp; '+todayDiary.length+' entries &nbsp;·&nbsp; '+todayPhotos.length+' photos</div>';
-  h+='</div>';
-  h+='<button onclick="dlFieldPDF();" style="padding:8px 14px;background:var(--gold);border:none;border-radius:8px;color:#000;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;">📥 PDF</button>';
-  h+='</div>';
-  h+='</div>';
+  h+='<div style="font-size:11px;color:rgba(255,193,69,0.8);font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">IC1 Road Improvements</div>';
+  h+='<div style="font-size:20px;font-weight:900;color:#f1f5f9;letter-spacing:-0.5px;">Daily Diary</div>';
+  h+='<div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:3px;">Field Activity Log &nbsp;·&nbsp; Daily Report Generator</div>';
+  h+='<div style="display:flex;align-items:center;gap:6px;margin-top:8px;">';
+  h+='<span style="background:rgba(255,193,69,0.15);border:1px solid rgba(255,193,69,0.3);color:#FFC145;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;">'+todayDiary.length+' entries today</span>';
+  h+='<span style="background:rgba(88,166,255,0.12);border:1px solid rgba(88,166,255,0.25);color:#58A6FF;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;">'+todayPhotos.length+' photos</span>';
+  h+='</div></div>';
+  h+='<button onclick="dlFieldPDF();" style="padding:9px 14px;background:linear-gradient(135deg,#FFC145,#D4A843);border:none;border-radius:9px;color:#000;font-weight:800;font-size:12px;cursor:pointer;font-family:inherit;white-space:nowrap;">📥 PDF</button>';
+  h+='</div></div>';
 
-  // ── Sub-tabs ────────────────────────────────────────────────
-  h+='<div style="display:flex;gap:4px;margin-bottom:12px;">';
-  var frTabs=[['diary','📝 Diary'],['photos','📸 Photos'],['report','📄 Preview']];
-  for(var i=0;i<frTabs.length;i++){
-    var isOn=_frTab===frTabs[i][0];
-    h+='<button data-tab="'+frTabs[i][0]+'" onclick="frSwitch(this.dataset.tab);" ';
-    h+='style="flex:1;padding:9px;border-radius:8px;border:1px solid '+(isOn?'var(--gold)':'var(--border)')+';';
-    h+='background:'+(isOn?'var(--gold)':'transparent')+';';
-    h+='color:'+(isOn?'#000':'var(--dimL)')+';font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">';
-    h+=frTabs[i][1]+'</button>';
+  // ── Pill Tab Bar ────────────────────────────────────────────
+  h+='<div style="display:flex;gap:5px;margin-bottom:14px;background:rgba(255,255,255,0.04);border-radius:12px;padding:4px;">';
+  var frTabs=[['diary','📝 Diary'],['photos','📸 Photos'],['import','📥 Import'],['preview','📄 Preview']];
+  for(var ti=0;ti<frTabs.length;ti++){
+    var isOn=_frTab===frTabs[ti][0];
+    h+='<button data-tab="'+frTabs[ti][0]+'" onclick="frSwitch(this.dataset.tab);" ';
+    h+='style="flex:1;padding:9px;border-radius:9px;border:none;';
+    h+='background:'+(isOn?'#FFC145':'transparent')+';';
+    h+='color:'+(isOn?'#000':'rgba(255,255,255,0.4)')+';';
+    h+='font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;';
+    h+='box-shadow:'+(isOn?'0 2px 8px rgba(255,193,69,0.35)':'none')+';">'+frTabs[ti][1]+'</button>';
   }
   h+='</div>';
 
   // ══ DIARY TAB ══════════════════════════════════════════════
   if(_frTab==='diary'){
-    // Quick entry form
-    h+='<div class="card">';
-    h+='<div class="ct">📝 Log Activity</div>';
+    // Daily summary block
+    h+='<div style="background:linear-gradient(135deg,var(--card),#1a1200);border:1px solid rgba(255,193,69,0.2);border-radius:14px;padding:14px;margin-bottom:10px;border-left:4px solid #FFC145;">';
+    h+='<div style="font-size:10px;color:rgba(255,193,69,0.8);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;">Daily Summary</div>';
+    h+='<div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:10px;">'+todayStr+'</div>';
+    h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
+    // Weather selector
+    h+='<div>';
+    h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Weather</label>';
+    h+='<select id="fr-weather" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:var(--fg);font-size:12px;font-family:inherit;">';
+    var weathers=[['sunny','☀️ Sunny'],['cloudy','⛅ Cloudy'],['overcast','🌥 Overcast'],['rain','🌧 Rain'],['wind','💨 Windy'],['sandstorm','🌪 Sandstorm'],['extreme','🌡 Extreme Heat']];
+    for(var wi=0;wi<weathers.length;wi++) h+='<option value="'+weathers[wi][0]+'">'+weathers[wi][1]+'</option>';
+    h+='</select></div>';
+    // Temperature
+    h+='<div>';
+    h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Temp (°C)</label>';
+    h+='<input type="number" id="fr-temp" placeholder="e.g. 38" min="0" max="60" ';
+    h+='style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:var(--fg);font-size:13px;text-align:center;">';
+    h+='</div></div></div>';
 
-    // Discipline selector
-    h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Discipline</label>';
-    h+='<select id="fr-disc" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:13px;font-family:inherit;margin-bottom:8px;">';
-    var discs5=[['bridges','🌉 Bridges'],['roads','🛣 Roads'],['utilities','🔧 Utilities'],['fillslope','⛰️ Fill Slope'],['survey','📐 Survey'],['general','📋 General']];
-    for(var di=0;di<discs5.length;di++) h+='<option value="'+discs5[di][0]+'">'+discs5[di][1]+'</option>';
-    h+='</select>';
-
+    // Activity entry form
+    h+='<div style="background:linear-gradient(135deg,var(--card),#0d1a30);border:1px solid rgba(255,193,69,0.15);border-radius:14px;padding:14px;margin-bottom:10px;">';
+    h+='<div style="font-size:10px;color:rgba(255,193,69,0.8);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;">Log Activity</div>';
+    // Discipline pills
+    h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Discipline</label>';
+    h+='<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;" id="fr-disc-pills">';
+    for(var di=0;di<discList.length;di++){
+      var dc=discCols[discList[di][0]]||'#94a3b8';
+      var isSel=_frDiaryDisc===discList[di][0];
+      h+='<button data-disc="'+discList[di][0]+'" onclick="frSelectDisc(this);" ';
+      h+='style="padding:6px 12px;border-radius:20px;border:1.5px solid '+dc+';';
+      h+='background:'+(isSel?dc:'transparent')+';';
+      h+='color:'+(isSel?'#000':'rgba(255,255,255,0.5)')+';';
+      h+='font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">'+discList[di][1]+'</button>';
+    }
+    h+='</div>';
     // Activity input
     h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Activity</label>';
     h+='<input type="text" id="fr-act" placeholder="e.g. Pier 3A — Pile Cap Concreting" ';
-    h+='style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:13px;font-family:inherit;outline:none;margin-bottom:8px;">';
-
-    // Status buttons
+    h+='style="width:100%;padding:10px 12px;border-radius:9px;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:var(--fg);font-size:13px;font-family:inherit;outline:none;margin-bottom:10px;">';
+    // Status chips
     h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Status</label>';
-    h+='<div style="display:flex;gap:5px;margin-bottom:8px;">';
-    var statuses6=['Completed','In Progress','Delayed','Blocked'];
-    var sCols6=['var(--green)','var(--blue)','var(--amber)','var(--red)'];
-    for(var si=0;si<statuses6.length;si++){
-      var isSel6=_frDiaryStatus===statuses6[si];
-      h+='<button data-st="'+statuses6[si]+'" onclick="frSetStatus(this);" ';
-      h+='style="flex:1;padding:6px 3px;border-radius:7px;border:2px solid '+sCols6[si]+';';
-      h+='background:'+(isSel6?sCols6[si]:'transparent')+';';
-      h+='color:'+(isSel6?'#000':'var(--dimL)')+';';
-      h+='font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;">'+statuses6[si]+'</button>';
+    h+='<div style="display:flex;gap:6px;margin-bottom:10px;">';
+    var stList2=['Completed','In Progress','Delayed','Blocked'];
+    for(var si=0;si<stList2.length;si++){
+      var st=stList2[si];
+      var isSel2=_frDiaryStatus===st;
+      h+='<button data-st="'+st+'" onclick="frSetStatus(this);" ';
+      h+='style="flex:1;padding:8px 4px;border-radius:9px;border:2px solid '+stCols[st]+';';
+      h+='background:'+(isSel2?stCols[st]:'transparent')+';';
+      h+='color:'+(isSel2?'#000':'rgba(255,255,255,0.4)')+';';
+      h+='font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;min-height:40px;line-height:1.2;">'+stIcons[st]+'<br>'+st.replace('In Progress','WIP')+'</button>';
     }
     h+='</div>';
-
-    // Notes
-    h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Notes (optional)</label>';
-    h+='<textarea id="fr-notes" placeholder="Observations, quantities, issues..." ';
-    h+='style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:12px;font-family:inherit;height:64px;resize:none;outline:none;margin-bottom:10px;"></textarea>';
-
-    h+='<button onclick="frAddDiary();" style="width:100%;padding:11px;background:var(--gold);border:none;border-radius:8px;color:#000;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;">+ Log Activity</button>';
+    // Notes textarea
+    h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Notes</label>';
+    h+='<textarea id="fr-notes" placeholder="Observations, quantities, issues, weather impacts..." ';
+    h+='style="width:100%;padding:10px 12px;border-radius:9px;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:var(--fg);font-size:13px;font-family:inherit;height:72px;resize:none;outline:none;margin-bottom:10px;line-height:1.6;"></textarea>';
+    // Add button
+    h+='<button onclick="frAddDiary();" style="width:100%;padding:13px;background:linear-gradient(135deg,#FFC145,#D4A843);border:none;border-radius:10px;color:#000;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;letter-spacing:0.3px;">+ Log Activity</button>';
     h+='</div>';
 
-    // Today's diary
-    h+='<div class="card">';
-    h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">';
-    h+='<div class="ct" style="margin-bottom:0;">Today\'s Log ('+todayDiary.length+')</div>';
-    if(todayDiary.length) h+='<span style="font-size:10px;color:var(--dimL);">tap ✕ to delete</span>';
-    h+='</div>';
+    // Today's entries
+    h+='<div style="font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;">Today\'s Log ('+todayDiary.length+')</div>';
     if(!todayDiary.length){
-      h+='<div style="text-align:center;padding:16px;color:var(--dimL);font-size:12px;">No entries yet — log your first activity above</div>';
+      h+='<div style="text-align:center;padding:32px;background:var(--card);border:1px solid var(--border);border-radius:14px;">';
+      h+='<div style="font-size:40px;margin-bottom:10px;">📋</div>';
+      h+='<div style="font-size:13px;font-weight:700;color:var(--fg);margin-bottom:4px;">No entries yet</div>';
+      h+='<div style="font-size:11px;color:var(--dimL);">Log your first activity above</div>';
+      h+='</div>';
     } else {
-      for(var di2=todayDiary.length-1;di2>=0;di2--){
-        var e=todayDiary[di2];
-        var eCol=e.status==='Completed'?'var(--green)':e.status==='In Progress'?'var(--blue)':e.status==='Delayed'?'var(--amber)':'var(--red)';
-        h+='<div style="padding:9px 0;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:flex-start;">';
-        h+='<div style="flex-shrink:0;margin-top:2px;">';
-        h+='<span style="font-size:9px;font-weight:700;color:'+eCol+';background:'+eCol+'22;padding:2px 7px;border-radius:5px;">'+e.status+'</span>';
+      for(var ei=todayDiary.length-1;ei>=0;ei--){
+        var e=todayDiary[ei];
+        var eSt=e.status||'Completed';
+        var eStCol=stCols[eSt]||'#4a5568';
+        var eStBg=stBg[eSt]||'rgba(74,85,104,0.12)';
+        var eStIcon=stIcons[eSt]||'📋';
+        var eDiscCol=discCols[e.discipline]||'#94a3b8';
+        var eTime=new Date(e.ts||Date.now()).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+
+        h+='<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:13px 14px;margin-bottom:8px;border-left:4px solid '+eDiscCol+';">';
+        // Top row: activity + status
+        h+='<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px;">';
+        h+='<div style="flex:1;padding-right:8px;">';
+        h+='<div style="font-size:13px;font-weight:800;color:var(--text);line-height:1.3;">'+e.activity+'</div>';
         h+='</div>';
-        h+='<div style="flex:1;">';
-        h+='<div style="font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">'+e.discipline+'</div>';
-        h+='<div style="font-size:12px;font-weight:700;color:var(--fg);">'+e.activity+'</div>';
-        if(e.notes) h+='<div style="font-size:11px;color:var(--dimL);margin-top:2px;">'+e.notes+'</div>';
+        h+='<span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:8px;white-space:nowrap;';
+        h+='background:'+eStBg+';color:'+eStCol+';border:1px solid '+eStCol+'33;">'+eStIcon+' '+eSt+'</span>';
         h+='</div>';
+        // Middle row: discipline + time
+        h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:'+(e.notes?'8':'4')+'px;">';
+        h+='<span style="font-size:9px;font-weight:700;color:'+eDiscCol+';background:'+eDiscCol+'15;padding:2px 8px;border-radius:6px;text-transform:uppercase;">';
+        // Find discipline label
+        var eDiscLabel=e.discipline||'general';
+        for(var di2=0;di2<discList.length;di2++) if(discList[di2][0]===e.discipline) eDiscLabel=discList[di2][1];
+        h+=eDiscLabel+'</span>';
+        h+='<span style="font-size:10px;color:var(--dimL);">'+eTime+'</span>';
+        if(e.importedFrom) h+='<span style="font-size:9px;color:#A78BFA;background:rgba(167,139,250,0.1);padding:2px 6px;border-radius:5px;">📥 Imported</span>';
+        h+='</div>';
+        // Notes
+        if(e.notes){
+          h+='<div style="font-size:11px;color:var(--dimL);line-height:1.6;border-top:1px solid rgba(255,255,255,0.06);padding-top:7px;margin-bottom:6px;">'+e.notes+'</div>';
+        }
+        // Extra imported fields
+        if(e.extraFields&&Object.keys(e.extraFields).length){
+          h+='<div style="background:rgba(167,139,250,0.07);border-radius:7px;padding:7px 10px;margin-bottom:6px;">';
+          h+='<div style="font-size:9px;color:#A78BFA;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Additional Imported Info</div>';
+          for(var xk in e.extraFields){
+            h+='<div style="font-size:10px;color:var(--dimL);"><span style="color:var(--fg);font-weight:600;">'+xk+':</span> '+e.extraFields[xk]+'</div>';
+          }
+          h+='</div>';
+        }
+        // Delete
         h+='<button data-eid="'+e.id+'" onclick="frDeleteDiary(this.dataset.eid);" ';
-        h+='style="padding:3px 8px;border-radius:5px;border:1px solid var(--border);background:transparent;color:var(--dimL);font-size:10px;cursor:pointer;flex-shrink:0;">✕</button>';
+        h+='style="padding:4px 10px;border-radius:6px;border:1px solid rgba(231,76,60,0.3);background:transparent;color:#E74C3C;font-size:9px;font-weight:700;cursor:pointer;">✕ Delete</button>';
         h+='</div>';
       }
     }
-    h+='</div>';
   }
 
   // ══ PHOTOS TAB ═════════════════════════════════════════════
   else if(_frTab==='photos'){
-    h+='<div class="card">';
-    h+='<div class="ct">📸 Capture Site Photo</div>';
-
+    h+='<div style="background:linear-gradient(135deg,var(--card),#0d1a30);border:1px solid rgba(255,193,69,0.15);border-radius:14px;padding:14px;margin-bottom:10px;">';
+    h+='<div style="font-size:10px;color:rgba(255,193,69,0.8);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;">Capture Site Photo</div>';
     h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Discipline</label>';
-    h+='<select id="fr-ph-disc" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:13px;font-family:inherit;margin-bottom:8px;">';
-    for(var di3=0;di3<discs5.length;di3++) h+='<option value="'+discs5[di3][0]+'">'+discs5[di3][1]+'</option>';
+    h+='<select id="fr-ph-disc" style="width:100%;padding:9px;border-radius:9px;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:var(--fg);font-size:13px;font-family:inherit;margin-bottom:8px;">';
+    for(var di3=0;di3<discList.length;di3++) h+='<option value="'+discList[di3][0]+'">'+discList[di3][1]+'</option>';
     h+='</select>';
-
     h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Caption</label>';
     h+='<input type="text" id="fr-ph-cap" placeholder="e.g. Bridge A - Pier 3: Formwork complete" ';
-    h+='style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:13px;font-family:inherit;outline:none;margin-bottom:10px;">';
-
+    h+='style="width:100%;padding:10px 12px;border-radius:9px;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:var(--fg);font-size:13px;font-family:inherit;outline:none;margin-bottom:10px;">';
     h+='<div style="display:flex;gap:8px;">';
-    h+='<label for="fr-cam-static" style="flex:1;padding:11px;background:var(--blue);border-radius:8px;color:#fff;font-weight:700;font-size:13px;cursor:pointer;text-align:center;display:block;">📷 Camera</label>';
-    h+='<label for="fr-gal-static" style="flex:1;padding:11px;background:var(--panel);border:1px solid var(--border);border-radius:8px;color:var(--dimL);font-weight:700;font-size:13px;cursor:pointer;text-align:center;display:block;">🖼 Gallery</label>';
-    h+='</div>';
-    h+='</div>';
-
-    // Today's photos grid
-    h+='<div class="card">';
-    h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">';
-    h+='<div class="ct" style="margin-bottom:0;">Today\'s Photos ('+todayPhotos.length+')</div>';
-    h+='</div>';
+    h+='<label for="fr-cam-static" style="flex:1;padding:13px;background:linear-gradient(135deg,#0057A3,#003d7a);border-radius:10px;color:#fff;font-weight:700;font-size:13px;cursor:pointer;text-align:center;display:block;">📷 Camera</label>';
+    h+='<label for="fr-gal-static" style="flex:1;padding:13px;background:rgba(255,255,255,0.07);border:1px solid var(--border);border-radius:10px;color:var(--dimL);font-weight:700;font-size:13px;cursor:pointer;text-align:center;display:block;">🖼 Gallery</label>';
+    h+='</div></div>';
+    // Photo grid
+    h+='<div style="font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;">Today\'s Photos ('+todayPhotos.length+')</div>';
     if(!todayPhotos.length){
-      h+='<div style="text-align:center;padding:20px;color:var(--dimL);font-size:12px;">';
-      h+='<div style="font-size:32px;margin-bottom:8px;">📷</div>';
-      h+='No photos yet — tap 📷 Camera above';
+      h+='<div style="text-align:center;padding:28px;background:var(--card);border:1px solid var(--border);border-radius:14px;">';
+      h+='<div style="font-size:40px;margin-bottom:8px;">📷</div>';
+      h+='<div style="font-size:13px;font-weight:700;color:var(--fg);margin-bottom:4px;">No photos yet</div>';
+      h+='<div style="font-size:11px;color:var(--dimL);">Tap 📷 Camera to capture a site photo</div>';
       h+='</div>';
     } else {
       h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
       for(var pi=0;pi<todayPhotos.length;pi++){
         var ph=todayPhotos[pi];
-        h+='<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;">';
+        var phDiscCol=discCols[ph.discipline]||'#94a3b8';
+        h+='<div style="border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--card);">';
         h+='<img src="'+ph.thumb+'" style="width:100%;height:110px;object-fit:cover;" alt="'+ph.caption+'">';
-        h+='<div style="padding:6px 8px;">';
-        h+='<div style="font-size:9px;color:var(--dimL);text-transform:uppercase;font-weight:700;">'+ph.discipline+'</div>';
-        h+='<div style="font-size:11px;color:var(--fg);font-weight:600;margin-top:1px;">'+ph.caption+'</div>';
+        h+='<div style="padding:8px 10px;">';
+        h+='<div style="font-size:9px;font-weight:700;color:'+phDiscCol+';text-transform:uppercase;margin-bottom:2px;">'+ph.discipline+'</div>';
+        h+='<div style="font-size:11px;color:var(--fg);font-weight:600;line-height:1.3;">'+ph.caption+'</div>';
         h+='<button data-pid="'+ph.id+'" onclick="frDeletePhoto(this.dataset.pid);" ';
-        h+='style="margin-top:4px;padding:2px 8px;border-radius:5px;border:1px solid var(--border);background:transparent;color:var(--dimL);font-size:9px;cursor:pointer;">✕ Delete</button>';
+        h+='style="margin-top:6px;padding:3px 8px;border-radius:6px;border:1px solid rgba(231,76,60,0.3);background:transparent;color:#E74C3C;font-size:9px;cursor:pointer;">✕ Delete</button>';
         h+='</div></div>';
       }
       h+='</div>';
     }
+  }
+
+  // ══ IMPORT TAB ═════════════════════════════════════════════
+  else if(_frTab==='import'){
+    h+='<div style="background:linear-gradient(135deg,var(--card),#0d1a30);border:1px solid rgba(167,139,250,0.2);border-radius:14px;padding:14px;margin-bottom:10px;border-left:4px solid #A78BFA;">';
+    h+='<div style="font-size:10px;color:rgba(167,139,250,0.8);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;">📥 Import External Daily Log</div>';
+    h+='<div style="font-size:12px;color:var(--dimL);line-height:1.7;margin-bottom:12px;">Import daily logs from colleague emails, contractor forms, or external tools. External fields are automatically mapped to SITESYNC labels. Unrecognised fields are stored under "Additional Information".</div>';
+
+    // Field mapping UI
+    h+='<div style="background:rgba(167,139,250,0.07);border-radius:10px;padding:12px;margin-bottom:12px;">';
+    h+='<div style="font-size:10px;color:#A78BFA;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Field Mapping — External → SITESYNC</div>';
+    var mappings=[
+      {from:'Activity Name / Work Done',to:'Activity'},
+      {from:'Team / Department',to:'Discipline'},
+      {from:'Status / Completion',to:'Status'},
+      {from:'Remarks / Comments',to:'Notes'},
+      {from:'Location / Bridge / Road',to:'Discipline (auto-detected)'},
+    ];
+    for(var mi=0;mi<mappings.length;mi++){
+      h+='<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.06);">';
+      h+='<div style="flex:1;font-size:11px;color:var(--dimL);">'+mappings[mi].from+'</div>';
+      h+='<div style="font-size:11px;color:rgba(255,255,255,0.3);">→</div>';
+      h+='<div style="flex:1;font-size:11px;font-weight:700;color:#A78BFA;">'+mappings[mi].to+'</div>';
+      h+='</div>';
+    }
+    h+='</div>';
+
+    // Manual import form
+    h+='<div style="font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Paste External Entry</div>';
+    h+='<select id="fr-imp-disc" style="width:100%;padding:9px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:var(--fg);font-size:13px;font-family:inherit;margin-bottom:8px;">';
+    for(var di4=0;di4<discList.length;di4++) h+='<option value="'+discList[di4][0]+'">'+discList[di4][1]+'</option>';
+    h+='</select>';
+    h+='<input type="text" id="fr-imp-act" placeholder="Activity / Work done (required)" ';
+    h+='style="width:100%;padding:10px 12px;border-radius:9px;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:var(--fg);font-size:13px;font-family:inherit;outline:none;margin-bottom:8px;">';
+    h+='<select id="fr-imp-st" style="width:100%;padding:9px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:var(--fg);font-size:13px;font-family:inherit;margin-bottom:8px;">';
+    for(var si2=0;si2<stList2.length;si2++) h+='<option value="'+stList2[si2]+'">'+stIcons[stList2[si2]]+' '+stList2[si2]+'</option>';
+    h+='</select>';
+    h+='<textarea id="fr-imp-notes" placeholder="Notes / Remarks (optional)" ';
+    h+='style="width:100%;padding:10px 12px;border-radius:9px;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:var(--fg);font-size:12px;font-family:inherit;height:60px;resize:none;outline:none;margin-bottom:8px;"></textarea>';
+    h+='<input type="text" id="fr-imp-extra" placeholder="Additional info (any non-standard fields)" ';
+    h+='style="width:100%;padding:10px 12px;border-radius:9px;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:var(--fg);font-size:13px;font-family:inherit;outline:none;margin-bottom:10px;">';
+    h+='<button onclick="frImportEntry();" style="width:100%;padding:12px;background:linear-gradient(135deg,#A78BFA,#7C3AED);border:none;border-radius:10px;color:#fff;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;">📥 Import Entry</button>';
+    h+='</div>';
+
+    // Standards reminder
+    h+='<div style="background:rgba(6,214,160,0.07);border:1px solid rgba(6,214,160,0.2);border-radius:10px;padding:12px;">';
+    h+='<div style="font-size:10px;color:#06D6A0;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">✅ SITESYNC Standards Applied</div>';
+    var standards=['All entries conform to: Discipline · Activity · Status · Notes','Unrecognised fields stored under "Additional Information"','Imported entries are flagged with 📥 badge','Original form data preserved in the Notes field'];
+    for(var sti=0;sti<standards.length;sti++){
+      h+='<div style="font-size:11px;color:var(--dimL);padding:3px 0;">• '+standards[sti]+'</div>';
+    }
     h+='</div>';
   }
 
-  // ══ REPORT PREVIEW TAB ═════════════════════════════════════
-  else if(_frTab==='report'){
+  // ══ PREVIEW TAB ════════════════════════════════════════════
+  else if(_frTab==='preview'){
     var ov5=calcOverallPct();
     var comp5=comparePlannedActual();
-    var variance5=comp5.variance;
-    var vCol5=variance5!==null&&variance5>=0?'var(--green)':'var(--red)';
+    var vPrev=comp5.variance;
+    var vColPrev=vPrev===null?'var(--dimL)':vPrev>=0?'#06D6A0':'#E74C3C';
 
-    h+='<div class="card" style="border-left:3px solid var(--gold);">';
-    h+='<div class="ct">📄 Daily Report Preview</div>';
-    h+='<div style="font-size:11px;color:var(--dimL);margin-bottom:12px;">Summary of today\'s field activities — tap PDF to download</div>';
-
-    // Overall progress strip
-    h+='<div style="display:flex;gap:8px;margin-bottom:10px;">';
-    var rpKpis=[
-      {v:ov5+'%',l:'Progress',c:'var(--gold)'},
-      {v:variance5!==null?(variance5>=0?'+':'')+variance5+'%':'—',l:'Variance',c:vCol5},
-      {v:todayDiary.length+'',l:'Activities',c:'var(--blue)'},
-      {v:todayPhotos.length+'',l:'Photos',c:'var(--dimL)'},
+    h+='<div style="background:linear-gradient(135deg,var(--card),#1a1200);border:1px solid rgba(255,193,69,0.2);border-radius:14px;padding:14px;margin-bottom:10px;border-left:4px solid #FFC145;">';
+    h+='<div style="font-size:10px;color:rgba(255,193,69,0.8);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;">📄 Report Preview — '+todayStr+'</div>';
+    // KPI row
+    h+='<div style="display:flex;gap:8px;margin-bottom:12px;">';
+    var prKpis=[
+      {v:ov5+'%',l:'Overall',c:'#D4A843'},
+      {v:vPrev!==null?(vPrev>=0?'+':'')+vPrev+'%':'—',l:'Variance',c:vColPrev},
+      {v:todayDiary.length+'',l:'Activities',c:'#FFC145'},
+      {v:todayPhotos.length+'',l:'Photos',c:'#58A6FF'},
     ];
-    for(var ki=0;ki<rpKpis.length;ki++){
-      h+='<div style="flex:1;background:var(--panel);border-radius:8px;padding:7px;text-align:center;">';
-      h+='<div style="font-size:16px;font-weight:900;color:'+rpKpis[ki].c+';">'+rpKpis[ki].v+'</div>';
-      h+='<div style="font-size:8px;color:var(--dimL);text-transform:uppercase;letter-spacing:0.5px;margin-top:2px;">'+rpKpis[ki].l+'</div>';
+    for(var ki=0;ki<prKpis.length;ki++){
+      h+='<div style="flex:1;background:rgba(255,255,255,0.05);border-radius:9px;padding:9px 6px;text-align:center;">';
+      h+='<div style="font-size:16px;font-weight:900;color:'+prKpis[ki].c+';">'+prKpis[ki].v+'</div>';
+      h+='<div style="font-size:8px;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:0.5px;margin-top:2px;">'+prKpis[ki].l+'</div>';
       h+='</div>';
     }
     h+='</div>';
-
-    // Diary entries preview
-    h+='<div style="font-size:10px;font-weight:700;color:var(--dimL);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Activities Logged Today</div>';
-    if(!todayDiary.length){
-      h+='<div style="font-size:11px;color:var(--dimL);font-style:italic;padding:4px 0;">No entries — go to Diary tab to log activities</div>';
-    } else {
-      for(var di4=0;di4<todayDiary.length;di4++){
-        var e2=todayDiary[di4];
-        var eC2=e2.status==='Completed'?'var(--green)':e2.status==='In Progress'?'var(--blue)':e2.status==='Delayed'?'var(--amber)':'var(--red)';
-        h+='<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--border);">';
-        h+='<span style="font-size:9px;color:'+eC2+';font-weight:700;background:'+eC2+'22;padding:1px 6px;border-radius:4px;flex-shrink:0;">'+e2.status+'</span>';
-        h+='<span style="font-size:11px;color:var(--fg);">'+e2.activity+'</span>';
+    // Activity summary
+    if(todayDiary.length){
+      h+='<div style="font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Activities</div>';
+      for(var di5=0;di5<todayDiary.length;di5++){
+        var e2=todayDiary[di5];
+        var eC2=stCols[e2.status]||'#4a5568';
+        h+='<div style="display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05);">';
+        h+='<span style="font-size:9px;color:'+eC2+';font-weight:700;background:'+eC2+'22;padding:1px 6px;border-radius:4px;white-space:nowrap;">'+(stIcons[e2.status]||'')+'</span>';
+        h+='<span style="font-size:11px;color:var(--fg);flex:1;">'+e2.activity+'</span>';
         h+='</div>';
       }
+    } else {
+      h+='<div style="font-size:11px;color:var(--dimL);font-style:italic;">No activities logged today</div>';
     }
-
-    // Photos preview
+    // Photo thumbnails
     if(todayPhotos.length){
-      h+='<div style="font-size:10px;font-weight:700;color:var(--dimL);text-transform:uppercase;letter-spacing:1px;margin:10px 0 6px;">Photos ('+todayPhotos.length+')</div>';
+      h+='<div style="font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin:10px 0 6px;">Photos</div>';
       h+='<div style="display:flex;gap:6px;overflow-x:auto;">';
       for(var pi2=0;pi2<todayPhotos.length;pi2++){
-        h+='<img src="'+todayPhotos[pi2].thumb+'" style="height:60px;width:80px;object-fit:cover;border-radius:6px;flex-shrink:0;border:1px solid var(--border);">';
+        h+='<img src="'+todayPhotos[pi2].thumb+'" style="height:64px;width:80px;object-fit:cover;border-radius:7px;flex-shrink:0;border:1px solid var(--border);">';
       }
       h+='</div>';
     }
     h+='</div>';
-
-    h+='<button onclick="dlFieldPDF();" style="width:100%;padding:13px;background:var(--gold);border:none;border-radius:10px;color:#000;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;margin-top:4px;">📥 Download Daily Field Report PDF</button>';
+    h+='<button onclick="dlFieldPDF();" style="width:100%;padding:14px;background:linear-gradient(135deg,#FFC145,#D4A843);border:none;border-radius:11px;color:#000;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;letter-spacing:0.3px;">📥 Download Daily Field Report PDF</button>';
   }
 
+  h+='<div style="height:20px;"></div>';
   document.getElementById('pg-fr').innerHTML=h;
-
+  // Re-bind static camera inputs
+  frInitInputs();
 }
 
-// ── Field Report handlers ──────────────────────────────────────
 function frSwitch(tab){ _frTab=tab; rFr(); }
+
+function frSelectDisc(btn){
+  _frDiaryDisc=btn.dataset.disc;
+  var btns=btn.parentElement.querySelectorAll('button');
+  var discCols2={bridges:'#D4A843',roads:'#58A6FF',utilities:'#38BDF8',fillslope:'#4ECDC4',survey:'#A78BFA',general:'#94a3b8'};
+  for(var k=0;k<btns.length;k++){
+    var dc2=discCols2[btns[k].dataset.disc]||'#94a3b8';
+    var isSel=btns[k].dataset.disc===_frDiaryDisc;
+    btns[k].style.background=isSel?dc2:'transparent';
+    btns[k].style.color=isSel?'#000':'rgba(255,255,255,0.5)';
+  }
+}
 
 function frSetStatus(btn){
   _frDiaryStatus=btn.dataset.st;
@@ -4091,6 +4213,37 @@ function frProcessPhoto(file){
     img.src=base64;
   };
   reader.readAsDataURL(file);
+}
+
+
+function frImportEntry(){
+  var disc=document.getElementById('fr-imp-disc');
+  var act=document.getElementById('fr-imp-act');
+  var st=document.getElementById('fr-imp-st');
+  var notes=document.getElementById('fr-imp-notes');
+  var extra=document.getElementById('fr-imp-extra');
+  if(!act||!act.value.trim()){flash('Enter activity name');return;}
+  var today=new Date().toISOString().slice(0,10);
+  var entry={
+    id:'fd_'+Date.now(),
+    date:today,
+    discipline:disc?disc.value:'general',
+    activity:act.value.trim(),
+    status:st?st.value:'Completed',
+    notes:notes?notes.value.trim():'',
+    ts:Date.now(),
+    importedFrom:'external'
+  };
+  if(extra&&extra.value.trim()){
+    entry.extraFields={'Additional Information':extra.value.trim()};
+  }
+  FIELD.diary.push(entry);
+  act.value='';
+  if(notes) notes.value='';
+  if(extra) extra.value='';
+  persist();
+  frSwitch('diary');
+  flash('Entry imported ✅');
 }
 
 function buildTicker(){
