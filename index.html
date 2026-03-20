@@ -1640,24 +1640,10 @@ function setUtAct(netId, actIdx, status, btn){
   n['a'+actIdx]=status;
   recalcUtPct(netId);
   saveUtNetworks();
-  // Update button styles
-  var btns=btn.parentElement.querySelectorAll('button');
-  var sColors=[SCOL['Not Started'],SCOL['In Progress'],SCOL['Complete']];
-  for(var k=0;k<btns.length;k++){
-    var isSel=btns[k].textContent.trim()===status;
-    btns[k].style.background=isSel?sColors[k]:'transparent';
-    btns[k].style.color=isSel?'#000':'var(--dimL)';
-  }
-  var parent=btn.parentElement.parentElement;
-  parent.style.border='1px solid '+(status!=='Not Started'?SCOL[status]:'var(--border)');
-  parent.style.background=SBGC[status]||'var(--panel)';
   buildTicker();
-  // Update pct display
-  var pctEl=document.getElementById('ut-pct-'+netId);
-  if(pctEl) pctEl.textContent=UTIL_NETWORKS[netId].pct+'%';
+  rUt();
 }
 
-// ── Reset network ──────────────────────────────────────────────
 function resetUtNetwork(netId){
   if(!confirm('Reset all activities for '+UTIL_NETWORKS[netId].name+'?')) return;
   var n=UTIL_NETWORKS[netId];
