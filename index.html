@@ -7174,95 +7174,179 @@ function calcFsEarned(){
 }
 
 function rFs(){
+  var FS_ITEMS=[
+    {key:'lm_r', label:'L\u2013M Right', zone:'Between Abutments L & M', side:'right', icon:'⛰️', w:0.175},
+    {key:'lm_l', label:'L\u2013M Left',  zone:'Between Abutments L & M', side:'left',  icon:'⛰️', w:0.175},
+    {key:'mn_r', label:'M\u2013N Right', zone:'Between Abutments M & N', side:'right', icon:'⛰️', w:0.175},
+    {key:'mn_l', label:'M\u2013N Left',  zone:'Between Abutments M & N', side:'left',  icon:'⛰️', w:0.175},
+  ];
+  var FS_TOTAL_W=0.7;
+  var stColors={'Not Started':'#4a5568','In Progress':'#4ECDC4','Complete':'#06D6A0'};
+  var stBg={'Not Started':'rgba(74,85,104,0.15)','In Progress':'rgba(78,205,196,0.15)','Complete':'rgba(6,214,160,0.15)'};
+
+  // Calc totals
+  var earned=0, doneCount=0, ipCount=0;
+  for(var i=0;i<FS_ITEMS.length;i++){
+    var st=FILL_SLOPE[FS_ITEMS[i].key]||'Not Started';
+    if(st==='Complete'){earned+=FS_ITEMS[i].w;doneCount++;}
+    else if(st==='In Progress'){earned+=FS_ITEMS[i].w*0.3;ipCount++;}
+  }
+  earned=Math.round(earned*1000)/1000;
+  var fsPct=Math.round(earned/FS_TOTAL_W*100*10)/10;
+  var fsStatus=doneCount===4?'Complete':doneCount>0||ipCount>0?'In Progress':'Not Started';
+  var fsStatusCol=stColors[fsStatus];
+  var fsAccentCol=fsPct>=75?'#06D6A0':fsPct>=30?'#4ECDC4':'#4a5568';
+
   var h='';
-  // Action buttons at top
-  h+='<div style="display:flex;gap:6px;margin-bottom:12px;">';
-  h+='<button onclick="openFsWeights();" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--dimL);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">⚙️ Edit Weights</button>';
-  h+='<button onclick="resetFsAll();" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--red);background:transparent;color:var(--red);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">🔄 Reset All</button>';
+
+  // ── Module Header ──────────────────────────────────────────
+  h+='<div style="background:linear-gradient(135deg,#0a1628 0%,#0d2a2a 60%,#0a1628 100%);';
+  h+='border-radius:14px;padding:16px;margin-bottom:14px;border:1px solid rgba(78,205,196,0.2);';
+  h+='position:relative;overflow:hidden;">';
+  h+='<div style="position:absolute;top:0;right:0;width:80px;height:80px;';
+  h+='background:radial-gradient(circle at top right,rgba(78,205,196,0.12),transparent 70%);pointer-events:none;"></div>';
+  h+='<div style="display:flex;align-items:flex-start;justify-content:space-between;">';
+  h+='<div>';
+  h+='<div style="font-size:11px;color:rgba(78,205,196,0.8);font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">IC1 Road Improvements</div>';
+  h+='<div style="font-size:20px;font-weight:900;color:#f1f5f9;letter-spacing:-0.5px;">Fill Slope</div>';
+  h+='<div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:3px;">Embankment fill between abutments L\u2013M and M\u2013N</div>';
+  h+='<div style="display:flex;align-items:center;gap:6px;margin-top:8px;">';
+  h+='<span style="background:rgba(78,205,196,0.15);border:1px solid rgba(78,205,196,0.3);color:#4ECDC4;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;">4 Zones</span>';
+  h+='<span style="background:rgba(212,168,67,0.12);border:1px solid rgba(212,168,67,0.25);color:#D4A843;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;">0.7% of Project</span>';
+  h+='</div></div>';
+  // SVG ring
+  var r3=28,s3=6,circ3=2*Math.PI*r3;
+  var df3=circ3*(fsPct/100),dg3=circ3-df3;
+  h+='<div style="width:72px;height:72px;">';
+  h+='<svg width="72" height="72" viewBox="0 0 72 72">';
+  h+='<circle cx="36" cy="36" r="'+r3+'" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="'+s3+'"/>';
+  h+='<circle cx="36" cy="36" r="'+r3+'" fill="none" stroke="'+fsAccentCol+'" stroke-width="'+s3+'" ';
+  h+='stroke-dasharray="'+Math.round(df3)+' '+Math.round(dg3)+'" stroke-dashoffset="'+(circ3*0.25)+'" ';
+  h+='transform="rotate(-90 36 36)" stroke-linecap="round"/>';
+  h+='<text x="36" y="33" text-anchor="middle" font-family="Segoe UI,Arial" font-size="11" font-weight="900" fill="'+fsAccentCol+'">'+fsPct+'%</text>';
+  h+='<text x="36" y="46" text-anchor="middle" font-family="Segoe UI,Arial" font-size="7" fill="rgba(255,255,255,0.35)">SLOPE</text>';
+  h+='</svg></div></div>';
   h+='</div>';
-  var items=[
-    {key:"lm_r",label:"L–M Right",w:0.175},
-    {key:"lm_l",label:"L–M Left", w:0.175},
-    {key:"mn_r",label:"M–N Right",w:0.175},
-    {key:"mn_l",label:"M–N Left", w:0.175}
+
+  // ── Summary Card ─────────────────────────────────────────
+  h+='<div style="background:linear-gradient(135deg,var(--card),#0d2a2a);border:1px solid rgba(78,205,196,0.25);';
+  h+='border-radius:14px;padding:14px;margin-bottom:14px;border-left:4px solid #4ECDC4;">';
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">';
+  h+='<div>';
+  h+='<div style="font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:1px;">Slope Summary</div>';
+  h+='<div style="font-size:17px;font-weight:900;color:var(--text);margin-top:3px;">Overall Fill Progress</div>';
+  h+='</div>';
+  h+='<span style="font-size:10px;font-weight:700;padding:4px 12px;border-radius:10px;';
+  h+='background:'+stBg[fsStatus]+';color:'+fsStatusCol+';border:1px solid '+fsStatusCol+'33;">'+fsStatus+'</span>';
+  h+='</div>';
+  // Big progress bar
+  h+='<div style="margin-bottom:10px;">';
+  h+='<div style="display:flex;justify-content:space-between;margin-bottom:6px;">';
+  h+='<span style="font-size:11px;color:var(--dimL);">Progress</span>';
+  h+='<span style="font-size:13px;font-weight:900;color:'+fsAccentCol+';">'+fsPct+'%</span>';
+  h+='</div>';
+  h+='<div style="height:10px;background:rgba(255,255,255,0.07);border-radius:5px;overflow:hidden;">';
+  h+='<div style="width:'+Math.min(100,fsPct)+'%;height:10px;background:linear-gradient(90deg,#4ECDC4,#06D6A0);border-radius:5px;transition:width 0.4s;"></div>';
+  h+='</div></div>';
+  // Stats row
+  h+='<div style="display:flex;gap:8px;margin-bottom:12px;">';
+  var fsKpis=[
+    {v:doneCount+'/4',l:'Complete',c:'#06D6A0'},
+    {v:ipCount+'',l:'In Progress',c:'#4ECDC4'},
+    {v:Math.round(earned*1000)/1000+'%',l:'Earned',c:'#D4A843'},
+    {v:Math.round((0.7-earned)*1000)/1000+'%',l:'Remaining',c:'#4a5568'},
+  ];
+  for(var ki=0;ki<fsKpis.length;ki++){
+    h+='<div style="flex:1;background:rgba(255,255,255,0.04);border-radius:8px;padding:7px 5px;text-align:center;">';
+    h+='<div style="font-size:14px;font-weight:900;color:'+fsKpis[ki].c+';">'+fsKpis[ki].v+'</div>';
+    h+='<div style="font-size:8px;color:var(--dimL);text-transform:uppercase;letter-spacing:0.5px;margin-top:2px;">'+fsKpis[ki].l+'</div>';
+    h+='</div>';
+  }
+  h+='</div>';
+  // Action buttons
+  h+='<div style="display:flex;gap:8px;">';
+  h+='<button onclick="openFsWeights();" style="flex:1;padding:9px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:var(--dimL);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">⚖️ Edit Weights</button>';
+  h+='<button onclick="resetFsAll();" style="flex:1;padding:9px;border-radius:9px;border:1px solid rgba(231,76,60,0.3);background:rgba(231,76,60,0.07);color:#E74C3C;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">🔄 Reset All</button>';
+  h+='</div></div>';
+
+  // ── Zone grouping ─────────────────────────────────────────
+  var zones=[
+    {label:'L\u2013M Zone',items:[FS_ITEMS[0],FS_ITEMS[1]],col:'#58A6FF'},
+    {label:'M\u2013N Zone',items:[FS_ITEMS[2],FS_ITEMS[3]],col:'#A78BFA'},
   ];
 
-  var earned=calcFsEarned();
-  var doneCount=0; var ipCount=0;
-  for(var i=0;i<items.length;i++){
-    var st=FILL_SLOPE[items[i].key]||"Not Started";
-    if(st==="Complete") doneCount++;
-    else if(st==="In Progress") ipCount++;
-  }
-  var overallSt=doneCount===4?"Complete":doneCount>0||ipCount>0?"In Progress":"Not Started";
-  var stCol=overallSt==="Complete"?"var(--green)":overallSt==="In Progress"?"var(--blue)":"var(--dim)";
-
-  // Header card
-  h+='<div class="card" style="border-left:3px solid #4ECDC4;">';
-  h+='<div style="display:flex;align-items:center;justify-content:space-between;">';
-  h+='<div>';
-  h+='<div class="ct" style="margin-bottom:4px;">⛰️ Fill Slope</div>';
-  h+='<div style="font-size:11px;color:var(--dimL);">Embankment fill between bridge abutments L–M and M–N</div>';
-  h+='<div style="font-size:11px;color:var(--dimL);margin-top:3px;">Total weight: <b style="color:var(--gold);">0.7%</b> &nbsp;·&nbsp; Each: <b style="color:var(--gold);">0.175%</b></div>';
-  h+='</div>';
-  h+='<div style="text-align:right;">';
-  h+='<div style="font-size:24px;font-weight:900;color:#4ECDC4;">'+Math.round(earned/0.7*100)+'%</div>';
-  h+='<div style="font-size:11px;color:'+stCol+';background:'+stCol+'22;padding:2px 8px;border-radius:10px;">'+overallSt+'</div>';
-  h+='</div></div>';
-  // Progress bar
-  h+='<div style="height:7px;background:var(--panel);border-radius:4px;margin-top:10px;">';
-  h+='<div style="width:'+Math.round(earned/0.7*100)+'%;height:7px;background:#4ECDC4;border-radius:4px;transition:width 0.3s;"></div></div>';
-  h+='</div>';
-
-  // Items card
-  h+='<div class="card" style="margin-top:12px;">';
-  h+='<div class="ct" style="margin-bottom:12px;">Fill Slope Items</div>';
-
-  for(var j=0;j<items.length;j++){
-    var item=items[j];
-    var itemSt=FILL_SLOPE[item.key]||"Not Started";
-    var iCol=SCOL[itemSt]||"var(--dim)";
-    var iBg=itemSt==="Complete"?"var(--green)11":itemSt==="In Progress"?"var(--blue)11":"var(--panel)";
-    var iBorder=itemSt==="Complete"?"var(--green)":itemSt==="In Progress"?"var(--blue)":"var(--border)";
-
-    h+='<div style="border:1px solid '+iBorder+';border-radius:10px;padding:11px 14px;margin-bottom:8px;background:'+iBg+';">';
-    // Row 1: label + weight badge
-    h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">';
-    h+='<div style="font-size:13px;font-weight:700;color:var(--fg);">⛰️ '+item.label+'</div>';
-    h+='<span style="font-size:11px;font-weight:700;color:#4ECDC4;background:#4ECDC422;padding:2px 10px;border-radius:10px;">'+item.w+'%</span>';
+  for(var zi=0;zi<zones.length;zi++){
+    var zone=zones[zi];
+    h+='<div style="font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;margin-top:'+(zi===0?'0':'14px')+';">';
+    h+='<span style="border-left:3px solid '+zone.col+';padding-left:8px;">'+zone.label+'</span>';
     h+='</div>';
-    // Row 2: status buttons
-    h+='<div style="display:flex;gap:6px;">';
-    var statuses=["Not Started","In Progress","Complete"];
-    var sCols2=["var(--dim)","var(--blue)","var(--green)"];
-    for(var si=0;si<statuses.length;si++){
-      var isSel=itemSt===statuses[si];
-      var btnKey=item.key; var btnSt=statuses[si];
-      h+='<button onclick="setFs(\''+btnKey+'\',\''+btnSt+'\');" ';
-      h+='style="flex:1;padding:5px 4px;border-radius:7px;border:2px solid '+sCols2[si]+';';
-      h+='background:'+(isSel?sCols2[si]:'transparent')+';';
-      h+='color:'+(isSel?'#000':'var(--dimL)')+';';
-      h+='font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;">'+statuses[si]+'</button>';
-    }
-    h+='</div>';
-    // Earned contribution
-    var contrib=itemSt==="Complete"?item.w:itemSt==="In Progress"?item.w*0.3:0;
-    if(contrib>0){
-      h+='<div style="margin-top:6px;font-size:10px;color:'+iCol+';">✓ Contributing: +'+Math.round(contrib*1000)/1000+'% to overall</div>';
+    h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px;">';
+
+    for(var ii=0;ii<zone.items.length;ii++){
+      var item=zone.items[ii];
+      var curSt=FILL_SLOPE[item.key]||'Not Started';
+      var itemEarned=curSt==='Complete'?item.w:curSt==='In Progress'?Math.round(item.w*0.3*1000)/1000:0;
+      var itemPct=curSt==='Complete'?100:curSt==='In Progress'?30:0;
+      var itemCol=stColors[curSt];
+      var sideIcon=item.side==='right'?'→':'←';
+      var stList=['Not Started','In Progress','Complete'];
+      var stCols2=['#4a5568','#4ECDC4','#06D6A0'];
+
+      h+='<div style="background:var(--card);border:1px solid '+(curSt!=='Not Started'?itemCol+'44':'var(--border)')+';';
+      h+='border-radius:12px;padding:12px;';
+      if(curSt==='Complete') h+='border-left:3px solid #06D6A0;';
+      else if(curSt==='In Progress') h+='border-left:3px solid #4ECDC4;';
+      else h+='border-left:3px solid rgba(255,255,255,0.08);';
+      h+='">';
+
+      // Item header
+      h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">';
+      h+='<div>';
+      h+='<div style="font-size:12px;font-weight:900;color:var(--text);">'+sideIcon+' '+item.label+'</div>';
+      h+='<span style="font-size:9px;font-weight:700;color:#D4A843;background:rgba(212,168,67,0.12);border:1px solid rgba(212,168,67,0.2);padding:1px 6px;border-radius:5px;">'+item.w+'%</span>';
+      h+='</div>';
+      h+='<div style="font-size:18px;">'+item.icon+'</div>';
+      h+='</div>';
+
+      // Progress bar
+      h+='<div style="height:5px;background:rgba(255,255,255,0.07);border-radius:3px;margin-bottom:5px;overflow:hidden;">';
+      h+='<div style="width:'+itemPct+'%;height:5px;background:'+itemCol+';border-radius:3px;transition:width 0.3s;"></div>';
+      h+='</div>';
+      h+='<div style="font-size:9px;color:var(--dimL);margin-bottom:9px;">+'+itemEarned+'% to overall</div>';
+
+      // 3-state buttons
+      h+='<div style="display:flex;flex-direction:column;gap:4px;">';
+      for(var k=0;k<stList.length;k++){
+        var isSel=curSt===stList[k];
+        var btnLabel=stList[k]==='Not Started'?'— None':stList[k]==='In Progress'?'🔨 WIP':'✅ Done';
+        h+='<button data-fskey="'+item.key+'" data-st="'+stList[k]+'" ';
+        h+='onclick="fsSetStatus(this);" ';
+        h+='style="width:100%;padding:8px 6px;border-radius:8px;';
+        h+='border:1.5px solid '+stCols2[k]+';';
+        h+='background:'+(isSel?stCols2[k]:'transparent')+';';
+        h+='color:'+(isSel?'#000':'rgba(255,255,255,0.35)')+';';
+        h+='font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;';
+        h+='min-height:34px;text-align:center;">'+btnLabel+'</button>';
+      }
+      h+='</div></div>';
     }
     h+='</div>';
   }
 
-  // Summary row
-  h+='<div style="margin-top:4px;padding:9px 12px;background:var(--panel);border-radius:8px;display:flex;justify-content:space-between;align-items:center;">';
-  h+='<span style="font-size:11px;color:var(--dimL);">'+doneCount+' complete &nbsp;·&nbsp; '+ipCount+' in progress &nbsp;·&nbsp; '+(4-doneCount-ipCount)+' pending</span>';
-  h+='<span style="font-size:12px;font-weight:700;color:#4ECDC4;">'+Math.round(earned*1000)/1000+'% earned</span>';
-  h+='</div>';
-  h+='</div>';
-
-  document.getElementById("pg-fs").innerHTML=h;
+  h+='<div style="height:20px;"></div>';
+  document.getElementById('pg-fs').innerHTML=h;
+  buildTicker();
 }
 
+function fsSetStatus(btn){
+  var key=btn.dataset.fskey;
+  var st=btn.dataset.st;
+  FILL_SLOPE[key]=st;
+  persist();
+  rFs();
+  rOv();
+  buildTicker();
+}
 
 function setRdAct(key, val){
   ROADS[key]=val;
