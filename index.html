@@ -8158,251 +8158,282 @@ function rGn(){
 }
 
 function rMp(){
-  var ibnPct=ROADS.ibn.pct||0;
-  var satPct=ROADS.sattam.pct||0;
-  var ibnSt=ROADS.ibn.status||"Not Started";
-  var satSt=ROADS.sattam.status||"Not Started";
+  var ibnPct   = Math.round((ROADS.ibn.pct||0)*10)/10;
+  var satPct   = Math.round((ROADS.sattam.pct||0)*10)/10;
+  var W=640, H=500;
+
+  // ── Compute bridge pct ────────────────────────────────────
+  function calcBrPct(brId){
+    var earned=0,total=0;
+    for(var b=0;b<BRIDGES.length;b++){
+      if(BRIDGES[b].id!==brId) continue;
+      for(var p=0;p<BRIDGES[b].piers.length;p++){
+        var pier=BRIDGES[b].piers[p];
+        var isDr=DIRECT.indexOf(pier)>-1;
+        for(var s=0;s<STAGES.length;s++){
+          if(STAGES[s].id==='PIL'&&isDr) continue;
+          var sw=STAGES[s].w; if(isDr) sw=Math.round(sw*(100/82)*10)/10;
+          total+=sw;
+          var sv=gps(pier,STAGES[s].id);
+          if(sv==='Complete'||sv==='Inspected') earned+=sw;
+          else if(sv==='In Progress') earned+=sw*0.3;
+        }
+      }
+      break;
+    }
+    return total>0?Math.round(earned/total*100):0;
+  }
+  function brColor(pct){
+    if(pct>=100) return '#06D6A0';
+    if(pct>=30)  return '#D4A843';
+    if(pct>0)    return '#58A6FF';
+    return '#2a3f58';
+  }
+
+  // ── Bridge positions — circular arrangement ───────────────
+  // 10 bridges in a circle, center of SVG
+  var cx=320, cy=248, circR=148;
+  var bridgeIds=['A','B','C','D','E','G','K','L','M','N'];
+  var BCIRC=[];
+  for(var i=0;i<bridgeIds.length;i++){
+    // Start from top (-90°), go clockwise
+    var angle=-90 + i*(360/bridgeIds.length);
+    var rad=angle*Math.PI/180;
+    BCIRC.push({
+      id: bridgeIds[i],
+      x: Math.round(cx + circR*Math.cos(rad)),
+      y: Math.round(cy + circR*Math.sin(rad))
+    });
+  }
+
+  var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block;" xmlns="http://www.w3.org/2000/svg">';
+
+  // ── Defs ──────────────────────────────────────────────────
+  svg+='<defs>';
+  svg+='<radialGradient id="bgRad" cx="50%" cy="50%" r="60%">';
+  svg+='<stop offset="0%" stop-color="#0d1e3a"/>';
+  svg+='<stop offset="100%" stop-color="#070e1a"/>';
+  svg+='</radialGradient>';
+  svg+='<style>';
+  // Wide red blink — outer ring pulses red
+  svg+='.blink-outer{animation:red-pulse 1.2s ease-in-out infinite;}';
+  svg+='@keyframes red-pulse{0%,100%{opacity:0;r:26}50%{opacity:0.9;r:38}}';
+  svg+='.blink-mid{animation:red-mid 1.2s ease-in-out infinite;}';
+  svg+='@keyframes red-mid{0%,100%{opacity:0.1}50%{opacity:0.55}}';
+  svg+='.blink-arc{animation:arc-flash 1.2s ease-in-out infinite;}';
+  svg+='@keyframes arc-flash{0%,100%{opacity:0.4}50%{opacity:1}}';
+  svg+='</style>';
+  svg+='</defs>';
+
+  // Background
+  svg+='<rect width="'+W+'" height="'+H+'" fill="url(#bgRad)"/>';
+  // Subtle grid
+  for(var gx=0;gx<=W;gx+=44) svg+='<line x1="'+gx+'" y1="0" x2="'+gx+'" y2="'+H+'" stroke="#ffffff06" stroke-width="0.5"/>';
+  for(var gy=0;gy<=H;gy+=44) svg+='<line x1="0" y1="'+gy+'" x2="'+W+'" y2="'+gy+'" stroke="#ffffff06" stroke-width="0.5"/>';
+
+  // ── Circular track (road ring) ────────────────────────────
+  svg+='<circle cx="'+cx+'" cy="'+cy+'" r="'+circR+'" fill="none" stroke="#1e2d44" stroke-width="38"/>';
+  svg+='<circle cx="'+cx+'" cy="'+cy+'" r="'+circR+'" fill="none" stroke="#D4A843" stroke-width="1.5" stroke-dasharray="22,10" opacity="0.4"/>';
+  svg+='<circle cx="'+cx+'" cy="'+cy+'" r="'+(circR-19)+'" fill="none" stroke="#D4A843" stroke-width="1" opacity="0.25"/>';
+  svg+='<circle cx="'+cx+'" cy="'+cy+'" r="'+(circR+19)+'" fill="none" stroke="#D4A843" stroke-width="1" opacity="0.25"/>';
+
+  // ── Center hub (overall progress) ────────────────────────
   var ov=calcOverallPct();
-
-  function rdCol(st){
-    return st==="Complete"?"#06D6A0":st==="In Progress"?"#58A6FF":st==="On Hold"?"#E63946":"#2a3a54";
+  // Outer hub ring
+  svg+='<circle cx="'+cx+'" cy="'+cy+'" r="72" fill="#0a1422" stroke="#D4A843" stroke-width="1.5" opacity="0.4"/>';
+  svg+='<circle cx="'+cx+'" cy="'+cy+'" r="58" fill="#0d1a2e" stroke="#D4A843" stroke-width="2"/>';
+  // Progress arc on hub
+  if(ov>0){
+    var hubR=58, hubAngle=(ov/100*360-0.01)*Math.PI/180;
+    var hx2=cx+hubR*Math.sin(hubAngle), hy2=cy-hubR*Math.cos(hubAngle);
+    var hlg=ov>50?1:0;
+    svg+='<path d="M '+cx+' '+(cy-hubR)+' A '+hubR+' '+hubR+' 0 '+hlg+' 1 '+Math.round(hx2*10)/10+' '+Math.round(hy2*10)/10+'" fill="none" stroke="#D4A843" stroke-width="5" stroke-linecap="round" opacity="0.9"/>';
   }
-  var ibnCol=rdCol(ibnSt), satCol=rdCol(satSt);
+  svg+='<text x="'+cx+'" y="'+(cy-8)+'" text-anchor="middle" font-size="26" font-weight="900" fill="#D4A843" font-family="Segoe UI,Arial">'+ov+'%</text>';
+  svg+='<text x="'+cx+'" y="'+(cy+10)+'" text-anchor="middle" font-size="10" font-weight="700" fill="rgba(255,255,255,0.5)" font-family="Segoe UI,Arial">OVERALL</text>';
+  svg+='<text x="'+cx+'" y="'+(cy+24)+'" text-anchor="middle" font-size="9" fill="rgba(255,255,255,0.3)" font-family="Segoe UI,Arial">IC1 BRIDGES</text>';
 
-  var h='<div style="text-align:center;">';
-  h+='<div style="display:inline-block;width:100%;max-width:640px;">';
-  h+='<svg viewBox="0 0 640 420" style="width:100%;background:#0a0f16;border-radius:12px;border:1px solid #1e2d3d;" xmlns="http://www.w3.org/2000/svg">';
-
-  // Background grid
-  var gx,gy;
-  for(gx=0;gx<640;gx+=40) h+='<line x1="'+gx+'" y1="0" x2="'+gx+'" y2="420" stroke="#ffffff06" stroke-width="1"/>';
-  for(gy=0;gy<420;gy+=40) h+='<line x1="0" y1="'+gy+'" x2="640" y2="'+gy+'" stroke="#ffffff06" stroke-width="1"/>';
-
-  // PRINCE SATTAM ROAD (top y=72-104)
-  h+='<rect x="0" y="72" width="640" height="32" fill="#151e2a"/>';
-  h+='<line x1="0" y1="88" x2="640" y2="88" stroke="#ffffff15" stroke-width="1" stroke-dasharray="20,12"/>';
-  h+='<line x1="0" y1="72" x2="640" y2="72" stroke="#ffffff20" stroke-width="1"/>';
-  h+='<line x1="0" y1="104" x2="640" y2="104" stroke="#ffffff20" stroke-width="1"/>';
-  if(satPct>0){
-    var satW=Math.round(640*satPct/100);
-    h+='<rect x="0" y="72" width="'+satW+'" height="32" fill="'+satCol+'" opacity="0.2"/>';
-    h+='<line x1="'+satW+'" y1="72" x2="'+satW+'" y2="104" stroke="'+satCol+'" stroke-width="2.5" opacity="0.9"/>';
-  }
-  h+='<rect x="4" y="76" width="138" height="20" rx="4" fill="#0a0f16bb"/>';
-  h+='<text x="10" y="90" font-size="9" font-weight="700" fill="'+satCol+'" font-family="Arial" letter-spacing="0.3">PR. SATTAM ROAD</text>';
-  h+='<rect x="498" y="76" width="138" height="20" rx="4" fill="#0a0f16bb"/>';
-  h+='<text x="504" y="90" font-size="9" font-weight="700" fill="'+satCol+'" font-family="Arial">'+satPct+'%  '+satSt+'</text>';
-
-  // KING KHALID ROAD (middle y=178-222 — dual carriageway)
-  h+='<rect x="0" y="178" width="640" height="44" fill="#141d28"/>';
-  h+='<rect x="0" y="198" width="640" height="4" fill="#D4A84333"/>';
-  h+='<line x1="0" y1="200" x2="640" y2="200" stroke="#D4A84355" stroke-width="1.5" stroke-dasharray="25,10"/>';
-  h+='<line x1="0" y1="189" x2="640" y2="189" stroke="#ffffff11" stroke-width="1" stroke-dasharray="18,10"/>';
-  h+='<line x1="0" y1="211" x2="640" y2="211" stroke="#ffffff11" stroke-width="1" stroke-dasharray="18,10"/>';
-  h+='<line x1="0" y1="178" x2="640" y2="178" stroke="#D4A84333" stroke-width="1"/>';
-  h+='<line x1="0" y1="222" x2="640" y2="222" stroke="#D4A84333" stroke-width="1"/>';
-  h+='<rect x="246" y="183" width="148" height="16" rx="4" fill="#0a0f16aa"/>';
-  h+='<text x="320" y="195" text-anchor="middle" font-size="8" font-weight="700" fill="#D4A84388" font-family="Arial" letter-spacing="1">KING KHALID ROAD</text>';
-
-  // IBN SAUD ROAD (bottom y=316-348)
-  h+='<rect x="0" y="316" width="640" height="32" fill="#151e2a"/>';
-  h+='<line x1="0" y1="332" x2="640" y2="332" stroke="#ffffff15" stroke-width="1" stroke-dasharray="20,12"/>';
-  h+='<line x1="0" y1="316" x2="640" y2="316" stroke="#ffffff20" stroke-width="1"/>';
-  h+='<line x1="0" y1="348" x2="640" y2="348" stroke="#ffffff20" stroke-width="1"/>';
-  if(ibnPct>0){
-    var ibnW=Math.round(640*ibnPct/100);
-    h+='<rect x="0" y="316" width="'+ibnW+'" height="32" fill="'+ibnCol+'" opacity="0.2"/>';
-    h+='<line x1="'+ibnW+'" y1="316" x2="'+ibnW+'" y2="348" stroke="'+ibnCol+'" stroke-width="2.5" opacity="0.9"/>';
-  }
-  h+='<rect x="4" y="320" width="126" height="20" rx="4" fill="#0a0f16bb"/>';
-  h+='<text x="10" y="334" font-size="9" font-weight="700" fill="'+ibnCol+'" font-family="Arial" letter-spacing="0.3">IBN SAUD ROAD</text>';
-  h+='<rect x="498" y="320" width="138" height="20" rx="4" fill="#0a0f16bb"/>';
-  h+='<text x="504" y="334" font-size="9" font-weight="700" fill="'+ibnCol+'" font-family="Arial">'+ibnPct+'%  '+ibnSt+'</text>';
-
-  // Cross-streets linking all three roads
-  var cxs=[50,150,250,350,450,570];
-  for(var ci=0;ci<cxs.length;ci++){
-    var cx=cxs[ci];
-    h+='<line x1="'+cx+'" y1="104" x2="'+cx+'" y2="178" stroke="#1e2d3d" stroke-width="6"/>';
-    h+='<line x1="'+cx+'" y1="222" x2="'+cx+'" y2="316" stroke="#1e2d3d" stroke-width="6"/>';
-    h+='<line x1="'+cx+'" y1="104" x2="'+cx+'" y2="178" stroke="#ffffff08" stroke-width="3" stroke-dasharray="8,6"/>';
-    h+='<line x1="'+cx+'" y1="222" x2="'+cx+'" y2="316" stroke="#ffffff08" stroke-width="3" stroke-dasharray="8,6"/>';
+  // ── Spoke lines from center to bridges ───────────────────
+  for(var i=0;i<BCIRC.length;i++){
+    var b=BCIRC[i];
+    var bpct=calcBrPct(b.id);
+    var bcol=brColor(bpct);
+    // Spoke from hub edge to bridge
+    var spokeStartR=72;
+    var angle2=Math.atan2(b.y-cy,b.x-cx);
+    var sx=cx+spokeStartR*Math.cos(angle2);
+    var sy=cy+spokeStartR*Math.sin(angle2);
+    svg+='<line x1="'+Math.round(sx)+'" y1="'+Math.round(sy)+'" x2="'+b.x+'" y2="'+b.y+'" stroke="'+bcol+'" stroke-width="1" opacity="0.2"/>';
   }
 
-  // Bridge nodes on King Khalid Road
-  var BPOS=[
-    {id:"A",x:72},{id:"B",x:130},{id:"C",x:190},{id:"D",x:252},
-    {id:"E",x:304},{id:"G",x:344},{id:"K",x:406},{id:"L",x:454},
-    {id:"M",x:496},{id:"N",x:546}
-  ];
-  for(var bi=0;bi<BRIDGES.length;bi++){
-    var br=BRIDGES[bi];
-    var bpos=null;
-    for(var bpi=0;bpi<BPOS.length;bpi++){if(BPOS[bpi].id===br.id){bpos=BPOS[bpi];break;}}
-    if(!bpos) continue;
-    var pct=calcBrPct(br.id);
-    var col=pct===100?"#06D6A0":pct>0?"#D4A843":"#3a4a5a";
-    var bx=bpos.x;
-    // Bridge span indicator
-    h+='<rect x="'+(bx-8)+'" y="172" width="16" height="56" fill="'+col+'" opacity="0.1" rx="2"/>';
-    h+='<line x1="'+bx+'" y1="158" x2="'+bx+'" y2="228" stroke="'+col+'" stroke-width="1.5" opacity="0.5"/>';
-    h+='<line x1="'+(bx-8)+'" y1="172" x2="'+(bx+8)+'" y2="172" stroke="'+col+'" stroke-width="2.5" opacity="0.7"/>';
-    h+='<line x1="'+(bx-8)+'" y1="222" x2="'+(bx+8)+'" y2="222" stroke="'+col+'" stroke-width="2.5" opacity="0.7"/>';
-    // Circle
-    h+='<circle cx="'+bx+'" cy="200" r="16" fill="'+col+'" opacity="0.2"/>';
-    h+='<circle cx="'+bx+'" cy="200" r="12" fill="#0d1520" stroke="'+col+'" stroke-width="1.8"/>';
-    h+='<text x="'+bx+'" y="204" text-anchor="middle" font-size="10" font-weight="900" fill="'+col+'" font-family="Arial">'+br.id+'</text>';
-    // Pct below
-    h+='<text x="'+bx+'" y="242" text-anchor="middle" font-size="8" font-weight="700" fill="'+col+'" font-family="Arial">'+pct+'%</text>';
-    // Label above
-    h+='<text x="'+bx+'" y="162" text-anchor="middle" font-size="7" fill="#4a6a8a" font-family="Arial">Br'+br.id+'</text>';
+  // ── Bridge nodes ─────────────────────────────────────────
+  var brR=18;
+  for(var i=0;i<BCIRC.length;i++){
+    var b=BCIRC[i];
+    var bpct=calcBrPct(b.id);
+    var bcol=brColor(bpct);
+    var isActive=bpct>0&&bpct<100;
+    var isComplete=bpct>=100;
+
+    // Wide red blinking rings for active bridges
+    if(isActive){
+      // Outermost wide red pulse
+      svg+='<circle class="blink-outer" cx="'+b.x+'" cy="'+b.y+'" r="36" fill="#E74C3C" opacity="0"/>';
+      // Mid red ring
+      svg+='<circle class="blink-mid" cx="'+b.x+'" cy="'+b.y+'" r="28" fill="none" stroke="#E74C3C" stroke-width="4" opacity="0.1"/>';
+    }
+
+    // Bridge circle base
+    svg+='<circle cx="'+b.x+'" cy="'+b.y+'" r="'+brR+'" fill="#0d1a2e" stroke="'+bcol+'" stroke-width="'+(isActive?3:isComplete?2.5:1.5)+'"/>';
+
+    // Progress arc
+    if(bpct>0&&bpct<100){
+      var angle3=(bpct/100*360-0.01)*Math.PI/180;
+      var ax2=b.x+brR*Math.sin(angle3);
+      var ay2=b.y-brR*Math.cos(angle3);
+      var alg=bpct>50?1:0;
+      var arcClass=' class="blink-arc"';
+      svg+='<path'+arcClass+' d="M '+b.x+' '+(b.y-brR)+' A '+brR+' '+brR+' 0 '+alg+' 1 '+Math.round(ax2*10)/10+' '+Math.round(ay2*10)/10+'" fill="none" stroke="#E74C3C" stroke-width="5" stroke-linecap="round"/>';
+    } else if(isComplete){
+      svg+='<circle cx="'+b.x+'" cy="'+b.y+'" r="'+brR+'" fill="'+bcol+'" opacity="0.2"/>';
+    }
+
+    // Bridge ID
+    svg+='<text x="'+b.x+'" y="'+(b.y-2)+'" text-anchor="middle" font-size="14" font-weight="900" fill="'+bcol+'" font-family="Segoe UI,Arial">'+b.id+'</text>';
+    // Bridge %
+    svg+='<text x="'+b.x+'" y="'+(b.y+13)+'" text-anchor="middle" font-size="10" font-weight="700" fill="'+bcol+'" font-family="Segoe UI,Arial">'+bpct+'%</text>';
   }
 
-  // Overall progress bar at top
-  var ovW=Math.round(640*ov/100);
-  h+='<rect x="0" y="0" width="640" height="5" fill="#0d1520"/>';
-  h+='<rect x="0" y="0" width="'+ovW+'" height="5" fill="#D4A843" opacity="0.8"/>';
-  h+='<rect x="2" y="1" width="78" height="14" rx="3" fill="#0a0f16bb"/>';
-  h+='<text x="6" y="12" font-size="7" font-weight="700" fill="#D4A84399" font-family="Arial">PROJECT '+ov+'%</text>';
+  // ── Roads as straight lines crossing the circle ───────────
+  // Sattam: horizontal line across top
+  var satY=50, roadH=22;
+  svg+='<rect x="0" y="'+(satY-roadH/2)+'" width="'+W+'" height="'+roadH+'" fill="#1a2240" rx="2"/>';
+  var satW2=Math.round(W*satPct/100);
+  if(satW2>0){
+    svg+='<rect x="0" y="'+(satY-roadH/2)+'" width="'+satW2+'" height="'+roadH+'" fill="#A78BFA" opacity="0.3" rx="2"/>';
+    svg+='<rect x="0" y="'+(satY-3)+'" width="'+satW2+'" height="5" fill="#A78BFA" opacity="0.95"/>';
+  }
+  svg+='<line x1="0" y1="'+satY+'" x2="'+W+'" y2="'+satY+'" stroke="#A78BFA" stroke-width="1.5" stroke-dasharray="16,8" opacity="0.5"/>';
+  svg+='<rect x="6" y="'+(satY-13)+'" width="196" height="26" rx="5" fill="#070e1a" opacity="0.9"/>';
+  svg+='<text x="14" y="'+(satY+5)+'" font-size="13" font-weight="900" fill="#A78BFA" font-family="Segoe UI,Arial">PRINCE SATTAM ROAD</text>';
+  var sBadge=satPct>=75?'#06D6A0':satPct>0?'#A78BFA':'#2a3f58';
+  svg+='<rect x="'+(W-58)+'" y="'+(satY-13)+'" width="52" height="26" rx="13" fill="'+sBadge+'"/>';
+  svg+='<text x="'+(W-32)+'" y="'+(satY+5)+'" text-anchor="middle" font-size="13" font-weight="900" fill="#000" font-family="Segoe UI,Arial">'+satPct+'%</text>';
 
-  // Legend
-  h+='<rect x="8" y="362" width="260" height="50" rx="5" fill="#0d1520cc" stroke="#1e2d3d" stroke-width="1"/>';
-  h+='<text x="16" y="375" font-size="7" font-weight="700" fill="#6b7a8d" font-family="Arial">LEGEND</text>';
-  h+='<circle cx="22" cy="387" r="4" fill="#D4A843"/><text x="30" y="391" font-size="7" fill="#888" font-family="Arial">Bridge In Progress</text>';
-  h+='<circle cx="120" cy="387" r="4" fill="#06D6A0"/><text x="128" y="391" font-size="7" fill="#888" font-family="Arial">Bridge Complete</text>';
-  h+='<circle cx="210" cy="387" r="4" fill="#3a4a5a"/><text x="218" y="391" font-size="7" fill="#888" font-family="Arial">Not Started</text>';
-  h+='<rect x="14" y="398" width="14" height="5" rx="2" fill="#58A6FF" opacity="0.5"/><text x="32" y="405" font-size="7" fill="#888" font-family="Arial">Road In Progress</text>';
-  h+='<rect x="122" y="398" width="14" height="5" rx="2" fill="#06D6A0" opacity="0.5"/><text x="140" y="405" font-size="7" fill="#888" font-family="Arial">Road Complete</text>';
+  // Ibn Saud: vertical on right
+  var ibnX2=600, ibnRW=22;
+  svg+='<rect x="'+(ibnX2-ibnRW/2)+'" y="'+(satY+roadH/2)+'" width="'+ibnRW+'" height="'+(H-satY-roadH/2)+'" fill="#1a2240" rx="2"/>';
+  var ibnFill2=Math.round((H-satY-roadH/2)*ibnPct/100);
+  if(ibnFill2>0){
+    svg+='<rect x="'+(ibnX2-ibnRW/2)+'" y="'+(satY+roadH/2)+'" width="'+ibnRW+'" height="'+ibnFill2+'" fill="#58A6FF" opacity="0.3" rx="2"/>';
+    svg+='<rect x="'+(ibnX2-3)+'" y="'+(satY+roadH/2)+'" width="5" height="'+ibnFill2+'" fill="#58A6FF" opacity="0.95"/>';
+  }
+  svg+='<line x1="'+ibnX2+'" y1="'+(satY+roadH/2)+'" x2="'+ibnX2+'" y2="'+H+'" stroke="#58A6FF" stroke-width="1.5" stroke-dasharray="16,8" opacity="0.5"/>';
+  svg+='<g transform="translate('+(ibnX2+ibnRW/2+16)+','+(H/2+30)+') rotate(90)">';
+  svg+='<rect x="-68" y="-14" width="136" height="26" rx="5" fill="#070e1a" opacity="0.92"/>';
+  svg+='<text x="0" y="5" text-anchor="middle" font-size="13" font-weight="900" fill="#58A6FF" font-family="Segoe UI,Arial">IBN SAUD ROAD</text>';
+  svg+='</g>';
+  var iBadge2=ibnPct>=75?'#06D6A0':ibnPct>0?'#58A6FF':'#2a3f58';
+  svg+='<rect x="'+(ibnX2-26)+'" y="'+(satY+roadH/2+8)+'" width="52" height="26" rx="13" fill="'+iBadge2+'"/>';
+  svg+='<text x="'+ibnX2+'" y="'+(satY+roadH/2+26)+'" text-anchor="middle" font-size="13" font-weight="900" fill="#000" font-family="Segoe UI,Arial">'+ibnPct+'%</text>';
 
-  // North arrow
-  h+='<g transform="translate(614,385)">';
-  h+='<circle r="16" fill="#0d1520" stroke="#1e2d3d" stroke-width="1"/>';
-  h+='<text x="0" y="-2" text-anchor="middle" font-size="13" fill="#4a6a8a" font-family="Arial">&#8593;</text>';
-  h+='<text x="0" y="10" text-anchor="middle" font-size="7" font-weight="700" fill="#6b7a8d" font-family="Arial">N</text>';
-  h+='</g>';
+  // ── Overall bar top ───────────────────────────────────────
+  svg+='<rect x="0" y="0" width="'+W+'" height="6" fill="#070e1a"/>';
+  svg+='<rect x="0" y="0" width="'+Math.round(W*ov/100)+'" height="6" fill="#D4A843"/>';
 
-  h+='</svg>';
+  // ── Legend ────────────────────────────────────────────────
+  svg+='<rect x="6" y="'+(H-44)+'" width="240" height="38" rx="6" fill="#070e1a" opacity="0.92" stroke="#1e2d44" stroke-width="1"/>';
+  svg+='<text x="14" y="'+(H-30)+'" font-size="9" font-weight="800" fill="#6b90b8" font-family="Segoe UI,Arial" letter-spacing="1">LEGEND</text>';
+  var lgI=[{c:'#D4A843',l:'In Progress'},{c:'#06D6A0',l:'Complete'},{c:'#2a3f58',l:'Not Started'}];
+  for(var li=0;li<lgI.length;li++){
+    svg+='<circle cx="'+(14+li*80)+'" cy="'+(H-14)+'" r="5" fill="'+lgI[li].c+'"/>';
+    svg+='<text x="'+(22+li*80)+'" y="'+(H-10)+'" font-size="9" fill="#ccd" font-family="Segoe UI,Arial">'+lgI[li].l+'</text>';
+  }
+  // Active = red blink note
+  svg+='<circle cx="14" cy="'+(H-14)+'" r="8" fill="#E74C3C" opacity="0.25"/>';
+
+  // N arrow
+  svg+='<g transform="translate('+(W-28)+','+(H-28)+')">';
+  svg+='<circle r="18" fill="#070e1a" stroke="#1e2d44" stroke-width="1.5"/>';
+  svg+='<text x="0" y="-2" text-anchor="middle" font-size="14" fill="#6b90b8" font-family="Arial">&#8593;</text>';
+  svg+='<text x="0" y="10" text-anchor="middle" font-size="9" font-weight="800" fill="#6b90b8" font-family="Segoe UI,Arial">N</text>';
+  svg+='</g>';
+
+  svg+='</svg>';
+
+  // ── Page HTML ─────────────────────────────────────────────
+  var h='';
+  h+='<div style="background:linear-gradient(135deg,#0a1628,#0d2444 60%,#0a1628);border-radius:14px;padding:14px 16px;margin-bottom:12px;border:1px solid rgba(212,168,67,0.2);">';
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;">';
+  h+='<div><div style="font-size:11px;color:rgba(212,168,67,0.8);font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:3px;">IC1 Road Improvements</div>';
+  h+='<div style="font-size:20px;font-weight:900;color:#f1f5f9;">Project Site Map</div>';
+  h+='<div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px;">Bridges · Roads · Live Progress</div></div>';
+  h+='<div style="text-align:right;"><div style="font-size:28px;font-weight:900;color:#D4A843;line-height:1;">'+ov+'%</div>';
+  h+='<div style="font-size:9px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px;margin-top:2px;">Overall</div></div>';
   h+='</div></div>';
+  h+='<div style="background:#070e1a;border-radius:14px;overflow:hidden;border:1px solid rgba(212,168,67,0.15);margin-bottom:12px;">'+svg+'</div>';
 
-  // Bridge cards grid
-  h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-top:12px;">';
-  for(var bj=0;bj<BRIDGES.length;bj++){
-    var brJ=BRIDGES[bj];
-    var pctJ=calcBrPct(brJ.id);
-    var colJ=pctJ===100?"var(--green)":pctJ>0?"var(--gold)":"var(--dim)";
-    var activeCnt=0;
-    for(var pp=0;pp<brJ.piers.length;pp++){
-      var ppct=calcPierPct(brJ.piers[pp]);
-      if(ppct>0&&ppct<100) activeCnt++;
-    }
-    h+='<div class="card" style="padding:12px;cursor:pointer;" onclick="nav(\'tr\');curBr=\''+brJ.id+'\';rTr();">';
-    h+='<div style="font-size:22px;font-weight:900;color:'+colJ+';">'+pctJ+'%</div>';
-    h+='<div style="font-size:13px;font-weight:700;color:var(--gold);">Bridge '+brJ.id+'</div>';
-    h+='<div style="font-size:10px;color:var(--dimL);">'+brJ.piers.length+' piers · '+activeCnt+' active</div>';
-    h+='<div class="pbar-wrap" style="margin:6px 0;"><div class="pbar" style="width:'+pctJ+'%;background:'+colJ+';"></div></div>';
-    h+='</div>';
+  // Bridge cards 5x2
+  h+='<div style="font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;">Bridge Status</div>';
+  h+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:12px;">';
+  for(var i=0;i<BCIRC.length;i++){
+    var bpct=calcBrPct(BCIRC[i].id);
+    var bcol=brColor(bpct);
+    var isAct=bpct>0&&bpct<100;
+    h+='<div style="background:var(--card);border:1px solid '+bcol+'44;border-radius:10px;padding:9px 6px;text-align:center;border-top:3px solid '+(isAct?'#E74C3C':bcol)+';">';
+    h+='<div style="font-size:14px;font-weight:900;color:#f1f5f9;">'+BCIRC[i].id+'</div>';
+    h+='<div style="font-size:11px;font-weight:800;color:'+bcol+';">'+bpct+'%</div>';
+    h+='<div style="height:4px;background:rgba(255,255,255,0.08);border-radius:2px;margin-top:5px;overflow:hidden;">';
+    h+='<div style="width:'+bpct+'%;height:4px;background:'+(isAct?'#E74C3C':bcol)+';border-radius:2px;"></div>';
+    h+='</div></div>';
   }
+  h+='</div>';
+
   // Road cards
-  h+='<div style="display:flex;gap:8px;margin-top:10px;">';
-  var mpRds=[{key:"ibn",lbl:"Ibn Saud Road",icon:"🛣"},{key:"sattam",lbl:"Prince Sattam Road",icon:"🛤"}];
+  h+='<div style="display:flex;gap:8px;margin-bottom:10px;">';
+  var mpRds=[{lbl:'Ibn Saud Road',icon:'🛣',col:'#58A6FF',pct:ibnPct},{lbl:'Prince Sattam Road',icon:'🛤',col:'#A78BFA',pct:satPct}];
   for(var ri=0;ri<mpRds.length;ri++){
-    var rk=mpRds[ri].key; var rl=mpRds[ri].icon;
-    var rp=ROADS[rk].pct||0; var rs=ROADS[rk].status||"Not Started";
-    var rc=rs==="Complete"?"var(--green)":rs==="In Progress"?"var(--blue)":rs==="On Hold"?"var(--red)":"var(--dim)";
-    h+='<div class="card" style="flex:1;padding:12px;cursor:pointer;border-top:2px solid var(--blue);" onclick="nav(\'rd\');rRd();">';
-    h+='<div style="font-size:15px;">'+rl+'</div>';
-    h+='<div style="font-size:11px;font-weight:700;color:var(--blue);margin:2px 0;">'+mpRds[ri].lbl+'</div>';
-    h+='<div style="font-size:24px;font-weight:900;color:'+rc+';">'+rp+'%</div>';
-    h+='<div style="height:4px;background:var(--panel);border-radius:2px;margin:5px 0;"><div style="width:'+rp+'%;height:100%;background:var(--blue);border-radius:2px;"></div></div>';
-    h+='<div style="font-size:10px;color:'+rc+';">'+rs+'</div>';
-    h+='</div>';
-  }
-  h+='</div>';
-  h+='</div>';
-
-  
-  // ── Team Location Panel ───────────────────────────────────
-  h+='<div class="card" style="margin-top:12px;">';
-  h+='<div class="ct" style="margin-bottom:10px;">📍 Team Locations</div>';
-
-  // My location
-  h+='<div style="margin-bottom:10px;">';
-  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">';
-  h+='<span style="font-size:11px;font-weight:700;color:var(--gold);">📌 My Location</span>';
-  h+='<button onclick="updateMyLocation();rMp();" style="padding:4px 10px;background:var(--gold);border:none;border-radius:6px;color:#000;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;">Update</button>';
-  h+='</div>';
-
-  if(MY_LOC.lat){
-    var myMapsUrl=getGoogleMapsUrl(MY_LOC.lat,MY_LOC.lng);
-    var myTime=new Date(MY_LOC.ts);
-    var myTs=(myTime.getHours()<10?"0"+myTime.getHours():myTime.getHours())+":"+(myTime.getMinutes()<10?"0"+myTime.getMinutes():myTime.getMinutes());
-    h+='<div style="background:var(--panel);border-radius:8px;padding:8px 12px;border-left:3px solid var(--gold);">';
-    h+='<div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:3px;">'+MY_NAME+'</div>';
-    h+='<div style="font-size:10px;color:var(--dimL);">'+MY_LOC.lat+', '+MY_LOC.lng+'</div>';
-    h+='<div style="font-size:10px;color:var(--dimL);">Accuracy: ±'+MY_LOC.acc+'m &nbsp;·&nbsp; Updated: '+myTs+'</div>';
-    h+='<a href="'+myMapsUrl+'" target="_blank" style="display:inline-block;margin-top:5px;font-size:10px;color:var(--gold);font-weight:700;">🗺️ Open in Google Maps</a>';
-    h+='</div>';
-  } else {
-    h+='<div style="background:var(--panel);border-radius:8px;padding:10px 12px;text-align:center;">';
-    h+='<div style="font-size:11px;color:var(--dimL);margin-bottom:6px;">Location not yet recorded</div>';
-    h+='<button onclick="getMyLocation(function(){rMp();});" style="padding:6px 14px;background:var(--gold);border:none;border-radius:6px;color:#000;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">📍 Get My Location</button>';
-    h+='</div>';
+    var rrd=mpRds[ri];
+    var rCol=rrd.pct>=75?'#06D6A0':rrd.pct>0?rrd.col:'#4a5568';
+    h+='<div style="flex:1;background:var(--card);border:1px solid '+rrd.col+'33;border-radius:10px;padding:10px;border-left:3px solid '+rrd.col+';">';
+    h+='<div style="font-size:12px;font-weight:800;color:var(--text);">'+rrd.icon+' '+rrd.lbl+'</div>';
+    h+='<div style="font-size:18px;font-weight:900;color:'+rCol+';margin-top:4px;">'+rrd.pct+'%</div>';
+    h+='<div style="height:4px;background:rgba(255,255,255,0.08);border-radius:2px;margin-top:6px;overflow:hidden;">';
+    h+='<div style="width:'+rrd.pct+'%;height:4px;background:'+rrd.col+';border-radius:2px;"></div>';
+    h+='</div></div>';
   }
   h+='</div>';
 
-  // Team members locations — with online/offline status
-  var teamKeys=Object.keys(TEAM_LOCS);
-  var onlineCount=0;
-  for(var tc=0;tc<teamKeys.length;tc++){
-    if(TEAM_LOCS[teamKeys[tc]]&&isOnline(TEAM_LOCS[teamKeys[tc]].ts)) onlineCount++;
+  // Team online
+  var onlineUsers=[];
+  if(typeof TEAM_LOCS!=='undefined'){
+    var tlKeys=Object.keys(TEAM_LOCS);
+    for(var ti=0;ti<tlKeys.length;ti++){
+      var tm=TEAM_LOCS[tlKeys[ti]];
+      if(tm&&tm.ts&&(Date.now()-tm.ts)<300000) onlineUsers.push(tm);
+    }
   }
-  if(teamKeys.length>0){
-    h+='<div>';
-    h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">';
-    h+='<div style="font-size:11px;font-weight:700;color:var(--dimL);">👥 Team Members ('+teamKeys.length+')</div>';
-    h+='<div style="background:#06C98F22;border:1px solid #06C98F44;border-radius:12px;padding:3px 10px;font-size:10px;font-weight:700;color:var(--green);">'+onlineCount+' Online Now</div>';
-    h+='</div>';
-    for(var ti=0;ti<teamKeys.length;ti++){
-      var tm=TEAM_LOCS[teamKeys[ti]];
-      if(!tm||!tm.lat) continue;
-      var tmOnline=isOnline(tm.ts);
-      var tmUrl=getGoogleMapsUrl(tm.lat,tm.lng);
-      var tmTime=new Date(tm.ts);
-      var tmTs=(tmTime.getHours()<10?"0"+tmTime.getHours():tmTime.getHours())+":"+(tmTime.getMinutes()<10?"0"+tmTime.getMinutes():tmTime.getMinutes());
-      var tmAgo=Math.round((Date.now()-tm.ts)/60000);
-      var tmAgoStr=tmAgo<1?"just now":tmAgo<60?tmAgo+"m ago":Math.round(tmAgo/60)+"h ago";
-      var tmBorderCol=tmOnline?"var(--green)":"var(--border)";
-      var tmStatusDot=tmOnline?'<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#06C98F;margin-right:4px;box-shadow:0 0 6px #06C98F88;"></span>':'<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#555;margin-right:4px;"></span>';
-      h+='<div style="background:var(--panel);border-radius:10px;padding:10px 14px;margin-bottom:8px;border-left:3px solid '+tmBorderCol+';">';
-      h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">';
-      h+='<div style="display:flex;align-items:center;">'+tmStatusDot+'<span style="font-size:12px;font-weight:700;color:var(--text);">'+teamKeys[ti]+'</span></div>';
-      h+='<span style="font-size:9px;font-weight:700;color:'+(tmOnline?"var(--green)":"var(--dimL)")+';">'+(tmOnline?"🟢 Online":"⚫ "+tmAgoStr)+'</span>';
-      h+='</div>';
-      h+='<div style="font-size:10px;color:var(--dimL);margin-bottom:3px;">📍 '+tm.lat+', '+tm.lng+' (±'+tm.acc+'m)</div>';
-      if(tm.lastAction) h+='<div style="font-size:10px;color:var(--dimL);margin-bottom:5px;">Last action: '+tm.lastAction+'</div>';
-      h+='<div style="display:flex;gap:8px;">';
-      h+='<a href="'+tmUrl+'" target="_blank" style="flex:1;text-align:center;padding:5px;background:var(--gold);border-radius:6px;font-size:10px;font-weight:700;color:#000;text-decoration:none;">🗺️ Google Maps</a>';
-      h+='<button onclick="rMp();" style="flex:1;padding:5px;background:var(--card);border:1px solid var(--border);border-radius:6px;font-size:10px;font-weight:700;color:var(--dimL);cursor:pointer;font-family:inherit;">🔄 Refresh</button>';
-      h+='</div>';
+  if(onlineUsers.length>0){
+    h+='<div style="background:var(--card);border:1px solid rgba(6,214,160,0.25);border-radius:10px;padding:10px 12px;">';
+    h+='<div style="font-size:10px;color:#06D6A0;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">👥 Team Online ('+onlineUsers.length+')</div>';
+    for(var ti=0;ti<onlineUsers.length;ti++){
+      var tm2=onlineUsers[ti];
+      h+='<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.06);">';
+      h+='<div style="width:8px;height:8px;border-radius:50%;background:#06D6A0;flex-shrink:0;"></div>';
+      h+='<span style="font-size:12px;font-weight:700;color:var(--fg);">'+(tm2.name||'Team Member')+'</span>';
       h+='</div>';
     }
     h+='</div>';
-  } else {
-    h+='<div style="text-align:center;padding:16px;">';
-    h+='<div style="font-size:24px;margin-bottom:8px;">👥</div>';
-    h+='<div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px;">No team members yet</div>';
-    h+='<div style="font-size:11px;color:var(--dimL);">Share the app link with colleagues to see them here</div>';
-    h+='</div>';
   }
 
-  h+='</div>';
-
-
-  document.getElementById("pg-mp").innerHTML=h;
+  document.getElementById('pg-mp').innerHTML=h;
+  if(!document.getElementById('map-blink-css')){
+    var st=document.createElement('style');
+    st.id='map-blink-css';
+    st.textContent='@keyframes red-pulse{0%,100%{opacity:0}50%{opacity:0.9}}@keyframes red-mid{0%,100%{opacity:0.1}50%{opacity:0.55}}@keyframes arc-flash{0%,100%{opacity:0.4}50%{opacity:1}}';
+    document.head.appendChild(st);
+  }
 }
 </script>
-<!-- Camera inputs — static in HTML, label-triggered (Android-safe) -->
-<input type="file" accept="image/*" capture="environment" id="fr-cam-static" style="position:fixed;left:-9999px;opacity:0;width:1px;height:1px;" tabindex="-1">
-<input type="file" accept="image/*" id="fr-gal-static" style="position:fixed;left:-9999px;opacity:0;width:1px;height:1px;" tabindex="-1">
 </body>
 </html>
