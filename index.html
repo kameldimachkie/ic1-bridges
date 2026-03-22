@@ -5409,8 +5409,10 @@ function rRd2(){
 
 function apGetOrCreate(itemId){
   if(!APPROVALS[itemId]){
-    APPROVALS[itemId]={levels:{1:null,2:null,3:null,4:null},locked:false};
+    APPROVALS[itemId]={levels:{1:null,2:null,3:null,4:null},locked:false,rejected:false};
   }
+  // Back-compat: add rejected flag if missing
+  if(APPROVALS[itemId].rejected===undefined) APPROVALS[itemId].rejected=false;
   return APPROVALS[itemId];
 }
 
@@ -5434,6 +5436,7 @@ function apApprove(itemId, action){
 
   var ap=apGetOrCreate(itemId);
   if(ap.locked){flash('This item is locked after final approval');return;}
+  if(ap.rejected){flash('This item has been rejected. Contact admin to reset.');return;}
 
   // Re-read role from assignments at approval time (ensures freshness)
   try{
@@ -5462,8 +5465,13 @@ function apApprove(itemId, action){
     action:action
   };
 
-  // Lock if all 4 levels approved
-  if(action==='approved'){
+  if(action==='rejected'){
+    // Mark item as rejected — disable all further approvals
+    ap.rejected=true;
+  } else {
+    // Clear rejected flag if re-approving after reset
+    ap.rejected=false;
+    // Lock if all 4 levels approved
     var allDone=true;
     for(var l=1;l<=4;l++) if(!ap.levels[l]||ap.levels[l].action!=='approved'){allDone=false;break;}
     if(allDone) ap.locked=true;
@@ -5478,7 +5486,7 @@ function apApprove(itemId, action){
 
 function apReset(itemId){
   if(!confirm('Reset all approvals for this item?')) return;
-  APPROVALS[itemId]={levels:{1:null,2:null,3:null,4:null},locked:false};
+  APPROVALS[itemId]={levels:{1:null,2:null,3:null,4:null},locked:false,rejected:false};
   persist();
   var box=document.getElementById('ap-box-'+itemId);
   if(box) box.innerHTML=apBuildInner(itemId);
@@ -5492,15 +5500,28 @@ function apBuildInner(itemId){
   var h='';
 
   // Status strip
+  var isRejected=ap.rejected===true;
   h+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;">';
   h+='<div style="font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:1px;flex:1;">Approval Status</div>';
-  if(isLocked){
+  if(isRejected){
+    h+='<span style="font-size:9px;font-weight:800;background:rgba(231,76,60,0.2);color:#E74C3C;padding:3px 10px;border-radius:6px;border:1px solid rgba(231,76,60,0.4);">✕ Rejected</span>';
+  } else if(isLocked){
     h+='<span style="font-size:9px;font-weight:700;background:rgba(6,214,160,0.15);color:#06D6A0;padding:2px 9px;border-radius:6px;border:1px solid rgba(6,214,160,0.3);">🔒 Locked — Fully Approved</span>';
   } else if(currentLevel<=4){
     var nextRole=APPROVAL_ROLES[currentLevel-1];
     h+='<span style="font-size:9px;font-weight:700;background:rgba(255,193,69,0.12);color:#FFC145;padding:2px 9px;border-radius:6px;border:1px solid rgba(255,193,69,0.25);">Awaiting '+nextRole.label+'</span>';
   }
   h+='</div>';
+
+  // Rejected banner — prominent, full-width
+  if(isRejected){
+    h+='<div style="background:rgba(231,76,60,0.12);border:1px solid rgba(231,76,60,0.35);border-radius:9px;padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;gap:8px;">';
+    h+='<div style="font-size:18px;">🚫</div>';
+    h+='<div>';
+    h+='<div style="font-size:12px;font-weight:900;color:#E74C3C;">Item Rejected</div>';
+    h+='<div style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:2px;">Further approvals are disabled. Contact the administrator to reset.</div>';
+    h+='</div></div>';
+  }
 
   // Progress stepper
   h+='<div style="display:flex;align-items:center;gap:4px;margin-bottom:10px;">';
@@ -5543,8 +5564,8 @@ function apBuildInner(itemId){
     h+='</div>';
   }
 
-  // Action buttons — only show if not locked and user's turn
-  if(!isLocked&&currentLevel<=4){
+  // Action buttons — hide if rejected or locked
+  if(!isRejected&&!isLocked&&currentLevel<=4){
     var myRoleObj=null;
     for(var i=0;i<APPROVAL_ROLES.length;i++) if(APPROVAL_ROLES[i].id===MY_ROLE) myRoleObj=APPROVAL_ROLES[i];
     var isMyTurn=myRoleObj&&myRoleObj.level===currentLevel;
