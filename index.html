@@ -6337,28 +6337,7 @@ function rOv(){
     var tm=TEAM_LOCS[teamKeys[i]];
     if(tm&&tm.ts&&(Date.now()-tm.ts)<300000) onlineCount++;
   }
-  // AI Report button
-  h+='<button onclick="nav(\'fr\');" style="width:100%;padding:10px;background:var(--blue);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;margin-bottom:12px;">🤖 Generate Daily AI Report</button>';
-    h+="<div style='background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;align-items:center;justify-content:space-between;'>";
-  h+="<div style='display:flex;align-items:center;gap:8px;'>";
-  h+="<div style='width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);'></div>";
-  h+="<div>";
-  h+="<div style='font-size:12px;font-weight:700;color:var(--text);'>Live Sync Active</div>";
-  h+="<div id='last-sync-ov' style='font-size:10px;color:var(--dimL);'>Syncing every 15s</div>";
-  h+="</div></div>";
-  h+="<div style='text-align:right;'>";
-  h+="<div style='font-size:14px;font-weight:900;color:var(--blue);'>👥 "+onlineCount+"</div>";
-  h+="<div style='font-size:10px;color:var(--dimL);'>online now</div>";
-  h+="</div></div>";
 
-  document.getElementById("pg-ov").innerHTML=h;
-  buildTicker();
-  for(var i=0;i<teamKeys.length;i++){
-    var tm=TEAM_LOCS[teamKeys[i]];
-    if(tm&&tm.ts&&(Date.now()-tm.ts)<300000) onlineCount++;
-  }
-  // AI Report button
-  h+='<button onclick="nav(\'fr\');" style="width:100%;padding:10px;background:var(--blue);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;margin-bottom:12px;">🤖 Generate Daily AI Report</button>';
     h+="<div style='background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;align-items:center;justify-content:space-between;'>";
   h+="<div style='display:flex;align-items:center;gap:8px;'>";
   h+="<div style='width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);'></div>";
