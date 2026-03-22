@@ -2141,256 +2141,324 @@ var _plTab='curve'; // 'curve' | 'activities' | 'compare'
 function rPl(){
   var comp=comparePlannedActual();
   var today=new Date().toISOString().slice(0,10);
-  var todayStr=new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
   var ov=calcOverallPct();
-  var tp=timePct?timePct():0;
   var dr=daysLeft?daysLeft():'--';
-  var variance=comp.variance!==null?comp.variance:null;
-  var vAbs=variance!==null?Math.abs(variance):null;
-  var vAhead=variance!==null&&variance>=0;
-  var vCol=variance===null?'#4a5568':vAhead?'#06D6A0':'#E74C3C';
-  var vBg=variance===null?'rgba(74,85,104,0.12)':vAhead?'rgba(6,214,160,0.1)':'rgba(231,76,60,0.1)';
-  var vBorder=variance===null?'rgba(74,85,104,0.3)':vAhead?'rgba(6,214,160,0.3)':'rgba(231,76,60,0.3)';
+  var variance=comp.variance;
+  var vCol=variance===null?'#4a5568':variance>=0?'#06D6A0':'#E74C3C';
+  var vIcon=variance===null?'—':variance>=0?'▲':'▼';
+  var sorted=PLAN.curve.slice().sort(function(a,b){return a.date<b.date?-1:1;});
 
   var h='';
 
-  // ── Module Header ──────────────────────────────────────────
-  h+='<div style="background:linear-gradient(135deg,#0a1628 0%,#0d1e3a 60%,#0a1628 100%);';
-  h+='border-radius:14px;padding:16px;margin-bottom:14px;border:1px solid rgba(167,139,250,0.2);';
-  h+='position:relative;overflow:hidden;">';
+  // ── Header ─────────────────────────────────────────────────
+  h+='<div style="background:linear-gradient(135deg,#0a1628,#0d1e3a 60%,#0a1628);';
+  h+='border-radius:14px;padding:16px;margin-bottom:14px;';
+  h+='border:1px solid rgba(167,139,250,0.2);position:relative;overflow:hidden;">';
   h+='<div style="position:absolute;top:0;right:0;width:80px;height:80px;';
   h+='background:radial-gradient(circle at top right,rgba(167,139,250,0.12),transparent 70%);pointer-events:none;"></div>';
   h+='<div style="display:flex;align-items:flex-start;justify-content:space-between;">';
   h+='<div>';
   h+='<div style="font-size:11px;color:rgba(167,139,250,0.8);font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">IC1 Road Improvements</div>';
   h+='<div style="font-size:20px;font-weight:900;color:#f1f5f9;letter-spacing:-0.5px;">Planning &amp; Baseline</div>';
-  h+='<div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:3px;">S-Curve &nbsp;·&nbsp; Activities &nbsp;·&nbsp; Comparison</div>';
+  h+='<div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:3px;">S-Curve &nbsp;·&nbsp; Baseline vs Actual</div>';
   h+='<div style="display:flex;align-items:center;gap:6px;margin-top:8px;">';
-  h+='<span style="background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.3);color:#A78BFA;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;">'+PLAN.curve.length+' Points</span>';
-  var totalActs=0;
-  var discsP=['bridges','roads','utilities','fillslope'];
-  for(var di=0;di<discsP.length;di++) totalActs+=(PLAN.activities[discsP[di]]||[]).length;
-  h+='<span style="background:rgba(212,168,67,0.12);border:1px solid rgba(212,168,67,0.25);color:#D4A843;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;">'+totalActs+' Activities</span>';
+  h+='<span style="background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.3);color:#A78BFA;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;">'+sorted.length+' Points</span>';
+  h+='<span style="background:rgba(212,168,67,0.12);border:1px solid rgba(212,168,67,0.25);color:#D4A843;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;">'+ov+'% Overall</span>';
   h+='</div></div>';
-  // Variance pill — right side
   h+='<div style="text-align:right;">';
   if(variance!==null){
-    h+='<div style="font-size:22px;font-weight:900;color:'+vCol+';">'+(vAhead?'▲':'▼')+' '+vAbs+'%</div>';
-    h+='<div style="font-size:9px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px;margin-top:2px;">'+(vAhead?'Ahead':'Behind')+' Schedule</div>';
+    h+='<div style="font-size:22px;font-weight:900;color:'+vCol+';line-height:1;">'+vIcon+' '+Math.abs(variance)+'%</div>';
+    h+='<div style="font-size:9px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px;margin-top:2px;">'+(variance>=0?'Ahead':'Behind')+'</div>';
   } else {
-    h+='<div style="font-size:14px;font-weight:700;color:#4a5568;">No Baseline</div>';
-    h+='<div style="font-size:9px;color:rgba(255,255,255,0.3);margin-top:2px;">Set curve first</div>';
+    h+='<div style="font-size:13px;font-weight:700;color:#4a5568;margin-top:8px;">No baseline</div>';
   }
   h+='</div></div></div>';
 
-  // ── Central Variance Card ──────────────────────────────────
-  h+='<div style="background:linear-gradient(135deg,'+vBg+',rgba(0,0,0,0));';
-  h+='border:1px solid '+vBorder+';border-radius:14px;padding:16px;margin-bottom:14px;';
-  h+='border-left:4px solid '+vCol+';">';
-  // Big variance label
-  if(variance!==null){
-    h+='<div style="font-size:26px;font-weight:900;color:'+vCol+';margin-bottom:4px;">';
-    h+=(vAhead?'▲ ':'▼ ')+vAbs+'% '+(vAhead?'Ahead of Schedule':'Behind Schedule');
-    h+='</div>';
-    h+='<div style="font-size:11px;color:rgba(255,255,255,0.4);margin-bottom:14px;">Variance calculated from the baseline S-curve &nbsp;·&nbsp; '+todayStr+'</div>';
-  } else {
-    h+='<div style="font-size:16px;font-weight:800;color:#4a5568;margin-bottom:4px;">No Baseline Defined</div>';
-    h+='<div style="font-size:11px;color:rgba(255,255,255,0.3);margin-bottom:14px;">Go to S-Curve tab to generate or import your planned baseline</div>';
-  }
-  // 4 KPI metrics
-  h+='<div style="display:flex;gap:8px;">';
-  var plKpis=[
-    {v:comp.planned!==null?comp.planned+'%':'—',l:'Planned Today',c:'#A78BFA',icon:'📋'},
-    {v:ov+'%',l:'Actual Today',c:'#D4A843',icon:'📊'},
-    {v:variance!==null?(vAhead?'+':'')+variance+'%':'—',l:'Variance',c:vCol,icon:vAhead?'▲':'▼'},
-    {v:dr+'d',l:'Days Left',c:'#58A6FF',icon:'📅'},
-  ];
-  for(var ki=0;ki<plKpis.length;ki++){
-    h+='<div style="flex:1;background:rgba(255,255,255,0.05);border-radius:10px;padding:10px 8px;text-align:center;border:1px solid rgba(255,255,255,0.07);">';
-    h+='<div style="font-size:10px;margin-bottom:4px;">'+plKpis[ki].icon+'</div>';
-    h+='<div style="font-size:16px;font-weight:900;color:'+plKpis[ki].c+';line-height:1;">'+plKpis[ki].v+'</div>';
-    h+='<div style="font-size:8px;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.5px;margin-top:3px;">'+plKpis[ki].l+'</div>';
-    h+='</div>';
-  }
-  h+='</div></div>';
-
-  // ── Pill Tab Bar ────────────────────────────────────────────
+  // ── Pill tab bar ────────────────────────────────────────────
   h+='<div style="display:flex;gap:5px;margin-bottom:14px;background:rgba(255,255,255,0.04);border-radius:12px;padding:4px;">';
   var plTabs=[['curve','📈 S-Curve'],['activities','📋 Activities'],['compare','⚖️ Compare']];
   for(var ti=0;ti<plTabs.length;ti++){
     var isOn=_plTab===plTabs[ti][0];
     h+='<button data-tab="'+plTabs[ti][0]+'" onclick="plSwitchTab(this.dataset.tab);" ';
-    h+='style="flex:1;padding:9px;border-radius:9px;';
-    h+='border:none;';
+    h+='style="flex:1;padding:9px;border-radius:9px;border:none;';
     h+='background:'+(isOn?'#A78BFA':'transparent')+';';
     h+='color:'+(isOn?'#000':'rgba(255,255,255,0.4)')+';';
     h+='font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;';
-    h+='box-shadow:'+(isOn?'0 2px 8px rgba(167,139,250,0.4)':'none')+';';
-    h+='transition:all 0.15s;">'+plTabs[ti][1]+'</button>';
+    h+='box-shadow:'+(isOn?'0 2px 8px rgba(167,139,250,0.4)':'none')+';">'+plTabs[ti][1]+'</button>';
   }
   h+='</div>';
 
   // ══ S-CURVE TAB ════════════════════════════════════════════
   if(_plTab==='curve'){
-    var sorted=PLAN.curve.slice().sort(function(a,b){return a.date<b.date?-1:1;});
 
-    // Auto-generate card
-    h+='<div style="background:linear-gradient(135deg,var(--card),#0d1a30);border:1px solid rgba(167,139,250,0.2);border-radius:14px;padding:14px;margin-bottom:10px;border-left:4px solid #A78BFA;">';
-    h+='<div class="ct" style="margin-bottom:10px;color:#A78BFA;">⚡ Auto-Generate Baseline</div>';
-    h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">';
-    h+='<div><label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Start Date</label>';
-    h+='<input type="date" id="pl-gen-start" value="2025-06-01" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:var(--fg);font-size:12px;"></div>';
-    h+='<div><label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">End Date</label>';
-    h+='<input type="date" id="pl-gen-end" value="2027-09-01" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:var(--fg);font-size:12px;"></div>';
+    // ── 1. SUMMARY CARD ──────────────────────────────────────
+    h+='<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px;border-left:4px solid #A78BFA;">';
+    h+='<div style="font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;">Summary</div>';
+    h+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;">';
+    var sumKpis=[
+      {v:comp.planned!==null?comp.planned+'%':'—', l:'Planned Today', c:'#A78BFA'},
+      {v:ov+'%',                                   l:'Actual Today',  c:'#D4A843'},
+      {v:variance!==null?(variance>=0?'+':'')+variance+'%':'—', l:'Variance', c:vCol},
+      {v:dr+'d',                                   l:'Days Left',     c:'#58A6FF'},
+    ];
+    for(var ki=0;ki<sumKpis.length;ki++){
+      h+='<div style="background:var(--panel);border-radius:9px;padding:10px 6px;text-align:center;border-top:3px solid '+sumKpis[ki].c+';">';
+      h+='<div style="font-size:16px;font-weight:900;color:'+sumKpis[ki].c+';line-height:1;">'+sumKpis[ki].v+'</div>';
+      h+='<div style="font-size:8px;color:var(--dimL);text-transform:uppercase;letter-spacing:0.5px;margin-top:4px;">'+sumKpis[ki].l+'</div>';
+      h+='</div>';
+    }
+    h+='</div></div>';
+
+    // ── 2. S-CURVE CHART CARD ─────────────────────────────────
+    h+='<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px;">';
+    h+='<div style="font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;">S-Curve — Baseline vs Actual</div>';
+
+    if(!sorted.length){
+      h+='<div style="text-align:center;padding:24px;">';
+      h+='<div style="font-size:32px;margin-bottom:8px;">📈</div>';
+      h+='<div style="font-size:12px;color:var(--dimL);">No baseline defined — generate or add points below</div>';
+      h+='</div>';
+    } else {
+      // SVG Chart
+      var cW=320,cH=160,padL=36,padB=24,padT=12,padR=12;
+      var chartW=cW-padL-padR, chartH=cH-padT-padB;
+      var todayIso3=new Date().toISOString().slice(0,10);
+
+      // Find date range
+      var minDate=sorted[0].date, maxDate=sorted[sorted.length-1].date;
+      function dateToX(d){
+        var total=new Date(maxDate)-new Date(minDate);
+        if(total===0) return padL+chartW/2;
+        return padL+((new Date(d)-new Date(minDate))/total)*chartW;
+      }
+      function pctToY(p){return padT+chartH-(p/100)*chartH;}
+
+      var svg='<svg viewBox="0 0 '+cW+' '+cH+'" style="width:100%;height:auto;" xmlns="http://www.w3.org/2000/svg">';
+
+      // Grid lines
+      for(var gi=0;gi<=4;gi++){
+        var gy=padT+(chartH/4)*gi;
+        var gPct=100-gi*25;
+        svg+='<line x1="'+padL+'" y1="'+gy+'" x2="'+(padL+chartW)+'" y2="'+gy+'" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>';
+        svg+='<text x="'+(padL-4)+'" y="'+(gy+3.5)+'" text-anchor="end" font-size="7" fill="#64748b" font-family="Segoe UI,Arial">'+gPct+'</text>';
+      }
+
+      // Today vertical line
+      if(todayIso3>=minDate&&todayIso3<=maxDate){
+        var todayX=dateToX(todayIso3);
+        svg+='<line x1="'+Math.round(todayX)+'" y1="'+padT+'" x2="'+Math.round(todayX)+'" y2="'+(padT+chartH)+'" stroke="#D4A843" stroke-width="1" stroke-dasharray="4,3" opacity="0.6"/>';
+        svg+='<text x="'+Math.round(todayX+2)+'" y="'+(padT+8)+'" font-size="6.5" fill="#D4A843" font-family="Segoe UI,Arial">Today</text>';
+      }
+
+      // Baseline path
+      var basePath='';
+      for(var pi=0;pi<sorted.length;pi++){
+        var bx=Math.round(dateToX(sorted[pi].date)*10)/10;
+        var by=Math.round(pctToY(sorted[pi].pct)*10)/10;
+        basePath+=(pi===0?'M':'L')+bx+' '+by+' ';
+      }
+      svg+='<path d="'+basePath+'" fill="none" stroke="#A78BFA" stroke-width="2" stroke-linejoin="round"/>';
+
+      // Actual path (only past points, flat at current ov)
+      var actPath='';
+      var actPts=[];
+      for(var pi=0;pi<sorted.length;pi++){
+        if(sorted[pi].date<=todayIso3) actPts.push({date:sorted[pi].date,pct:ov});
+      }
+      if(actPts.length){
+        for(var pi=0;pi<actPts.length;pi++){
+          var ax=Math.round(dateToX(actPts[pi].date)*10)/10;
+          var ay=Math.round(pctToY(actPts[pi].pct)*10)/10;
+          actPath+=(pi===0?'M':'L')+ax+' '+ay+' ';
+        }
+        svg+='<path d="'+actPath+'" fill="none" stroke="#D4A843" stroke-width="2" stroke-linejoin="round" stroke-dasharray="5,3"/>';
+      }
+
+      // Dots on baseline
+      for(var pi=0;pi<sorted.length;pi++){
+        var dx=Math.round(dateToX(sorted[pi].date)*10)/10;
+        var dy=Math.round(pctToY(sorted[pi].pct)*10)/10;
+        svg+='<circle cx="'+dx+'" cy="'+dy+'" r="3" fill="#A78BFA"/>';
+      }
+
+      // X-axis labels (first + last)
+      svg+='<text x="'+padL+'" y="'+(cH-4)+'" font-size="7" fill="#64748b" font-family="Segoe UI,Arial">'+sorted[0].date.slice(0,7)+'</text>';
+      svg+='<text x="'+(padL+chartW)+'" y="'+(cH-4)+'" text-anchor="end" font-size="7" fill="#64748b" font-family="Segoe UI,Arial">'+sorted[sorted.length-1].date.slice(0,7)+'</text>';
+
+      // Chart border
+      svg+='<rect x="'+padL+'" y="'+padT+'" width="'+chartW+'" height="'+chartH+'" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>';
+
+      svg+='</svg>';
+
+      h+=svg;
+
+      // Legend
+      h+='<div style="display:flex;gap:14px;margin-top:8px;justify-content:center;">';
+      h+='<div style="display:flex;align-items:center;gap:5px;"><div style="width:20px;height:2px;background:#A78BFA;"></div><span style="font-size:10px;color:var(--dimL);">Baseline</span></div>';
+      h+='<div style="display:flex;align-items:center;gap:5px;"><div style="width:20px;height:2px;background:#D4A843;border-top:2px dashed #D4A843;"></div><span style="font-size:10px;color:var(--dimL);">Actual</span></div>';
+      h+='<div style="display:flex;align-items:center;gap:5px;"><div style="width:8px;height:1px;background:#D4A843;"></div><span style="font-size:10px;color:var(--dimL);">Today</span></div>';
+      h+='</div>';
+    }
     h+='</div>';
-    h+='<select id="pl-gen-shape" style="width:100%;padding:9px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:var(--fg);font-size:12px;font-family:inherit;margin-bottom:10px;">';
-    h+='<option value="scurve">S-Curve — Slow start, peak middle, slow end (Recommended)</option>';
-    h+='<option value="linear">Linear — Equal progress every month</option>';
+
+    // ── 3. BASELINE GENERATION CARD ───────────────────────────
+    h+='<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px;border-left:4px solid #A78BFA;">';
+    h+='<div style="font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;">Generate Baseline Curve</div>';
+    h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">';
+    h+='<div>';
+    h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Start Date</label>';
+    h+='<input type="date" id="pl-gen-start" value="2025-06-01" ';
+    h+='style="width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:12px;font-family:inherit;">';
+    h+='</div>';
+    h+='<div>';
+    h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">End Date</label>';
+    h+='<input type="date" id="pl-gen-end" value="2027-09-01" ';
+    h+='style="width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:12px;font-family:inherit;">';
+    h+='</div>';
+    h+='</div>';
+    h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Curve Type</label>';
+    h+='<select id="pl-gen-shape" ';
+    h+='style="width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:12px;font-family:inherit;margin-bottom:12px;">';
+    h+='<option value="scurve">S-Curve — Slow start, peak middle, slow end</option>';
+    h+='<option value="linear">Linear — Equal progress each month</option>';
     h+='<option value="front">Front-Loaded — Fast start, slow end</option>';
     h+='<option value="back">Back-Loaded — Slow start, fast end</option>';
     h+='</select>';
-    h+='<button onclick="plGenCurve();" style="width:100%;padding:10px;background:linear-gradient(90deg,#A78BFA,#7C3AED);border:none;border-radius:9px;color:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;">⚡ Generate Baseline Curve</button>';
+    h+='<button onclick="plGenCurve();" ';
+    h+='style="width:100%;padding:11px;background:#A78BFA;border:none;border-radius:9px;color:#000;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;">⚡ Generate Baseline Curve</button>';
     h+='</div>';
 
-    // Manual add point
+    // ── 4. DATA ENTRY CARD ────────────────────────────────────
     h+='<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px;">';
-    h+='<div class="ct" style="margin-bottom:10px;">✏️ Add / Edit Point</div>';
+    h+='<div style="font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;">Add / Edit Point</div>';
     h+='<div style="display:flex;gap:8px;align-items:flex-end;">';
-    h+='<div style="flex:1;"><label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Date</label>';
-    h+='<input type="date" id="pl-pt-date" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:var(--fg);font-size:12px;"></div>';
-    h+='<div style="width:80px;"><label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Planned %</label>';
-    h+='<input type="number" id="pl-pt-pct" min="0" max="100" step="0.1" placeholder="0–100" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:var(--fg);font-size:12px;text-align:center;"></div>';
-    h+='<button onclick="plAddPoint();" style="padding:9px 14px;background:var(--gold);border:none;border-radius:9px;color:#000;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;">+ Add</button>';
+    h+='<div style="flex:1;">';
+    h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Date</label>';
+    h+='<input type="date" id="pl-pt-date" ';
+    h+='style="width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:12px;font-family:inherit;">';
+    h+='</div>';
+    h+='<div style="width:80px;">';
+    h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Planned %</label>';
+    h+='<input type="number" id="pl-pt-pct" min="0" max="100" step="0.1" placeholder="0–100" ';
+    h+='style="width:100%;padding:9px 8px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:12px;text-align:center;font-family:inherit;">';
+    h+='</div>';
+    h+='<button onclick="plAddPoint();" ';
+    h+='style="padding:9px 16px;background:var(--gold);border:none;border-radius:9px;color:#000;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;white-space:nowrap;">+ Add</button>';
     h+='</div></div>';
 
-    // CSV import
+    // ── 5. CSV IMPORT CARD ────────────────────────────────────
     h+='<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px;">';
-    h+='<div class="ct" style="margin-bottom:8px;">📥 Import CSV</div>';
-    h+='<div style="font-size:11px;color:var(--dimL);margin-bottom:8px;">Format: <code style="background:rgba(255,255,255,0.07);padding:2px 6px;border-radius:4px;">YYYY-MM-DD,planned%</code> one per line</div>';
-    h+='<input type="file" id="pl-csv" accept=".csv,.txt" onchange="plImportCSV(this);" style="width:100%;padding:6px;font-size:11px;color:var(--fg);">';
+    h+='<div style="font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;">Import CSV</div>';
+    h+='<div style="font-size:11px;color:var(--dimL);margin-bottom:10px;line-height:1.6;">';
+    h+='One row per line: <code style="background:var(--panel);padding:2px 7px;border-radius:4px;font-size:10px;">YYYY-MM-DD,planned%</code>';
+    h+='</div>';
+    h+='<input type="file" id="pl-csv" accept=".csv,.txt" onchange="plImportCSV(this);" ';
+    h+='style="width:100%;padding:7px;font-size:11px;color:var(--fg);font-family:inherit;">';
     h+='</div>';
 
-    // Baseline table
+    // ── Baseline table (if points exist) ──────────────────────
     if(sorted.length){
-      h+='<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;">';
-      h+='<div style="padding:14px 14px 10px;display:flex;align-items:center;justify-content:space-between;">';
-      h+='<div class="ct" style="margin-bottom:0;">📊 Baseline Curve ('+sorted.length+' points)</div>';
-      h+='<button onclick="plClearCurve();" style="padding:5px 10px;border-radius:7px;border:1px solid rgba(231,76,60,0.4);background:transparent;color:#E74C3C;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;">🗑 Clear</button>';
+      var errors3=validatePlanCurve();
+      h+='<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:10px;">';
+      h+='<div style="padding:12px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);">';
+      h+='<div>';
+      h+='<div style="font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;">Baseline Points ('+sorted.length+')</div>';
+      h+=errors3.length?'<div style="font-size:10px;color:#E74C3C;margin-top:2px;">⚠️ '+errors3[0]+'</div>':'<div style="font-size:10px;color:#06D6A0;margin-top:2px;">✅ Curve valid</div>';
+      h+='</div>';
+      h+='<button onclick="plClearCurve();" ';
+      h+='style="padding:5px 12px;border-radius:7px;border:1px solid rgba(231,76,60,0.4);background:transparent;color:#E74C3C;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;">🗑 Clear</button>';
       h+='</div>';
       h+='<div style="overflow-x:auto;">';
-      h+='<table class="tbl" style="margin-bottom:0;">';
-      h+='<tr>';
-      h+='<th style="background:#0d1f3c;color:#A78BFA;padding:10px 12px;">Date</th>';
-      h+='<th style="background:#0d1f3c;color:#A78BFA;padding:10px 12px;text-align:center;">Planned</th>';
-      h+='<th style="background:#0d1f3c;color:#A78BFA;padding:10px 12px;text-align:center;">Actual</th>';
-      h+='<th style="background:#0d1f3c;color:#A78BFA;padding:10px 12px;text-align:center;">Variance</th>';
-      h+='<th style="background:#0d1f3c;padding:10px 12px;text-align:center;"></th>';
+      h+='<table style="width:100%;border-collapse:collapse;font-size:11px;">';
+      h+='<tr style="background:rgba(255,255,255,0.04);">';
+      h+='<th style="padding:9px 14px;text-align:left;color:var(--dimL);font-weight:700;font-size:10px;text-transform:uppercase;border-bottom:1px solid var(--border);">Date</th>';
+      h+='<th style="padding:9px 10px;text-align:center;color:#A78BFA;font-weight:700;font-size:10px;text-transform:uppercase;border-bottom:1px solid var(--border);">Planned</th>';
+      h+='<th style="padding:9px 10px;text-align:center;color:#D4A843;font-weight:700;font-size:10px;text-transform:uppercase;border-bottom:1px solid var(--border);">Actual</th>';
+      h+='<th style="padding:9px 10px;text-align:center;color:var(--dimL);font-weight:700;font-size:10px;text-transform:uppercase;border-bottom:1px solid var(--border);">Variance</th>';
+      h+='<th style="padding:9px 10px;border-bottom:1px solid var(--border);"></th>';
       h+='</tr>';
-      var todayD=new Date().toISOString().slice(0,10);
+      var todayD2=new Date().toISOString().slice(0,10);
       var actualNow=calcOverallPct();
       for(var pi=0;pi<sorted.length;pi++){
         var pt=sorted[pi];
-        var isPast=pt.date<=todayD;
-        var ptActual=isPast?actualNow:null;
+        var isPast=pt.date<=todayD2;
         var ptVar=isPast?Math.round((actualNow-pt.pct)*10)/10:null;
-        var ptVCol=ptVar===null?'rgba(255,255,255,0.25)':ptVar>=0?'#06D6A0':'#E74C3C';
-        var ptVIcon=ptVar===null?'—':ptVar>=0?'▲':'▼';
+        var ptVCol=ptVar===null?'rgba(255,255,255,0.2)':ptVar>=0?'#06D6A0':'#E74C3C';
         var rowBg=pi%2===0?'rgba(255,255,255,0.02)':'transparent';
-        h+='<tr style="background:'+rowBg+';">';
-        h+='<td style="padding:10px 12px;font-size:12px;font-weight:600;color:var(--fg);">'+pt.date+'</td>';
-        h+='<td style="padding:10px 12px;text-align:center;font-weight:700;color:#A78BFA;">'+pt.pct+'%</td>';
-        h+='<td style="padding:10px 12px;text-align:center;color:'+(isPast?'#D4A843':'rgba(255,255,255,0.25)');+';">'+( isPast?ptActual+'%':'—')+'</td>';
-        h+='<td style="padding:10px 12px;text-align:center;font-weight:800;color:'+ptVCol+';">';
-        h+=ptVar!==null?ptVIcon+' '+Math.abs(ptVar)+'%':'—';
+        h+='<tr style="background:'+rowBg+';border-bottom:1px solid var(--border);">';
+        h+='<td style="padding:8px 14px;font-size:11px;font-weight:600;color:var(--fg);">'+pt.date+'</td>';
+        h+='<td style="padding:8px 10px;text-align:center;font-weight:700;color:#A78BFA;">'+pt.pct+'%</td>';
+        h+='<td style="padding:8px 10px;text-align:center;color:'+(isPast?'#D4A843':'rgba(255,255,255,0.2)')+';">'+(isPast?actualNow+'%':'—')+'</td>';
+        h+='<td style="padding:8px 10px;text-align:center;font-weight:800;color:'+ptVCol+'">';
+        h+=ptVar!==null?(ptVar>=0?'▲ +':'▼ ')+Math.abs(ptVar)+'%':'—';
         h+='</td>';
-        h+='<td style="padding:8px 12px;text-align:center;">';
+        h+='<td style="padding:6px 10px;text-align:center;">';
         h+='<button data-dt="'+pt.date+'" onclick="plDeletePoint(this.dataset.dt);" ';
         h+='style="padding:3px 8px;border-radius:6px;border:1px solid rgba(231,76,60,0.35);background:transparent;color:#E74C3C;font-size:10px;cursor:pointer;">✕</button>';
         h+='</td></tr>';
       }
-      h+='</table></div>';
-      // Validation
-      var errors=validatePlanCurve();
-      h+='<div style="padding:10px 14px;border-top:1px solid rgba(255,255,255,0.06);font-size:11px;">';
-      if(errors.length){
-        h+='<span style="color:#E74C3C;">⚠️ '+errors.join(' · ')+'</span>';
-      } else {
-        h+='<span style="color:#06D6A0;">✅ Baseline curve is valid</span>';
-      }
-      h+='</div></div>';
-    } else {
-      h+='<div style="text-align:center;padding:28px;background:var(--card);border:1px solid var(--border);border-radius:14px;">';
-      h+='<div style="font-size:32px;margin-bottom:8px;">📈</div>';
-      h+='<div style="font-size:13px;font-weight:700;color:var(--fg);margin-bottom:4px;">No baseline defined</div>';
-      h+='<div style="font-size:11px;color:var(--dimL);">Generate or import a curve above</div>';
-      h+='</div>';
+      h+='</table></div></div>';
     }
   }
 
   // ══ ACTIVITIES TAB ══════════════════════════════════════════
   else if(_plTab==='activities'){
-    var discList=[
-      {id:'bridges',   label:'🌉 Bridges',   col:'#D4A843', examples:['Pile Cap Concrete','Pier Shaft Concrete','Girder Erection','Deck Slab']},
-      {id:'roads',     label:'🛣 Roads',      col:'#58A6FF', examples:['Sub-base','Base Course','Asphalt Binder','Wearing Course']},
-      {id:'utilities', label:'🔧 Utilities',  col:'#38BDF8', examples:['Trenching','Pipe Installation','Backfilling']},
-      {id:'fillslope', label:'⛰️ Fill Slope', col:'#4ECDC4', examples:['Fill & Compaction','Grading']},
+    var discList4=[
+      {id:'bridges',   label:'🌉 Bridges',    col:'#D4A843'},
+      {id:'roads',     label:'🛣 Roads',       col:'#58A6FF'},
+      {id:'utilities', label:'🔧 Utilities',   col:'#38BDF8'},
+      {id:'fillslope', label:'⛰️ Fill Slope',  col:'#4ECDC4'},
     ];
-
-    // Add activity form
-    h+='<div style="background:linear-gradient(135deg,var(--card),#0d1a30);border:1px solid rgba(167,139,250,0.2);border-radius:14px;padding:14px;margin-bottom:10px;border-left:4px solid #A78BFA;">';
-    h+='<div class="ct" style="margin-bottom:12px;color:#A78BFA;">+ Add Planned Activity</div>';
+    // Add form
+    h+='<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px;border-left:4px solid #A78BFA;">';
+    h+='<div style="font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;">Add Planned Activity</div>';
     h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Discipline</label>';
-    h+='<select id="pl-act-disc" style="width:100%;padding:9px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:var(--fg);font-size:13px;font-family:inherit;margin-bottom:8px;">';
-    for(var dl=0;dl<discList.length;dl++) h+='<option value="'+discList[dl].id+'">'+discList[dl].label+'</option>';
+    h+='<select id="pl-act-disc" style="width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:12px;font-family:inherit;margin-bottom:8px;">';
+    for(var dl=0;dl<discList4.length;dl++) h+='<option value="'+discList4[dl].id+'">'+discList4[dl].label+'</option>';
     h+='</select>';
     h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Activity Name</label>';
     h+='<input type="text" id="pl-act-name" placeholder="e.g. Pile Cap Concrete — Bridge A" ';
-    h+='style="width:100%;padding:9px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:var(--fg);font-size:13px;font-family:inherit;outline:none;margin-bottom:8px;">';
+    h+='style="width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:12px;font-family:inherit;outline:none;margin-bottom:8px;">';
     h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">';
     h+='<div><label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Start Date</label>';
-    h+='<input type="date" id="pl-act-start" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:var(--fg);font-size:12px;"></div>';
+    h+='<input type="date" id="pl-act-start" style="width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:12px;font-family:inherit;"></div>';
     h+='<div><label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">End Date</label>';
-    h+='<input type="date" id="pl-act-end" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:var(--fg);font-size:12px;"></div>';
+    h+='<input type="date" id="pl-act-end" style="width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:12px;font-family:inherit;"></div>';
     h+='</div>';
-    h+='<div style="display:grid;grid-template-columns:2fr 1fr;gap:8px;margin-bottom:10px;">';
+    h+='<div style="display:grid;grid-template-columns:2fr 1fr;gap:8px;margin-bottom:12px;">';
     h+='<div><label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Daily Output</label>';
-    h+='<input type="number" id="pl-act-output" placeholder="e.g. 2" min="0" step="0.1" ';
-    h+='style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:var(--fg);font-size:13px;font-family:inherit;"></div>';
+    h+='<input type="number" id="pl-act-output" placeholder="e.g. 2" min="0" step="0.1" style="width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:12px;font-family:inherit;"></div>';
     h+='<div><label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Unit</label>';
-    h+='<input type="text" id="pl-act-unit" placeholder="piers/day" ';
-    h+='style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:var(--fg);font-size:13px;font-family:inherit;"></div>';
+    h+='<input type="text" id="pl-act-unit" placeholder="piers/day" style="width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:12px;font-family:inherit;"></div>';
     h+='</div>';
-    h+='<button onclick="plAddAct();" style="width:100%;padding:11px;background:linear-gradient(90deg,#A78BFA,#7C3AED);border:none;border-radius:9px;color:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;">+ Add Activity</button>';
+    h+='<button onclick="plAddAct();" style="width:100%;padding:11px;background:#A78BFA;border:none;border-radius:9px;color:#000;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;">+ Add Activity</button>';
     h+='</div>';
-
-    // Activities per discipline
-    var todayD2=new Date().toISOString().slice(0,10);
-    for(var dl=0;dl<discList.length;dl++){
-      var disc=discList[dl];
-      var acts=PLAN.activities[disc.id]||[];
-      h+='<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px;border-left:4px solid '+disc.col+';">';
+    // Per discipline list
+    var todayD3=new Date().toISOString().slice(0,10);
+    for(var dl=0;dl<discList4.length;dl++){
+      var disc4=discList4[dl];
+      var acts4=PLAN.activities[disc4.id]||[];
+      h+='<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px;border-left:4px solid '+disc4.col+';">';
       h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">';
-      h+='<div class="ct" style="margin-bottom:0;color:'+disc.col+';">'+disc.label+'</div>';
-      h+='<span style="font-size:10px;color:var(--dimL);background:rgba(255,255,255,0.06);padding:2px 8px;border-radius:6px;">'+acts.length+' planned</span>';
+      h+='<div style="font-size:12px;font-weight:800;color:'+disc4.col+';">'+disc4.label+'</div>';
+      h+='<span style="font-size:10px;color:var(--dimL);background:var(--panel);padding:2px 8px;border-radius:6px;">'+acts4.length+' activities</span>';
       h+='</div>';
-      if(!acts.length){
-        h+='<div style="font-size:11px;color:var(--dimL);padding:4px 0;">No activities — examples: '+disc.examples.join(', ')+'</div>';
+      if(!acts4.length){
+        h+='<div style="font-size:11px;color:var(--dimL);font-style:italic;">No activities planned yet</div>';
       } else {
-        for(var ai=0;ai<acts.length;ai++){
-          var act=acts[ai];
-          var isActive2=act.start<=todayD2&&act.end>=todayD2;
-          var isFuture=act.start>todayD2;
-          var isPast2=act.end<todayD2;
-          var actStatusIcon=isActive2?'🟢':isFuture?'🔵':'⚪';
-          var actBg=isActive2?'rgba(6,214,160,0.06)':'rgba(255,255,255,0.02)';
-          h+='<div style="display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:9px;background:'+actBg+';border:1px solid rgba(255,255,255,0.07);margin-bottom:6px;">';
-          h+='<span style="font-size:12px;flex-shrink:0;">'+actStatusIcon+'</span>';
+        for(var ai4=0;ai4<acts4.length;ai4++){
+          var act4=acts4[ai4];
+          var isActive4=act4.start<=todayD3&&act4.end>=todayD3;
+          var isFuture4=act4.start>todayD3;
+          var dot4=isActive4?'🟢':isFuture4?'🔵':'⚪';
+          h+='<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);">';
+          h+='<span style="font-size:11px;flex-shrink:0;">'+dot4+'</span>';
           h+='<div style="flex:1;">';
-          h+='<div style="font-size:12px;font-weight:700;color:var(--fg);">'+act.name+'</div>';
-          h+='<div style="font-size:10px;color:var(--dimL);">'+act.start+' → '+act.end+(act.output?' &nbsp;·&nbsp; '+act.output+' '+act.unit:'')+'</div>';
+          h+='<div style="font-size:12px;font-weight:700;color:var(--fg);">'+act4.name+'</div>';
+          h+='<div style="font-size:10px;color:var(--dimL);">'+act4.start+' → '+act4.end+(act4.output?' · '+act4.output+' '+act4.unit:'')+'</div>';
           h+='</div>';
-          h+='<button data-disc="'+disc.id+'" data-id="'+act.id+'" onclick="plDeleteAct(this.dataset.disc,this.dataset.id);" ';
-          h+='style="padding:4px 8px;border-radius:6px;border:1px solid rgba(231,76,60,0.3);background:transparent;color:#E74C3C;font-size:10px;cursor:pointer;flex-shrink:0;">✕</button>';
+          h+='<button data-disc="'+disc4.id+'" data-id="'+act4.id+'" onclick="plDeleteAct(this.dataset.disc,this.dataset.id);" ';
+          h+='style="padding:3px 8px;border-radius:6px;border:1px solid rgba(231,76,60,0.3);background:transparent;color:#E74C3C;font-size:10px;cursor:pointer;flex-shrink:0;">✕</button>';
           h+='</div>';
         }
       }
@@ -2403,86 +2471,77 @@ function rPl(){
     if(!comp.hasBaseline){
       h+='<div style="text-align:center;padding:32px;background:var(--card);border:1px solid var(--border);border-radius:14px;">';
       h+='<div style="font-size:32px;margin-bottom:10px;">📊</div>';
-      h+='<div style="font-size:14px;font-weight:700;color:var(--fg);margin-bottom:6px;">No Baseline Defined</div>';
-      h+='<div style="font-size:12px;color:var(--dimL);margin-bottom:16px;">Go to S-Curve tab to generate your planned baseline</div>';
-      h+='<button onclick="plSwitchTab(\'curve\');" style="padding:10px 24px;background:linear-gradient(90deg,#A78BFA,#7C3AED);border:none;border-radius:9px;color:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;">📈 Set Up Baseline</button>';
+      h+='<div style="font-size:13px;font-weight:700;color:var(--fg);margin-bottom:6px;">No Baseline Defined</div>';
+      h+='<div style="font-size:11px;color:var(--dimL);margin-bottom:16px;">Go to S-Curve tab to generate your planned baseline</div>';
+      h+='<button onclick="plSwitchTab(\'curve\');" style="padding:10px 24px;background:#A78BFA;border:none;border-radius:9px;color:#000;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;">📈 Go to S-Curve</button>';
       h+='</div>';
     } else {
-      // Comparison summary card
-      h+='<div style="background:linear-gradient(135deg,'+vBg+',transparent);border:1px solid '+vBorder+';border-radius:14px;padding:14px;margin-bottom:10px;border-left:4px solid '+vCol+';">';
-      h+='<div class="ct" style="margin-bottom:8px;color:'+vCol+';">⚖️ Planned vs Actual</div>';
-      h+='<div style="display:flex;gap:8px;margin-bottom:10px;">';
-      var compKpis=[
-        {v:comp.planned+'%',l:'Planned',c:'#A78BFA'},
-        {v:comp.actual+'%',l:'Actual',c:'#D4A843'},
-        {v:(vAhead?'+':'')+variance+'%',l:'Variance',c:vCol},
-        {v:tp+'%',l:'Time Elapsed',c:'#58A6FF'},
-      ];
-      for(var ki2=0;ki2<compKpis.length;ki2++){
-        h+='<div style="flex:1;background:rgba(255,255,255,0.05);border-radius:9px;padding:9px 6px;text-align:center;">';
-        h+='<div style="font-size:16px;font-weight:900;color:'+compKpis[ki2].c+';">'+compKpis[ki2].v+'</div>';
-        h+='<div style="font-size:8px;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.5px;margin-top:2px;">'+compKpis[ki2].l+'</div>';
+      // Variance summary card
+      h+='<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px;border-left:4px solid '+vCol+';">';
+      h+='<div style="font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;">Planned vs Actual</div>';
+      h+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:10px;">';
+      for(var ki=0;ki<sumKpis.length;ki++){
+        h+='<div style="background:var(--panel);border-radius:9px;padding:9px 6px;text-align:center;">';
+        h+='<div style="font-size:15px;font-weight:900;color:'+sumKpis[ki].c+';">'+sumKpis[ki].v+'</div>';
+        h+='<div style="font-size:8px;color:var(--dimL);text-transform:uppercase;letter-spacing:0.5px;margin-top:3px;">'+sumKpis[ki].l+'</div>';
         h+='</div>';
       }
       h+='</div>';
-      // Status banner
-      h+='<div style="padding:9px 12px;background:'+(vAhead?'rgba(6,214,160,0.12)':'rgba(231,76,60,0.12)')+';border-radius:9px;font-size:12px;color:'+vCol+';font-weight:700;">';
-      h+=(vAhead?'✅ Project is '+vAbs+'% ahead of the baseline schedule.':'⚠️ Project is '+vAbs+'% behind the baseline schedule.');
+      h+='<div style="padding:8px 10px;background:'+(variance>=0?'rgba(6,214,160,0.1)':'rgba(231,76,60,0.1)')+';border-radius:8px;font-size:12px;color:'+vCol+';font-weight:700;">';
+      h+=(variance>=0?'✅ Ahead of schedule by +'+variance+'%':'⚠️ Behind schedule by '+Math.abs(variance)+'%');
       h+='</div></div>';
-
-      // Full comparison table
+      // Full table
       var sortedC=comp.curve.slice().sort(function(a,b){return a.date<b.date?-1:1;});
-      h+='<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;">';
-      h+='<div style="padding:14px 14px 10px;"><div class="ct" style="margin-bottom:0;">Baseline vs Actual — All Points</div></div>';
-      h+='<div style="overflow-x:auto;">';
-      h+='<table class="tbl" style="margin-bottom:0;">';
-      h+='<tr>';
-      h+='<th style="background:#0d1f3c;color:#A78BFA;padding:10px 12px;">Date</th>';
-      h+='<th style="background:#0d1f3c;color:#A78BFA;padding:10px 12px;text-align:center;">Planned</th>';
-      h+='<th style="background:#0d1f3c;color:#D4A843;padding:10px 12px;text-align:center;">Actual</th>';
-      h+='<th style="background:#0d1f3c;padding:10px 12px;text-align:center;">Variance</th>';
-      h+='<th style="background:#0d1f3c;padding:10px 12px;text-align:center;">Status</th>';
+      h+='<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:10px;">';
+      h+='<div style="padding:12px 14px;border-bottom:1px solid var(--border);">';
+      h+='<div style="font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;">Baseline vs Actual — All Points</div>';
+      h+='</div>';
+      h+='<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:11px;">';
+      h+='<tr style="background:rgba(255,255,255,0.04);">';
+      h+='<th style="padding:9px 14px;text-align:left;color:#A78BFA;font-weight:700;font-size:10px;text-transform:uppercase;border-bottom:1px solid var(--border);">Date</th>';
+      h+='<th style="padding:9px 10px;text-align:center;color:#A78BFA;font-weight:700;font-size:10px;text-transform:uppercase;border-bottom:1px solid var(--border);">Planned</th>';
+      h+='<th style="padding:9px 10px;text-align:center;color:#D4A843;font-weight:700;font-size:10px;text-transform:uppercase;border-bottom:1px solid var(--border);">Actual</th>';
+      h+='<th style="padding:9px 10px;text-align:center;color:var(--dimL);font-weight:700;font-size:10px;text-transform:uppercase;border-bottom:1px solid var(--border);">Variance</th>';
+      h+='<th style="padding:9px 10px;text-align:center;color:var(--dimL);font-weight:700;font-size:10px;text-transform:uppercase;border-bottom:1px solid var(--border);">Status</th>';
       h+='</tr>';
-      var todayD3=new Date().toISOString().slice(0,10);
-      var actualNow2=calcOverallPct();
+      var todayD4=new Date().toISOString().slice(0,10);
+      var an2=calcOverallPct();
       for(var ci=0;ci<sortedC.length;ci++){
         var cp=sortedC[ci];
-        var cpPast=cp.date<=todayD3;
-        var cpActual=cpPast?actualNow2:null;
-        var cpVar=cpPast?Math.round((actualNow2-cp.pct)*10)/10:null;
+        var cpPast=cp.date<=todayD4;
+        var cpVar=cpPast?Math.round((an2-cp.pct)*10)/10:null;
         var cpVCol=cpVar===null?'rgba(255,255,255,0.2)':cpVar>=0?'#06D6A0':'#E74C3C';
-        var cpStatus=cpVar===null?'—':cpVar>=0?'✅ Ahead':'⚠️ Behind';
-        var rowBg2=ci%2===0?'rgba(255,255,255,0.02)':'transparent';
-        h+='<tr style="background:'+rowBg2+';">';
-        h+='<td style="padding:10px 12px;font-size:12px;font-weight:600;color:var(--fg);">'+cp.date+'</td>';
-        h+='<td style="padding:10px 12px;text-align:center;font-weight:700;color:#A78BFA;">'+cp.pct+'%</td>';
-        h+='<td style="padding:10px 12px;text-align:center;color:'+(cpPast?'#D4A843':'rgba(255,255,255,0.25)')+';">'+( cpPast?cpActual+'%':'—')+'</td>';
-        h+='<td style="padding:10px 12px;text-align:center;font-weight:800;color:'+cpVCol+';">';
+        var cpSt=cpVar===null?'—':cpVar>=0?'✅ Ahead':'⚠️ Behind';
+        var rowBg3=ci%2===0?'rgba(255,255,255,0.02)':'transparent';
+        h+='<tr style="background:'+rowBg3+';border-bottom:1px solid var(--border);">';
+        h+='<td style="padding:8px 14px;font-size:11px;font-weight:600;color:var(--fg);">'+cp.date+'</td>';
+        h+='<td style="padding:8px 10px;text-align:center;font-weight:700;color:#A78BFA;">'+cp.pct+'%</td>';
+        h+='<td style="padding:8px 10px;text-align:center;color:'+(cpPast?'#D4A843':'rgba(255,255,255,0.25)')+';">'+(cpPast?an2+'%':'—')+'</td>';
+        h+='<td style="padding:8px 10px;text-align:center;font-weight:800;color:'+cpVCol+'">';
         h+=cpVar!==null?(cpVar>=0?'▲ +':'▼ ')+Math.abs(cpVar)+'%':'—';
         h+='</td>';
-        h+='<td style="padding:10px 12px;text-align:center;font-size:11px;color:'+cpVCol+';">'+cpStatus+'</td>';
+        h+='<td style="padding:8px 10px;text-align:center;font-size:11px;color:'+cpVCol+';">'+cpSt+'</td>';
         h+='</tr>';
       }
       h+='</table></div></div>';
-    }
-
-    // Today planned activities
-    var todayPlan=getPlannedToday();
-    h+='<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-top:10px;">';
-    h+='<div class="ct" style="margin-bottom:10px;">📋 Today\'s Planned Activities</div>';
-    if(!todayPlan.activities.length){
-      h+='<div style="font-size:12px;color:var(--dimL);">No activities planned for today</div>';
-    } else {
-      for(var tai=0;tai<todayPlan.activities.length;tai++){
-        var ta=todayPlan.activities[tai];
-        h+='<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);">';
-        h+='<span style="font-size:9px;font-weight:700;color:#A78BFA;background:rgba(167,139,250,0.12);padding:2px 7px;border-radius:5px;text-transform:uppercase;">'+ta.discipline+'</span>';
-        h+='<span style="font-size:12px;font-weight:700;color:var(--fg);flex:1;">'+ta.name+'</span>';
-        if(ta.output) h+='<span style="font-size:10px;color:var(--dimL);">'+ta.output+' '+ta.unit+'</span>';
-        h+='</div>';
+      // Today activities
+      var todayPlan2=getPlannedToday();
+      h+='<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;">';
+      h+='<div style="font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;">Today\'s Planned Activities</div>';
+      if(!todayPlan2.activities.length){
+        h+='<div style="font-size:11px;color:var(--dimL);">No activities planned for today</div>';
+      } else {
+        for(var tai=0;tai<todayPlan2.activities.length;tai++){
+          var ta=todayPlan2.activities[tai];
+          h+='<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);">';
+          h+='<span style="font-size:9px;font-weight:700;color:#A78BFA;background:rgba(167,139,250,0.12);padding:2px 7px;border-radius:5px;text-transform:uppercase;">'+ta.discipline+'</span>';
+          h+='<span style="font-size:12px;font-weight:700;color:var(--fg);flex:1;">'+ta.name+'</span>';
+          if(ta.output) h+='<span style="font-size:10px;color:var(--dimL);">'+ta.output+' '+ta.unit+'</span>';
+          h+='</div>';
+        }
       }
+      h+='</div>';
     }
-    h+='</div>';
   }
 
   h+='<div style="height:20px;"></div>';
