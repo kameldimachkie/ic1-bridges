@@ -618,6 +618,23 @@ var ROADS={ibn:{pct:0,status:"Not Started"},sattam:{pct:0,status:"Not Started"}}
 var FILL_SLOPE={lm_r:false,lm_l:false,mn_r:false,mn_l:false};
 var UTILITIES=[];  // legacy shim — new system uses UTIL_NETWORKS
 // ── DAILY REPORT DATA ─────────────────────────────────────────
+// ── APPROVAL WORKFLOW DATA ─────────────────────────────────────
+var APPROVALS = {};
+// Structure: APPROVALS[itemId] = {
+//   levels: [{role, name, ts, action}×4],
+//   locked: bool
+// }
+
+var APPROVAL_ROLES = [
+  {id:'engineer',        label:'Engineer',                    level:1, col:'#58A6FF'},
+  {id:'quality',         label:'Quality Engineer',            level:2, col:'#4ECDC4'},
+  {id:'are',             label:'Assistant Resident Engineer', level:3, col:'#FFC145'},
+  {id:'re',              label:'Resident Engineer',           level:4, col:'#06D6A0'},
+];
+
+// Current user role — set in Setup, stored locally
+var MY_ROLE = localStorage.getItem('ic1_my_role') || '';
+
 // ── SURVEY DATA ────────────────────────────────────────────────
 var SURVEY = {
   bms:          [],   // [{id,name,e,n,z,desc,accClass,status,created,verified,photo}]
@@ -691,6 +708,8 @@ function loadData(){
   // loadUtNetworks called after DOMContentLoaded
   try{CUSTOM_WEIGHTS=JSON.parse(localStorage.getItem("ic1b3_cw")||JSON.stringify(CUSTOM_WEIGHTS));}catch(e){}
   try{MESSAGES=JSON.parse(localStorage.getItem('ic1b3_msg')||'[]');}catch(e){MESSAGES=[];}
+  try{var _apr=localStorage.getItem('ic1b3_approvals');if(_apr) APPROVALS=JSON.parse(_apr);}catch(e){}
+  try{ MY_ROLE=localStorage.getItem('ic1_my_role')||''; }catch(e){}
   try{var _sv2=localStorage.getItem('ic1b3_survey');if(_sv2){var _sd=JSON.parse(_sv2);SURVEY.bms=_sd.bms||[];SURVEY.verifications=_sd.verifications||[];SURVEY.tasks=_sd.tasks||[];}}catch(e){}
   try{var _fld=localStorage.getItem('ic1b3_field');if(_fld){var _ff=JSON.parse(_fld);FIELD.photos=_ff.photos||[];FIELD.diary=_ff.diary||[];}}catch(e){}
   try{var _dly=localStorage.getItem('ic1b3_daily');if(_dly){var _dd=JSON.parse(_dly);DAILY.photos=_dd.photos||[];DAILY.entries=_dd.entries||[];DAILY.reports=_dd.reports||[];DAILY.snapshots=_dd.snapshots||[];DAILY.apiKey=_dd.apiKey||'';}}catch(e){}
@@ -709,6 +728,7 @@ function persist(){
   try{localStorage.setItem("ic1b3_cw",JSON.stringify(CUSTOM_WEIGHTS));}catch(e){}
   try{localStorage.setItem('ic1b3_msg',JSON.stringify(MESSAGES.slice(-20)));}catch(e){}
   try{localStorage.setItem('ic1b3_plan',JSON.stringify(PLAN));}catch(e){}
+  try{localStorage.setItem('ic1b3_approvals',JSON.stringify(APPROVALS));}catch(e){}
   try{localStorage.setItem('ic1b3_survey',JSON.stringify({bms:SURVEY.bms,verifications:SURVEY.verifications,tasks:SURVEY.tasks}));}catch(e){}
   try{localStorage.setItem('ic1b3_field',JSON.stringify({photos:FIELD.photos.slice(-100),diary:FIELD.diary.slice(-500)}));}catch(e){}
   try{localStorage.setItem('ic1b3_daily',JSON.stringify({photos:DAILY.photos.slice(-50),entries:DAILY.entries.slice(-200),reports:DAILY.reports.slice(-30),snapshots:DAILY.snapshots.slice(-90),apiKey:DAILY.apiKey}));}catch(e){}
@@ -1555,6 +1575,13 @@ function adminSubmit(){
     if(err) err.textContent='❌ Incorrect password — try again';
     pw.value='';pw.focus();
   }
+}
+
+function apSetRoleSetup(roleId){
+  MY_ROLE=roleId;
+  try{localStorage.setItem('ic1_my_role',roleId);}catch(e){}
+  flash('Role saved ✅');
+  rWs();
 }
 
 function lockAdmin(){
@@ -5288,6 +5315,217 @@ function rRd2(){
   document.getElementById('pg-rd2').innerHTML=h;
 }
 
+
+// ══════════════════════════════════════════════════════════════
+// APPROVAL WORKFLOW ENGINE
+// ══════════════════════════════════════════════════════════════
+
+function apGetOrCreate(itemId){
+  if(!APPROVALS[itemId]){
+    APPROVALS[itemId]={levels:{1:null,2:null,3:null,4:null},locked:false};
+  }
+  return APPROVALS[itemId];
+}
+
+function apCurrentLevel(itemId){
+  var ap=apGetOrCreate(itemId);
+  for(var l=1;l<=4;l++){
+    if(!ap.levels[l]||ap.levels[l].action==='rejected') return l;
+  }
+  return 5; // all approved
+}
+
+function apIsLocked(itemId){
+  var ap=apGetOrCreate(itemId);
+  return ap.locked;
+}
+
+function apApprove(itemId, action){
+  // action: 'approved' | 'rejected'
+  if(!MY_NAME){flash('Set your name first — go to Setup');return;}
+  if(!MY_ROLE){flash('Set your role first — tap "Set My Role" above');return;}
+
+  var ap=apGetOrCreate(itemId);
+  if(ap.locked){flash('This item is locked after final approval');return;}
+
+  // Find required level for this role
+  var roleObj=null;
+  for(var i=0;i<APPROVAL_ROLES.length;i++) if(APPROVAL_ROLES[i].id===MY_ROLE) roleObj=APPROVAL_ROLES[i];
+  if(!roleObj){flash('Unknown role — update your role in Setup');return;}
+
+  var requiredLevel=apCurrentLevel(itemId);
+  if(requiredLevel>4){flash('All approvals already complete');return;}
+
+  if(roleObj.level!==requiredLevel){
+    var needed=APPROVAL_ROLES[requiredLevel-1];
+    flash('This step requires '+needed.label+' approval');
+    return;
+  }
+
+  ap.levels[requiredLevel]={
+    role:roleObj.label,
+    roleId:MY_ROLE,
+    name:MY_NAME,
+    ts:new Date().toISOString(),
+    action:action
+  };
+
+  // Lock if all 4 levels approved
+  if(action==='approved'){
+    var allDone=true;
+    for(var l=1;l<=4;l++) if(!ap.levels[l]||ap.levels[l].action!=='approved'){allDone=false;break;}
+    if(allDone) ap.locked=true;
+  }
+
+  persist();
+  // Re-render the approval block
+  var box=document.getElementById('ap-box-'+itemId);
+  if(box) box.innerHTML=apBuildInner(itemId);
+  flash(action==='approved'?'Approved ✅':'Rejected — returned to previous level');
+}
+
+function apReset(itemId){
+  if(!confirm('Reset all approvals for this item?')) return;
+  APPROVALS[itemId]={levels:{1:null,2:null,3:null,4:null},locked:false};
+  persist();
+  var box=document.getElementById('ap-box-'+itemId);
+  if(box) box.innerHTML=apBuildInner(itemId);
+  flash('Approvals reset');
+}
+
+function apBuildInner(itemId){
+  var ap=apGetOrCreate(itemId);
+  var currentLevel=apCurrentLevel(itemId);
+  var isLocked=ap.locked;
+  var h='';
+
+  // Status strip
+  h+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;">';
+  h+='<div style="font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:1px;flex:1;">Approval Status</div>';
+  if(isLocked){
+    h+='<span style="font-size:9px;font-weight:700;background:rgba(6,214,160,0.15);color:#06D6A0;padding:2px 9px;border-radius:6px;border:1px solid rgba(6,214,160,0.3);">🔒 Locked — Fully Approved</span>';
+  } else if(currentLevel<=4){
+    var nextRole=APPROVAL_ROLES[currentLevel-1];
+    h+='<span style="font-size:9px;font-weight:700;background:rgba(255,193,69,0.12);color:#FFC145;padding:2px 9px;border-radius:6px;border:1px solid rgba(255,193,69,0.25);">Awaiting '+nextRole.label+'</span>';
+  }
+  h+='</div>';
+
+  // Progress stepper
+  h+='<div style="display:flex;align-items:center;gap:4px;margin-bottom:10px;">';
+  for(var l=1;l<=4;l++){
+    var lv=ap.levels[l];
+    var role=APPROVAL_ROLES[l-1];
+    var isDone=lv&&lv.action==='approved';
+    var isRej=lv&&lv.action==='rejected';
+    var isCur=!isDone&&!isRej&&l===currentLevel;
+    var stepCol=isDone?role.col:isRej?'#E74C3C':isCur?'rgba(255,255,255,0.4)':'rgba(255,255,255,0.12)';
+    var stepBg=isDone?role.col+'22':isRej?'rgba(231,76,60,0.12)':isCur?'rgba(255,255,255,0.06)':'transparent';
+    h+='<div style="flex:1;background:'+stepBg+';border:1px solid '+stepCol+';border-radius:8px;padding:5px 4px;text-align:center;">';
+    h+='<div style="font-size:9px;font-weight:800;color:'+stepCol+';">'+(isDone?'✓':isRej?'✗':l)+'</div>';
+    h+='<div style="font-size:8px;color:var(--dimL);margin-top:1px;line-height:1.2;">'+role.label.split(' ')[0]+'</div>';
+    h+='</div>';
+    if(l<4) h+='<div style="font-size:10px;color:rgba(255,255,255,0.15);">›</div>';
+  }
+  h+='</div>';
+
+  // Audit trail
+  var hasTrail=false;
+  for(var l=1;l<=4;l++) if(ap.levels[l]) hasTrail=true;
+  if(hasTrail){
+    h+='<div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:8px 10px;margin-bottom:10px;">';
+    h+='<div style="font-size:9px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Audit Trail</div>';
+    for(var l=1;l<=4;l++){
+      var lv2=ap.levels[l];
+      if(!lv2) continue;
+      var lRole=APPROVAL_ROLES[l-1];
+      var lCol=lv2.action==='approved'?lRole.col:'#E74C3C';
+      var lDate=new Date(lv2.ts);
+      var lStr=lDate.toLocaleDateString('en-GB',{day:'2-digit',month:'short'})+' '+lDate.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+      h+='<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.05);">';
+      h+='<span style="font-size:8px;font-weight:700;background:'+lCol+'22;color:'+lCol+';padding:1px 6px;border-radius:4px;border:1px solid '+lCol+'33;flex-shrink:0;">'+(lv2.action==='approved'?'✓':'✗')+'</span>';
+      h+='<span style="font-size:10px;font-weight:700;color:var(--fg);">'+lv2.name+'</span>';
+      h+='<span style="font-size:9px;color:var(--dimL);">'+lv2.role+'</span>';
+      h+='<span style="font-size:9px;color:var(--dimL);margin-left:auto;">'+lStr+'</span>';
+      h+='</div>';
+    }
+    h+='</div>';
+  }
+
+  // Action buttons — only show if not locked and user's turn
+  if(!isLocked&&currentLevel<=4){
+    var myRoleObj=null;
+    for(var i=0;i<APPROVAL_ROLES.length;i++) if(APPROVAL_ROLES[i].id===MY_ROLE) myRoleObj=APPROVAL_ROLES[i];
+    var isMyTurn=myRoleObj&&myRoleObj.level===currentLevel;
+
+    if(!MY_ROLE){
+      h+='<div style="font-size:11px;color:var(--dimL);text-align:center;padding:6px;">Set your role to approve — see Setup tab</div>';
+    } else if(isMyTurn){
+      h+='<div style="display:flex;gap:6px;">';
+      h+='<button data-apid="'+itemId+'" data-apact="approved" onclick="apApprove(this.dataset.apid,this.dataset.apact);" ';
+      h+='style="flex:2;padding:9px;border-radius:9px;border:none;background:#06D6A0;color:#000;font-weight:800;font-size:12px;cursor:pointer;font-family:inherit;">✓ Approve</button>';
+      h+='<button data-apid="'+itemId+'" data-apact="rejected" onclick="apApprove(this.dataset.apid,this.dataset.apact);" ';
+      h+='style="flex:1;padding:9px;border-radius:9px;border:1px solid rgba(231,76,60,0.4);background:transparent;color:#E74C3C;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;">✕ Reject</button>';
+      h+='</div>';
+    } else {
+      var needRole=APPROVAL_ROLES[currentLevel-1];
+      h+='<div style="font-size:11px;color:var(--dimL);text-align:center;padding:6px;background:rgba(255,255,255,0.03);border-radius:7px;">Waiting for <b style="color:'+needRole.col+';">'+needRole.label+'</b> to approve</div>';
+    }
+  }
+
+  // Admin reset (only show to RE role)
+  if(MY_ROLE==='re'&&hasTrail&&!isLocked){
+    h+='<button data-apid="'+itemId+'" onclick="apReset(this.dataset.apid);" ';
+    h+='style="width:100%;margin-top:6px;padding:6px;border-radius:7px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:var(--dimL);font-size:10px;cursor:pointer;font-family:inherit;">↺ Reset Approvals</button>';
+  }
+
+  return h;
+}
+
+// Main render function — call this to inject approval block
+function buildApprovalBlock(itemId){
+  var h='';
+  h+='<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px;">';
+  h+='<div id="ap-box-'+itemId+'" style="background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:10px;padding:11px 12px;">';
+  h+=apBuildInner(itemId);
+  h+='</div>';
+  h+='</div>';
+  return h;
+}
+
+// Role picker — inline mini-widget for user to set their role
+function buildRolePicker(){
+  var h='<div style="background:rgba(255,193,69,0.06);border:1px solid rgba(255,193,69,0.2);border-radius:10px;padding:10px 12px;margin-bottom:10px;">';
+  h+='<div style="font-size:10px;color:#FFC145;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:7px;">Your Role (for approvals)</div>';
+  h+='<div style="display:flex;gap:5px;flex-wrap:wrap;">';
+  for(var i=0;i<APPROVAL_ROLES.length;i++){
+    var r=APPROVAL_ROLES[i];
+    var isSel=MY_ROLE===r.id;
+    h+='<button data-rid="'+r.id+'" onclick="apSetRole(this.dataset.rid);" ';
+    h+='style="padding:6px 10px;border-radius:7px;border:1.5px solid '+r.col+';';
+    h+='background:'+(isSel?r.col:'transparent')+';';
+    h+='color:'+(isSel?'#000':'rgba(255,255,255,0.5)')+';';
+    h+='font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">'+r.label+'</button>';
+  }
+  h+='</div>';
+  if(MY_ROLE){
+    var cur=null; for(var i=0;i<APPROVAL_ROLES.length;i++) if(APPROVAL_ROLES[i].id===MY_ROLE) cur=APPROVAL_ROLES[i];
+    if(cur) h+='<div style="font-size:10px;color:var(--dimL);margin-top:6px;">Active: <b style="color:'+cur.col+';">'+MY_NAME+' — '+cur.label+'</b></div>';
+  }
+  h+='</div>';
+  return h;
+}
+
+function apSetRole(roleId){
+  MY_ROLE=roleId;
+  try{localStorage.setItem('ic1_my_role',roleId);}catch(e){}
+  // Re-render any open approval role picker
+  var pickers=document.querySelectorAll('.ap-role-picker');
+  for(var i=0;i<pickers.length;i++){
+    pickers[i].innerHTML=buildRolePicker();
+  }
+  flash('Role set ✅');
+}
+
 function buildTicker(){
   var items=[];
 
@@ -5968,6 +6206,8 @@ function trBuildStagePanel(pier){
     h+='</div></div>';
   }
   h+='</div>';
+  // Approval block for this pier
+  h+=buildApprovalBlock('pier_'+pier);
   return h;
 }
 
@@ -6678,6 +6918,9 @@ function rRp(){
   h+='</div>';
 
   // ── PDF button ─────────────────────────────────────────────
+  // Role picker for approval workflow
+  h+='<div class="ap-role-picker">'+buildRolePicker()+'</div>';
+  h+=buildApprovalBlock('report_'+new Date().toISOString().slice(0,10));
   h+='<button onclick="dlPDF();" style="width:100%;padding:13px;background:linear-gradient(135deg,#D4A843,#C9A44C);border:none;border-radius:11px;color:#000;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;letter-spacing:0.3px;">📥 Download Report PDF</button>';
 
   document.getElementById('pg-rp').innerHTML=h;
@@ -7382,6 +7625,7 @@ function pullSync(){
   try{localStorage.setItem("ic1b3_cw",JSON.stringify(CUSTOM_WEIGHTS));}catch(e){}
   try{localStorage.setItem('ic1b3_msg',JSON.stringify(MESSAGES.slice(-20)));}catch(e){}
   try{localStorage.setItem('ic1b3_plan',JSON.stringify(PLAN));}catch(e){}
+  try{localStorage.setItem('ic1b3_approvals',JSON.stringify(APPROVALS));}catch(e){}
   try{localStorage.setItem('ic1b3_survey',JSON.stringify({bms:SURVEY.bms,verifications:SURVEY.verifications,tasks:SURVEY.tasks}));}catch(e){}
   try{localStorage.setItem('ic1b3_field',JSON.stringify({photos:FIELD.photos.slice(-100),diary:FIELD.diary.slice(-500)}));}catch(e){}
   try{localStorage.setItem('ic1b3_daily',JSON.stringify({photos:DAILY.photos.slice(-50),entries:DAILY.entries.slice(-200),reports:DAILY.reports.slice(-30),snapshots:DAILY.snapshots.slice(-90),apiKey:DAILY.apiKey}));}catch(e){}
