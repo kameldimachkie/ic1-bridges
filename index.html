@@ -1348,6 +1348,50 @@ function rWs(){
 
   var h='';
 
+  // ── YOUR ROLE card — always visible, no password needed ──────
+  // Re-read assignment to ensure freshness
+  try{var _ws_a=JSON.parse(localStorage.getItem('ic1_role_assignments')||'{}');if(MY_NAME&&_ws_a[MY_NAME]){MY_ROLE=_ws_a[MY_NAME];}}catch(e){}
+  var _wsRO=null;
+  for(var _wsi=0;_wsi<APPROVAL_ROLES.length;_wsi++) if(APPROVAL_ROLES[_wsi].id===MY_ROLE){_wsRO=APPROVAL_ROLES[_wsi];break;}
+  h+='<div class="card" style="border-left:3px solid #A78BFA;margin-bottom:10px;">';
+  h+='<div class="ct" style="margin-bottom:10px;">Your Role</div>';
+  if(_wsRO){
+    h+='<div style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--panel);border-radius:9px;margin-bottom:8px;">';
+    h+='<div style="width:40px;height:40px;border-radius:10px;background:'+_wsRO.col+'20;border:1px solid '+_wsRO.col+'44;display:flex;align-items:center;justify-content:center;flex-shrink:0;">';
+    h+='<div style="font-size:16px;font-weight:900;color:'+_wsRO.col+';">'+_wsRO.level+'</div>';
+    h+='</div>';
+    h+='<div style="flex:1;">';
+    h+='<div style="font-size:14px;font-weight:900;color:'+_wsRO.col+';">'+_wsRO.label+'</div>';
+    h+='<div style="font-size:11px;color:var(--dimL);margin-top:2px;">Assigned to: <b style="color:var(--fg);">'+MY_NAME+'</b></div>';
+    h+='</div>';
+    h+='<div style="text-align:right;">';
+    h+='<div style="font-size:9px;font-weight:700;background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.3);padding:3px 9px;border-radius:6px;">read-only</div>';
+    h+='</div></div>';
+    // Approval level indicator
+    h+='<div style="display:flex;gap:4px;margin-top:8px;">';
+    for(var _li=0;_li<APPROVAL_ROLES.length;_li++){
+      var _lr=APPROVAL_ROLES[_li];
+      var _isMe=_lr.id===MY_ROLE;
+      h+='<div style="flex:1;padding:6px 4px;border-radius:7px;text-align:center;';
+      h+='background:'+(_isMe?_lr.col+'22':'rgba(255,255,255,0.03)')+';';
+      h+='border:1px solid '+(_isMe?_lr.col+'55':'rgba(255,255,255,0.07)')+';font-size:9px;">';
+      h+='<div style="font-weight:800;color:'+(_isMe?_lr.col:'rgba(255,255,255,0.2)')+';">L'+_lr.level+'</div>';
+      h+='<div style="color:'+(_isMe?_lr.col:'rgba(255,255,255,0.2)')+';margin-top:1px;">'+_lr.label.split(' ')[0]+'</div>';
+      h+='</div>';
+      if(_li<APPROVAL_ROLES.length-1) h+='<div style="color:rgba(255,255,255,0.1);font-size:10px;align-self:center;">›</div>';
+    }
+    h+='</div>';
+    h+='<div style="font-size:10px;color:rgba(255,255,255,0.25);margin-top:8px;">Role assigned by administrator. Contact admin to request a change.</div>';
+  } else {
+    h+='<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--panel);border-radius:9px;margin-bottom:8px;">';
+    h+='<div style="font-size:20px;">⚠️</div>';
+    h+='<div>';
+    h+='<div style="font-size:12px;font-weight:700;color:#FFC145;">No Role Assigned</div>';
+    h+='<div style="font-size:11px;color:var(--dimL);margin-top:2px;">Contact the administrator to get a role assigned before using approval features.</div>';
+    h+='</div></div>';
+  }
+  h+='</div>';
+
   // ── Header ────────────────────────────────────────────────
   h+='<div class="card" style="border-left:3px solid var(--gold);">';
   h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">';
