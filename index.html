@@ -5845,16 +5845,7 @@ function dlPDF(){
   ph+='<li>Bridge weight allocation is <strong>'+brW+'%</strong> of total project value'+( brW<70?' — approaching lower threshold':'')+'</li>';
   if(utTotal===0) ph+='<li>Utility network weights have not been configured — this may understate actual project scope</li>';
   ph+='<li>'+dr+' calendar days remain until scheduled project handover (September 2027)</li>';
-  ph+='</ul>';
-  ph+='<div class="sub-hdr">Next Steps (14-Day Lookahead)</div>';
-  ph+='<ul>';
-  ph+='<li>Continue pier construction and concrete works for active bridge structures</li>';
-  ph+='<li>Progress road sub-base and base course layers where earthworks are complete</li>';
-  ph+='<li>Coordinate utility diversions and interface with bridge abutment zones</li>';
-  ph+='<li>Update Primavera P6 schedule and issue weekly progress report by next Friday</li>';
-  ph+='<li>Conduct site survey for fill slope zones between L–M and M–N abutments</li>';
-  ph+='</ul>';
-  ph+= footer(2, totalPages);
+  ph+='</ul>';  ph+= footer(2, totalPages);
   ph+='</div>';
 
   // ══════════════════════════════════════════════════════════
