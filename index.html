@@ -745,6 +745,14 @@ loadData();
 window.addEventListener('DOMContentLoaded',function(){
   loadUtNetworks();
   frInitInputs();
+  // Apply admin-assigned role for current user
+  try{
+    var _assigns=JSON.parse(localStorage.getItem('ic1_role_assignments')||'{}');
+    if(MY_NAME&&_assigns[MY_NAME]){
+      MY_ROLE=_assigns[MY_NAME];
+      localStorage.setItem('ic1_my_role',MY_ROLE);
+    }
+  }catch(e){}
   wcInit();
   // Restore custom weights if saved
   if(CUSTOM_WEIGHTS.stages&&Object.keys(CUSTOM_WEIGHTS.stages).length){
@@ -1581,6 +1589,31 @@ function apSetRoleSetup(roleId){
   MY_ROLE=roleId;
   try{localStorage.setItem('ic1_my_role',roleId);}catch(e){}
   flash('Role saved ✅');
+  rWs();
+}
+
+function wsAssignRole(){
+  var nameEl=document.getElementById('ws-role-name');
+  var selEl=document.getElementById('ws-role-sel');
+  if(!nameEl||!nameEl.value.trim()){flash('Enter the user name');return;}
+  var assignments=JSON.parse(localStorage.getItem('ic1_role_assignments')||'{}');
+  assignments[nameEl.value.trim()]=selEl?selEl.value:'engineer';
+  localStorage.setItem('ic1_role_assignments',JSON.stringify(assignments));
+  // Apply to current user if name matches
+  if(nameEl.value.trim()===MY_NAME){
+    MY_ROLE=selEl?selEl.value:'engineer';
+    try{localStorage.setItem('ic1_my_role',MY_ROLE);}catch(e){}
+  }
+  nameEl.value='';
+  flash('Role assigned ✅');
+  rWs();
+}
+
+function wsRemoveRole(name){
+  var assignments=JSON.parse(localStorage.getItem('ic1_role_assignments')||'{}');
+  delete assignments[name];
+  localStorage.setItem('ic1_role_assignments',JSON.stringify(assignments));
+  flash('Role removed');
   rWs();
 }
 
@@ -5516,14 +5549,11 @@ function buildRolePicker(){
 }
 
 function apSetRole(roleId){
+  // apSetRole is now admin-only — called only from Setup after password check
+  // Regular users cannot call this directly
   MY_ROLE=roleId;
   try{localStorage.setItem('ic1_my_role',roleId);}catch(e){}
-  // Re-render any open approval role picker
-  var pickers=document.querySelectorAll('.ap-role-picker');
-  for(var i=0;i<pickers.length;i++){
-    pickers[i].innerHTML=buildRolePicker();
-  }
-  flash('Role set ✅');
+  flash('Role updated ✅');
 }
 
 function buildTicker(){
@@ -6918,8 +6948,17 @@ function rRp(){
   h+='</div>';
 
   // ── PDF button ─────────────────────────────────────────────
-  // Role picker for approval workflow
-  h+='<div class="ap-role-picker">'+buildRolePicker()+'</div>';
+  // Show role as read-only in report tab
+  var myRoleObjRp=null;
+  for(var ri5=0;ri5<APPROVAL_ROLES.length;ri5++) if(APPROVAL_ROLES[ri5].id===MY_ROLE){myRoleObjRp=APPROVAL_ROLES[ri5];break;}
+  if(myRoleObjRp){
+    h+='<div style="background:var(--panel);border-radius:9px;padding:9px 12px;margin-bottom:10px;display:flex;align-items:center;gap:8px;">';
+    h+='<div style="font-size:10px;color:var(--dimL);">Approving as:</div>';
+    h+='<div style="font-size:11px;font-weight:800;color:'+myRoleObjRp.col+';">'+MY_NAME+' — '+myRoleObjRp.label+'</div>';
+    h+='</div>';
+  } else {
+    h+='<div style="background:rgba(255,193,69,0.08);border:1px solid rgba(255,193,69,0.2);border-radius:9px;padding:9px 12px;margin-bottom:10px;font-size:11px;color:#FFC145;">No role assigned — contact the administrator (🔐 Setup).</div>';
+  }
   h+=buildApprovalBlock('report_'+new Date().toISOString().slice(0,10));
   h+='<button onclick="dlPDF();" style="width:100%;padding:13px;background:linear-gradient(135deg,#D4A843,#C9A44C);border:none;border-radius:11px;color:#000;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;letter-spacing:0.3px;">📥 Download Report PDF</button>';
 
