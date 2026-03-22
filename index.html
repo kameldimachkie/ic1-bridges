@@ -5224,6 +5224,8 @@ function wcEnter(){
     ws.style.display = 'none';
     nav('ov');
     buildTicker();
+    // Check for pending approvals on app launch
+    setTimeout(function(){try{apCheckNotifications();}catch(e){}},800);
   }, 400);
 }
 
@@ -5481,7 +5483,13 @@ function apApprove(itemId, action){
   // Re-render the approval block
   var box=document.getElementById('ap-box-'+itemId);
   if(box) box.innerHTML=apBuildInner(itemId);
-  flash(action==='approved'?'Approved ✅':'Rejected — returned to previous level');
+  flash(action==='approved'?'Approved ✅':'Item rejected — workflow stopped');
+  // Clear session seen keys so next user sees notification fresh
+  try{
+    for(var _sk in sessionStorage){
+      if(_sk.indexOf('ap_notif_seen_'+itemId)===0) sessionStorage.removeItem(_sk);
+    }
+  }catch(e){}
 }
 
 function apReset(itemId){
@@ -5821,6 +5829,106 @@ function adChangeRole(name){
   },50);
 }
 
+
+// ══════════════════════════════════════════════════════════════
+// APPROVAL NOTIFICATION SYSTEM
+// ══════════════════════════════════════════════════════════════
+
+var _apNotifItem = null;   // itemId of the pending notification
+var _apNotifDest = null;   // nav destination tab
+
+function apCheckNotifications(){
+  if(!MY_ROLE || !MY_NAME) return;
+  // Find my role level
+  var myLevel = 0;
+  for(var i=0;i<APPROVAL_ROLES.length;i++) if(APPROVAL_ROLES[i].id===MY_ROLE){myLevel=APPROVAL_ROLES[i].level;break;}
+  if(!myLevel) return;
+
+  // Scan all approval items
+  var pending=[];
+  for(var itemId in APPROVALS){
+    var ap=APPROVALS[itemId];
+    if(!ap||ap.locked) continue;
+    if(ap.rejected){
+      // If item was rejected and I approved it at a previous level — notify
+      var myLv=ap.levels[myLevel];
+      if(myLv&&myLv.action==='approved'){
+        pending.push({itemId:itemId,type:'rejected'});
+      }
+      continue;
+    }
+    var nextLevel=apCurrentLevel(itemId);
+    if(nextLevel===myLevel && (!ap.levels[myLevel])){
+      pending.push({itemId:itemId,type:'awaiting',level:myLevel});
+    }
+  }
+
+  if(!pending.length) return;
+
+  // Show first pending notification
+  var first=pending[0];
+  _apNotifItem=first.itemId;
+
+  var title='', msg='', icon='🔔';
+
+  if(first.type==='rejected'){
+    icon='🚫';
+    title='Item Rejected';
+    msg='An item you approved has been rejected. Please review the audit trail.';
+    _apNotifDest=apItemDest(first.itemId);
+  } else {
+    var roleObj=APPROVAL_ROLES[first.level-1];
+    icon=first.level===4?'⚠️':'🔔';
+    title=roleObj.label+(pending.length>1?' ('+pending.length+' pending)':'');
+    msg=first.level===4
+      ?'Final approval required. Please review and approve to complete the workflow.'
+      :'A new item is awaiting your approval.';
+    _apNotifDest=apItemDest(first.itemId);
+  }
+
+  // Avoid showing same notification twice in a session
+  var seenKey='ap_notif_seen_'+first.itemId+'_'+first.type+'_'+MY_ROLE;
+  if(sessionStorage.getItem(seenKey)) return;
+
+  // Show after short delay so screen renders first
+  setTimeout(function(){
+    var el=document.getElementById('ap-notif');
+    if(!el) return;
+    document.getElementById('ap-notif-icon').textContent=icon;
+    document.getElementById('ap-notif-title').textContent=title;
+    document.getElementById('ap-notif-msg').textContent=msg;
+    el.style.display='block';
+    // Auto-dismiss after 12s
+    clearTimeout(window._apNotifTimer);
+    window._apNotifTimer=setTimeout(function(){apNotifDismiss();},12000);
+    try{sessionStorage.setItem(seenKey,'1');}catch(e){}
+  },700);
+}
+
+function apItemDest(itemId){
+  // Derive which tab to navigate to based on item ID prefix
+  if(itemId.indexOf('pier_')===0) return 'tr';
+  if(itemId.indexOf('report_')===0) return 'rp';
+  return 'ov';
+}
+
+function apNotifView(){
+  apNotifDismiss();
+  if(_apNotifDest) nav(_apNotifDest);
+  if(_apNotifDest==='tr' && _apNotifItem){
+    // Try to highlight the pier
+    var pier=_apNotifItem.replace('pier_','');
+    if(typeof sPier==='function') setTimeout(function(){sPier(pier);},200);
+  }
+}
+
+function apNotifDismiss(){
+  clearTimeout(window._apNotifTimer);
+  var el=document.getElementById('ap-notif');
+  if(el) el.style.display='none';
+}
+
+
 function buildTicker(){
   var items=[];
 
@@ -5896,6 +6004,8 @@ function countAllPiers(){
 var ALL_TABS=["ov","tr","rd","fs","ut","rp","pl","fr","sv","rd2","mp","ch","ad","ws"];
 
 function nav(id){
+  // Check for pending approval notifications on tab switch
+  try{ apCheckNotifications(); }catch(e){}
   for(var i=0;i<ALL_TABS.length;i++){
     var pg=document.getElementById("pg-"+ALL_TABS[i]);
     var tb=document.getElementById("tab-"+ALL_TABS[i]);
