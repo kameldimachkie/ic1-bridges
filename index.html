@@ -620,6 +620,10 @@ var ROADS={ibn:{pct:0,status:"Not Started"},sattam:{pct:0,status:"Not Started"}}
 var FILL_SLOPE={lm_r:false,lm_l:false,mn_r:false,mn_l:false};
 var UTILITIES=[];  // legacy shim — new system uses UTIL_NETWORKS
 // ── DAILY REPORT DATA ─────────────────────────────────────────
+// ── NOTIFICATION STORE ─────────────────────────────────────────
+// [{id, itemId, fromRole, toRole, ts, status:'unread'|'read'}]
+var AP_NOTIFS = [];
+
 // ── APPROVAL WORKFLOW DATA ─────────────────────────────────────
 var APPROVALS = {};
 // Structure: APPROVALS[itemId] = {
@@ -711,6 +715,7 @@ function loadData(){
   try{CUSTOM_WEIGHTS=JSON.parse(localStorage.getItem("ic1b3_cw")||JSON.stringify(CUSTOM_WEIGHTS));}catch(e){}
   try{MESSAGES=JSON.parse(localStorage.getItem('ic1b3_msg')||'[]');}catch(e){MESSAGES=[];}
   try{var _apr=localStorage.getItem('ic1b3_approvals');if(_apr) APPROVALS=JSON.parse(_apr);}catch(e){}
+  try{var _nfr=localStorage.getItem('ic1b3_notifs');if(_nfr) AP_NOTIFS=JSON.parse(_nfr);}catch(e){}
   try{ MY_ROLE=localStorage.getItem('ic1_my_role')||''; }catch(e){}
   try{var _sv2=localStorage.getItem('ic1b3_survey');if(_sv2){var _sd=JSON.parse(_sv2);SURVEY.bms=_sd.bms||[];SURVEY.verifications=_sd.verifications||[];SURVEY.tasks=_sd.tasks||[];}}catch(e){}
   try{var _fld=localStorage.getItem('ic1b3_field');if(_fld){var _ff=JSON.parse(_fld);FIELD.photos=_ff.photos||[];FIELD.diary=_ff.diary||[];}}catch(e){}
@@ -731,6 +736,7 @@ function persist(){
   try{localStorage.setItem('ic1b3_msg',JSON.stringify(MESSAGES.slice(-20)));}catch(e){}
   try{localStorage.setItem('ic1b3_plan',JSON.stringify(PLAN));}catch(e){}
   try{localStorage.setItem('ic1b3_approvals',JSON.stringify(APPROVALS));}catch(e){}
+  try{localStorage.setItem('ic1b3_notifs',JSON.stringify(AP_NOTIFS));}catch(e){}
   try{localStorage.setItem('ic1b3_survey',JSON.stringify({bms:SURVEY.bms,verifications:SURVEY.verifications,tasks:SURVEY.tasks}));}catch(e){}
   try{localStorage.setItem('ic1b3_field',JSON.stringify({photos:FIELD.photos.slice(-100),diary:FIELD.diary.slice(-500)}));}catch(e){}
   try{localStorage.setItem('ic1b3_daily',JSON.stringify({photos:DAILY.photos.slice(-50),entries:DAILY.entries.slice(-200),reports:DAILY.reports.slice(-30),snapshots:DAILY.snapshots.slice(-90),apiKey:DAILY.apiKey}));}catch(e){}
@@ -5479,17 +5485,15 @@ function apApprove(itemId, action){
     if(allDone) ap.locked=true;
   }
 
+  // Save persistent notification for next role
+  var nextLv=apCurrentLevel(itemId);
+  apSaveNotification(itemId, action, MY_ROLE, action==='approved'?nextLv:null);
+
   persist();
   // Re-render the approval block
   var box=document.getElementById('ap-box-'+itemId);
   if(box) box.innerHTML=apBuildInner(itemId);
   flash(action==='approved'?'Approved ✅':'Item rejected — workflow stopped');
-  // Clear session seen keys so next user sees notification fresh
-  try{
-    for(var _sk in sessionStorage){
-      if(_sk.indexOf('ap_notif_seen_'+itemId)===0) sessionStorage.removeItem(_sk);
-    }
-  }catch(e){}
 }
 
 function apReset(itemId){
@@ -5831,66 +5835,77 @@ function adChangeRole(name){
 
 
 // ══════════════════════════════════════════════════════════════
-// APPROVAL NOTIFICATION SYSTEM
+// APPROVAL NOTIFICATION SYSTEM  (persistent, role-filtered)
 // ══════════════════════════════════════════════════════════════
 
-var _apNotifItem = null;   // itemId of the pending notification
-var _apNotifDest = null;   // nav destination tab
+var _apNotifItem = null;
+var _apNotifDest = null;
 
-function apCheckNotifications(){
-  if(!MY_ROLE || !MY_NAME) return;
-  // Find my role level
-  var myLevel = 0;
-  for(var i=0;i<APPROVAL_ROLES.length;i++) if(APPROVAL_ROLES[i].id===MY_ROLE){myLevel=APPROVAL_ROLES[i].level;break;}
-  if(!myLevel) return;
-
-  // Scan all approval items
-  var pending=[];
-  for(var itemId in APPROVALS){
-    var ap=APPROVALS[itemId];
-    if(!ap||ap.locked) continue;
-    if(ap.rejected){
-      // If item was rejected and I approved it at a previous level — notify
-      var myLv=ap.levels[myLevel];
-      if(myLv&&myLv.action==='approved'){
-        pending.push({itemId:itemId,type:'rejected'});
-      }
-      continue;
-    }
-    var nextLevel=apCurrentLevel(itemId);
-    if(nextLevel===myLevel && (!ap.levels[myLevel])){
-      pending.push({itemId:itemId,type:'awaiting',level:myLevel});
-    }
+// ── Write a notification when an approval action happens ──────
+function apSaveNotification(itemId, action, fromRoleId, nextLevel){
+  var fromRoleObj = null, toRoleObj = null;
+  for(var i=0;i<APPROVAL_ROLES.length;i++){
+    if(APPROVAL_ROLES[i].id===fromRoleId) fromRoleObj=APPROVAL_ROLES[i];
+    if(APPROVAL_ROLES[i].level===nextLevel) toRoleObj=APPROVAL_ROLES[i];
   }
+  var notif = {
+    id: 'n_'+Date.now()+'_'+Math.round(Math.random()*9999),
+    itemId: itemId,
+    fromRole: fromRoleObj ? fromRoleObj.label : fromRoleId,
+    fromRoleId: fromRoleId,
+    toRole: toRoleObj ? toRoleObj.label : null,
+    toRoleId: toRoleObj ? toRoleObj.id : null,
+    action: action,           // 'approved' | 'rejected'
+    ts: new Date().toISOString(),
+    status: 'unread'
+  };
+  AP_NOTIFS.push(notif);
+  // Keep last 100 only
+  if(AP_NOTIFS.length>100) AP_NOTIFS=AP_NOTIFS.slice(-100);
+  persist();
+  console.log('[SiteSync Notif] Saved notification:', JSON.stringify(notif));
+}
 
-  if(!pending.length) return;
+// ── Check for unread notifications for current user ───────────
+function apCheckNotifications(){
+  // Re-read role fresh
+  try{var _wa=JSON.parse(localStorage.getItem('ic1_role_assignments')||'{}');if(MY_NAME&&_wa[MY_NAME])MY_ROLE=_wa[MY_NAME];}catch(e){}
 
-  // Show first pending notification
-  var first=pending[0];
-  _apNotifItem=first.itemId;
+  console.log('[SiteSync Notif] Checking notifications. MY_NAME='+MY_NAME+' MY_ROLE='+MY_ROLE);
+  console.log('[SiteSync Notif] All notifications:', JSON.stringify(AP_NOTIFS));
 
-  var title='', msg='', icon='🔔';
+  if(!MY_ROLE || !MY_NAME) return;
 
-  if(first.type==='rejected'){
+  // Filter: unread + toRoleId matches my role
+  var pending = AP_NOTIFS.filter(function(n){
+    return n.status==='unread' && n.toRoleId===MY_ROLE;
+  });
+  // Also: rejections where I was a previous approver
+  var myRejections = AP_NOTIFS.filter(function(n){
+    return n.status==='unread' && n.action==='rejected' && n.fromRoleId===MY_ROLE;
+  });
+  var all = pending.concat(myRejections);
+  if(!all.length){ console.log('[SiteSync Notif] No pending notifications for role: '+MY_ROLE); return; }
+
+  var first = all[0];
+  _apNotifItem = first.itemId;
+  _apNotifDest = apItemDest(first.itemId);
+
+  var icon='🔔', title='', msg='';
+  if(first.action==='rejected'){
     icon='🚫';
     title='Item Rejected';
-    msg='An item you approved has been rejected. Please review the audit trail.';
-    _apNotifDest=apItemDest(first.itemId);
+    msg='Item "'+first.itemId+'" was rejected by '+first.fromRole+'. Please review the audit trail.';
   } else {
-    var roleObj=APPROVAL_ROLES[first.level-1];
-    icon=first.level===4?'⚠️':'🔔';
-    title=roleObj.label+(pending.length>1?' ('+pending.length+' pending)':'');
-    msg=first.level===4
-      ?'Final approval required. Please review and approve to complete the workflow.'
-      :'A new item is awaiting your approval.';
-    _apNotifDest=apItemDest(first.itemId);
+    var isLast = first.toRoleId==='re';
+    icon = isLast?'⚠️':'🔔';
+    title = 'New Item Awaiting Your Approval';
+    msg = '"'+first.itemId+'" has been approved by '+first.fromRole+' and is now awaiting your review as '+first.toRole+'.';
+    if(isLast) msg = 'Final approval required. '+first.fromRole+' has approved "'+first.itemId+'". Please review and sign off.';
   }
 
-  // Avoid showing same notification twice in a session
-  var seenKey='ap_notif_seen_'+first.itemId+'_'+first.type+'_'+MY_ROLE;
-  if(sessionStorage.getItem(seenKey)) return;
+  console.log('[SiteSync Notif] Showing popup for notification:', JSON.stringify(first));
 
-  // Show after short delay so screen renders first
   setTimeout(function(){
     var el=document.getElementById('ap-notif');
     if(!el) return;
@@ -5898,25 +5913,32 @@ function apCheckNotifications(){
     document.getElementById('ap-notif-title').textContent=title;
     document.getElementById('ap-notif-msg').textContent=msg;
     el.style.display='block';
-    // Auto-dismiss after 12s
+    // Store which notif this is so we can mark read on dismiss/view
+    el.dataset.notifId = first.id;
     clearTimeout(window._apNotifTimer);
-    window._apNotifTimer=setTimeout(function(){apNotifDismiss();},12000);
-    try{sessionStorage.setItem(seenKey,'1');}catch(e){}
+    window._apNotifTimer=setTimeout(function(){apNotifDismiss();},15000);
   },700);
 }
 
 function apItemDest(itemId){
-  // Derive which tab to navigate to based on item ID prefix
   if(itemId.indexOf('pier_')===0) return 'tr';
   if(itemId.indexOf('report_')===0) return 'rp';
   return 'ov';
 }
 
+function apMarkNotifRead(notifId){
+  for(var i=0;i<AP_NOTIFS.length;i++){
+    if(AP_NOTIFS[i].id===notifId){ AP_NOTIFS[i].status='read'; break; }
+  }
+  persist();
+}
+
 function apNotifView(){
+  var el=document.getElementById('ap-notif');
+  if(el&&el.dataset.notifId) apMarkNotifRead(el.dataset.notifId);
   apNotifDismiss();
   if(_apNotifDest) nav(_apNotifDest);
-  if(_apNotifDest==='tr' && _apNotifItem){
-    // Try to highlight the pier
+  if(_apNotifDest==='tr'&&_apNotifItem){
     var pier=_apNotifItem.replace('pier_','');
     if(typeof sPier==='function') setTimeout(function(){sPier(pier);},200);
   }
@@ -5925,7 +5947,9 @@ function apNotifView(){
 function apNotifDismiss(){
   clearTimeout(window._apNotifTimer);
   var el=document.getElementById('ap-notif');
-  if(el) el.style.display='none';
+  if(!el) return;
+  if(el.dataset.notifId) apMarkNotifRead(el.dataset.notifId);
+  el.style.display='none';
 }
 
 
@@ -8041,6 +8065,7 @@ function pullSync(){
   try{localStorage.setItem('ic1b3_msg',JSON.stringify(MESSAGES.slice(-20)));}catch(e){}
   try{localStorage.setItem('ic1b3_plan',JSON.stringify(PLAN));}catch(e){}
   try{localStorage.setItem('ic1b3_approvals',JSON.stringify(APPROVALS));}catch(e){}
+  try{localStorage.setItem('ic1b3_notifs',JSON.stringify(AP_NOTIFS));}catch(e){}
   try{localStorage.setItem('ic1b3_survey',JSON.stringify({bms:SURVEY.bms,verifications:SURVEY.verifications,tasks:SURVEY.tasks}));}catch(e){}
   try{localStorage.setItem('ic1b3_field',JSON.stringify({photos:FIELD.photos.slice(-100),diary:FIELD.diary.slice(-500)}));}catch(e){}
   try{localStorage.setItem('ic1b3_daily',JSON.stringify({photos:DAILY.photos.slice(-50),entries:DAILY.entries.slice(-200),reports:DAILY.reports.slice(-30),snapshots:DAILY.snapshots.slice(-90),apiKey:DAILY.apiKey}));}catch(e){}
