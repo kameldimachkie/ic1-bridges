@@ -5613,21 +5613,6 @@ function rRp(){
     +'<td></td></tr>';
   h+='</table></div>';
 
-  // ── Lookahead ────────────────────────────────────────────────
-  h+='<div class="card" style="border-left:3px solid var(--amber);">';
-  h+='<div class="ct">📅 14-Day Lookahead</div>';
-  var lookahead=[
-    '🌉 Continue pier construction — target 2+ piers to advance to next stage',
-    '🛣 Progress sub-base and base course where earthworks are accepted',
-    '🔧 Coordinate utility diversions and interface with abutment zones',
-    '⛰️ Commence fill slope compaction works between L–M abutments',
-    '📋 Issue weekly survey report and update as-built drawings',
-    '⚠️ Monitor schedule variance and flag any emerging delays immediately',
-  ];
-  for(var li=0;li<lookahead.length;li++){
-    h+='<div style="font-size:12px;color:var(--fg);padding:5px 0;border-bottom:1px solid var(--border);">'+lookahead[li]+'</div>';
-  }
-  h+='</div>';
 
   // ── Download button ──────────────────────────────────────────
   h+='<button onclick="dlPDF();" style="width:100%;padding:13px;background:var(--gold);border:none;border-radius:10px;color:#000;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;margin-bottom:12px;">📥 Download Full PDF Report (7 Pages)</button>';
@@ -5775,7 +5760,7 @@ function dlPDF(){
       +'</div>';
   }
 
-  var totalPages = 7;
+  var totalPages = 6;
   var ph = '<!DOCTYPE html><html><head><meta charset="UTF-8">'
     +'<style>'+css+'</style></head><body>';
 
@@ -6091,45 +6076,7 @@ function dlPDF(){
   ph+='</div>';
 
   // ══════════════════════════════════════════════════════════
-  // PAGE 7 — LOOKAHEAD & SIGN-OFF
-  // ══════════════════════════════════════════════════════════
-  ph+='<div class="page">';
-  ph+='<div class="sec-hdr">6. 14-Day Lookahead &amp; Next Steps</div>';
-  ph+='<div class="sub-hdr">6.1 Planned Activities (Next 14 Days)</div>';
-  ph+='<ul>';
-  ph+='<li><strong>Bridge Works:</strong> Continue pile cap construction and pier shaft concreting for active bridges. Target minimum 2 piers to advance to next stage.</li>';
-  ph+='<li><strong>Bridge Bearings:</strong> Confirm bearing pads delivery schedule and coordinate with structural engineer for installation approval.</li>';
-  ph+='<li><strong>Girder Works:</strong> Review girder erection sequence with contractor for bridges approaching STR stage.</li>';
-  ph+='<li><strong>Roads \u2013 Ibn Saud:</strong> Complete sub-base compaction in areas where earthworks are accepted. Progress to base course in approved sections.</li>';
-  ph+='<li><strong>Roads \u2013 Prince Sattam:</strong> Continue pavement works in line with approved material submittals and lab test results.</li>';
-  ph+='<li><strong>Utilities:</strong> Review utility diversion schedule and coordinate with service authorities for any outstanding permissions.</li>';
-  ph+='<li><strong>Fill Slope:</strong> Mobilize fill material and commence compaction works between L\u2013M abutment zone.</li>';
-  ph+='<li><strong>Survey:</strong> Conduct weekly as-built survey for all active disciplines. Update coordinate files and submit to consultant within 48 hours.</li>';
-  ph+='</ul>';
-  ph+='<div class="sub-hdr">6.2 Risks &amp; Dependencies</div>';
-  ph+='<ul>';
-  if(variance<-3) ph+='<li><strong style="color:#721C24;">Schedule Recovery:</strong> Project is '+Math.abs(variance)+'% behind plan. Contractor to submit recovery schedule within 7 days.</li>';
-  ph+='<li><strong>Material Delivery:</strong> Confirm concrete mix design approvals for upcoming pier shaft pours.</li>';
-  ph+='<li><strong>Utility Interfaces:</strong> Verify that utility diversions are complete before starting road base layers in affected zones.</li>';
-  ph+='<li><strong>Weather:</strong> Monitor temperature forecasts for concrete pours. Avoid pouring in temperatures exceeding 35\u00b0C without approved hot-weather concreting plan.</li>';
-  ph+='<li><strong>Approvals Pending:</strong> Follow up on any outstanding RFIs and technical submittals to avoid delays to critical path activities.</li>';
-  ph+='</ul>';
-  ph+='<div class="sub-hdr">6.3 Report Sign-Off</div>';
-  ph+='<table style="margin-top:8pt;">';
-  ph+='<tr><th>Role</th><th>Name</th><th>Signature</th><th>Date</th></tr>';
-  ph+='<tr><td>Head of Surveying</td><td>'+MY_NAME+'</td><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td><td>'+todayStr+'</td></tr>';
-  ph+='<tr><td>Resident Engineer</td><td></td><td>&nbsp;</td><td></td></tr>';
-  ph+='<tr><td>Project Manager</td><td></td><td>&nbsp;</td><td></td></tr>';
-  ph+='</table>';
-  // SITESYNC branding
-  ph+='<div style="margin-top:16pt;background:#003A70;color:#fff;padding:8pt 12pt;border-radius:4pt;display:flex;align-items:center;justify-content:space-between;">';
-  ph+='<div><div style="font-size:10pt;font-weight:900;letter-spacing:0.5px;">SITESYNC</div><div style="font-size:7pt;color:#C9A44C;margin-top:2pt;">Construction Intelligence Platform</div></div>';
-  ph+='<div style="text-align:right;font-size:7.5pt;"><div>Khatib &amp; Alami Consolidated Engineering</div><div style="color:#C9A44C;margin-top:2pt;">'+genStr+'</div></div>';
-  ph+='</div>';
-  ph+=footer(7,totalPages);
-  ph+='</div>';
-
-  ph+='</body></html>';
+  // ph+='</body></html>';
 
   var blob=new Blob([ph],{type:'text/html'});
   var url=URL.createObjectURL(blob);
