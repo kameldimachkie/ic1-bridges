@@ -246,6 +246,91 @@ body{display:flex;flex-direction:column;}
 </head>
 <body>
 <div id="ticker"><div id="ticker-inner"></div></div>
+<!-- Welcome / Splash screen -->
+<div id="welcome-screen" style="display:flex;flex-direction:column;position:fixed;inset:0;z-index:9999;background:linear-gradient(160deg,#050d1a 0%,#0a1628 50%,#0d1e10 100%);overflow:hidden;">
+
+  <!-- Animated background grid -->
+  <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(212,168,67,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(212,168,67,0.04) 1px,transparent 1px);background-size:40px 40px;"></div>
+
+  <!-- Corner accents -->
+  <div style="position:absolute;top:0;left:0;width:120px;height:120px;background:radial-gradient(circle at top left,rgba(212,168,67,0.12),transparent 70%);"></div>
+  <div style="position:absolute;bottom:0;right:0;width:180px;height:180px;background:radial-gradient(circle at bottom right,rgba(6,214,160,0.08),transparent 70%);"></div>
+
+  <!-- Content -->
+  <div style="position:relative;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;text-align:center;">
+
+    <!-- Logo mark -->
+    <div style="margin-bottom:20px;">
+      <svg width="72" height="72" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="36,4 66,20 66,52 36,68 6,52 6,20" fill="none" stroke="#D4A843" stroke-width="2"/>
+        <polygon points="36,12 58,24 58,48 36,60 14,48 14,24" fill="#D4A843" opacity="0.08"/>
+        <text x="36" y="43" text-anchor="middle" font-family="Segoe UI,Arial" font-size="18" font-weight="900" fill="#D4A843">KD</text>
+      </svg>
+    </div>
+
+    <!-- Brand -->
+    <div style="font-size:32px;font-weight:900;color:#f1f5f9;letter-spacing:2px;margin-bottom:4px;">SITESYNC</div>
+    <div style="font-size:11px;color:rgba(212,168,67,0.7);letter-spacing:3px;text-transform:uppercase;margin-bottom:28px;">Construction Intelligence Platform</div>
+
+    <!-- Project card -->
+    <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:18px 24px;width:100%;max-width:340px;margin-bottom:24px;">
+      <div style="font-size:11px;color:rgba(255,255,255,0.35);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;">Active Project</div>
+      <div style="font-size:17px;font-weight:900;color:#f1f5f9;margin-bottom:2px;">IC1 Road Improvements</div>
+      <div style="font-size:12px;color:rgba(255,255,255,0.45);margin-bottom:14px;">Interchange 1 &nbsp;·&nbsp; Diriyah, Riyadh</div>
+      <!-- Progress bar -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+        <div style="flex:1;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;">
+          <div id="wc-progress-bar" style="height:6px;background:linear-gradient(90deg,#D4A843,#06D6A0);border-radius:3px;width:0%;transition:width 0.8s ease;"></div>
+        </div>
+        <div id="wc-progress-pct" style="font-size:14px;font-weight:900;color:#D4A843;min-width:40px;text-align:right;">—%</div>
+      </div>
+      <div style="font-size:10px;color:rgba(255,255,255,0.3);">Overall Physical Progress</div>
+    </div>
+
+    <!-- Date + weather strip -->
+    <div style="display:flex;gap:10px;margin-bottom:24px;width:100%;max-width:340px;">
+      <div style="flex:1;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 12px;text-align:left;">
+        <div style="font-size:10px;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">Date</div>
+        <div id="wc-date" style="font-size:13px;font-weight:700;color:#f1f5f9;"></div>
+      </div>
+      <div style="flex:1;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 12px;text-align:left;">
+        <div style="font-size:10px;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">Location</div>
+        <div style="font-size:13px;font-weight:700;color:#f1f5f9;">Diriyah</div>
+      </div>
+    </div>
+
+    <!-- User name entry -->
+    <div style="width:100%;max-width:340px;margin-bottom:16px;">
+      <div style="font-size:10px;color:rgba(255,255,255,0.4);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Your Name</div>
+      <input id="wc-name" type="text" placeholder="Enter your name to continue..."
+        style="width:100%;padding:13px 16px;border-radius:10px;border:1px solid rgba(212,168,67,0.3);background:rgba(255,255,255,0.06);color:#f1f5f9;font-size:14px;font-family:inherit;outline:none;text-align:center;letter-spacing:0.3px;">
+    </div>
+
+    <!-- Password entry -->
+    <div style="width:100%;max-width:340px;margin-bottom:16px;">
+      <div style="font-size:10px;color:rgba(255,255,255,0.4);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Access Code</div>
+      <input id="wc-pass" type="password" placeholder="Enter access code..."
+        style="width:100%;padding:13px 16px;border-radius:10px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:#f1f5f9;font-size:14px;font-family:inherit;outline:none;text-align:center;letter-spacing:2px;">
+      <div id="wc-pass-err" style="font-size:10px;color:#E74C3C;margin-top:5px;min-height:14px;text-align:center;"></div>
+      <div style="font-size:10px;color:rgba(255,255,255,0.25);margin-top:6px;text-align:center;line-height:1.6;">
+        Access code provided by the Head of Surveying.<br>Contact <span style="color:rgba(212,168,67,0.6);">K. Dimachkie</span> if you need access.
+      </div>
+    </div>
+
+    <!-- Enter button -->
+    <button id="wc-enter-btn" onclick="wcEnter();"
+      style="width:100%;max-width:340px;padding:15px;background:linear-gradient(135deg,#D4A843,#C9A44C);border:none;border-radius:12px;color:#000;font-weight:900;font-size:15px;cursor:pointer;font-family:inherit;letter-spacing:0.5px;margin-bottom:20px;">
+      Enter App →
+    </button>
+
+    <!-- Footer -->
+    <div style="font-size:10px;color:rgba(255,255,255,0.2);letter-spacing:0.5px;">
+      Khatib &amp; Alami &nbsp;·&nbsp; Head of Surveying &nbsp;·&nbsp; <span id="wc-version">SiteSync v3.2</span>
+    </div>
+
+  </div>
+</div>
+
 <div id="app">
 <div id="hdr">
   <div class="hdr-top">
@@ -638,6 +723,7 @@ loadData();
 window.addEventListener('DOMContentLoaded',function(){
   loadUtNetworks();
   frInitInputs();
+  wcInit();
   // Restore custom weights if saved
   if(CUSTOM_WEIGHTS.stages&&Object.keys(CUSTOM_WEIGHTS.stages).length){
     for(var i=0;i<STAGES.length;i++){
@@ -4509,11 +4595,19 @@ function rSv(){
             h+='</div>';
           }
         }
-        h+='<div style="display:flex;gap:6px;margin-top:10px;">';
+        h+='<div style="display:flex;gap:5px;margin-top:10px;flex-wrap:wrap;">';
         h+='<button data-bid2="'+bm.id+'" onclick="svGoVerify(this.dataset.bid2);" ';
-        h+='style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(6,214,160,0.3);background:rgba(6,214,160,0.08);color:#06D6A0;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">Verify BM</button>';
+        h+='style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(6,214,160,0.3);background:rgba(6,214,160,0.08);color:#06D6A0;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;min-width:64px;">Verify</button>';
+        h+='<button data-bidedit="'+bm.id+'" onclick="svOpenEdit(this.dataset.bidedit);" ';
+        h+='style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(167,139,250,0.3);background:rgba(167,139,250,0.08);color:#A78BFA;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;min-width:64px;">Edit</button>';
+        h+='<button data-bidrepl="'+bm.id+'" onclick="svOpenReplace(this.dataset.bidrepl);" ';
+        h+='style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,193,69,0.3);background:rgba(255,193,69,0.08);color:#FFC145;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;min-width:64px;">Replace</button>';
+        if(bm.status==='Active'){
+          h+='<button data-biddeact="'+bm.id+'" onclick="svDeactivateBm(this.dataset.biddeact);" ';
+          h+='style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(74,85,104,0.4);background:rgba(74,85,104,0.1);color:#94a3b8;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;min-width:64px;">Deactivate</button>';
+        }
         h+='<button data-bid3="'+bm.id+'" onclick="svDeleteBm(this.dataset.bid3);" ';
-        h+='style="padding:8px 14px;border-radius:8px;border:1px solid rgba(231,76,60,0.3);background:transparent;color:#E74C3C;font-size:11px;cursor:pointer;font-family:inherit;">Delete</button>';
+        h+='style="padding:8px 12px;border-radius:8px;border:1px solid rgba(231,76,60,0.3);background:transparent;color:#E74C3C;font-size:11px;cursor:pointer;font-family:inherit;">✕</button>';
         h+='</div></div>';
       }
     }
@@ -4525,12 +4619,17 @@ function rSv(){
   // ════════════════════════════════════════════════════════════
   else if(_svTab==='add'){
     h+='<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px;border-left:4px solid #A78BFA;">';
-    h+='<div style="font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;">Add New Benchmark</div>';
+    var isEdit=_svEditId!==null;
+    var editBm=null;
+    if(isEdit){for(var ei2=0;ei2<SURVEY.bms.length;ei2++) if(SURVEY.bms[ei2].id===_svEditId){editBm=SURVEY.bms[ei2];break;}}
+    h+='<div style="font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;">'+(isEdit?'Edit Benchmark — '+(editBm?editBm.name:''):'Add New Benchmark')+'</div>';
+    if(isEdit&&editBm) h+='<div style="background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.25);border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:11px;color:#A78BFA;">Editing: <b>'+editBm.name+'</b> — changes will update the registry immediately</div>';
     // BM Name + Accuracy Class
     h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">';
     h+='<div>';
     h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">BM Name</label>';
-    h+='<input type="text" id="sv-bm-name" placeholder="e.g. BM-021" ';
+    var vName=isEdit&&editBm?editBm.name:'';
+    h+='<input type="text" id="sv-bm-name" placeholder="e.g. BM-021" value="'+vName+'"';
     h+='style="width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:13px;font-family:inherit;outline:none;">';
     h+='</div>';
     h+='<div>';
@@ -4552,15 +4651,17 @@ function rSv(){
     h+='</div>';
     // Description
     h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Description</label>';
-    h+='<textarea id="sv-bm-desc" placeholder="Location, monument type, reference notes..." ';
-    h+='style="width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:12px;font-family:inherit;height:60px;resize:none;outline:none;margin-bottom:8px;"></textarea>';
+    var vDesc=isEdit&&editBm?editBm.desc:'';
+    h+='<textarea id="sv-bm-desc" placeholder="Location, monument type, reference notes..."';
+    h+='style="width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:12px;font-family:inherit;height:60px;resize:none;outline:none;margin-bottom:8px;">'+vDesc+'</textarea>';
     // Photo
     h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Photo (optional)</label>';
     h+='<input type="file" id="sv-bm-photo" accept="image/*" style="width:100%;padding:6px;font-size:11px;color:var(--fg);margin-bottom:12px;">';
     // Map auto-link note
     h+='<div style="background:rgba(88,166,255,0.08);border:1px solid rgba(88,166,255,0.2);border-radius:8px;padding:9px 12px;margin-bottom:12px;font-size:11px;color:#58A6FF;">BM will be automatically linked to the Map module after saving</div>';
-    h+='<button onclick="svAddBm();" ';
-    h+='style="width:100%;padding:11px;background:#A78BFA;border:none;border-radius:9px;color:#000;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;">Save Benchmark</button>';
+    h+='<input type="hidden" id="sv-bm-edit-id" value="'+(isEdit?_svEditId:'')+'">';
+    h+='<button onclick="svSaveBm();" ';
+    h+='style="width:100%;padding:11px;background:#A78BFA;border:none;border-radius:9px;color:#000;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;">'+(isEdit?'Update Benchmark':'Save Benchmark')+'</button>';
     h+='</div>';
   }
 
@@ -4750,31 +4851,68 @@ function rSv(){
 }
 
 // ── Survey helpers ─────────────────────────────────────────────
+function svOpenAdd(){_svEditId=null;_svTab='add';rSv();}
+function svOpenEdit(id){_svEditId=id;_svTab='add';rSv();}
+function svOpenReplace(id){
+  if(!confirm('This will mark the current BM as Replaced and open the Add form for the new BM. Continue?')) return;
+  // Mark old BM replaced
+  for(var i=0;i<SURVEY.bms.length;i++) if(SURVEY.bms[i].id===id){SURVEY.bms[i].status='Replaced';break;}
+  persist();
+  _svEditId=null;_svTab='add';rSv();
+  flash('Old BM marked Replaced — fill in the new BM details');
+}
+function svDeactivateBm(id){
+  if(!confirm('Mark this BM as Inactive?')) return;
+  for(var i=0;i<SURVEY.bms.length;i++) if(SURVEY.bms[i].id===id){SURVEY.bms[i].status='Inactive';break;}
+  persist();rSv();flash('BM deactivated');
+}
+function svSaveBm(){
+  var nameEl=document.getElementById('sv-bm-name');
+  var editIdEl=document.getElementById('sv-bm-edit-id');
+  if(!nameEl||!nameEl.value.trim()){flash('Enter a BM name');return;}
+  var eEl=document.getElementById('sv-bm-e');
+  var nEl=document.getElementById('sv-bm-n');
+  var zEl=document.getElementById('sv-bm-z');
+  var descEl=document.getElementById('sv-bm-desc');
+  var accEl=document.getElementById('sv-bm-acc');
+  var editId=editIdEl?editIdEl.value:'';
+  if(editId){
+    // Update existing
+    for(var i=0;i<SURVEY.bms.length;i++){
+      if(SURVEY.bms[i].id===editId){
+        SURVEY.bms[i].name=nameEl.value.trim();
+        SURVEY.bms[i].e=eEl&&eEl.value!==''?parseFloat(eEl.value):SURVEY.bms[i].e;
+        SURVEY.bms[i].n=nEl&&nEl.value!==''?parseFloat(nEl.value):SURVEY.bms[i].n;
+        SURVEY.bms[i].z=zEl&&zEl.value!==''?parseFloat(zEl.value):SURVEY.bms[i].z;
+        SURVEY.bms[i].desc=descEl?descEl.value.trim():SURVEY.bms[i].desc;
+        SURVEY.bms[i].accClass=accEl?accEl.value:SURVEY.bms[i].accClass;
+        break;
+      }
+    }
+    _svEditId=null;persist();_svTab='registry';rSv();flash('Benchmark updated ✅');
+  } else {
+    // New BM
+    SURVEY.bms.push({
+      id:'bm_'+Date.now(),
+      name:nameEl.value.trim(),
+      e:eEl&&eEl.value!==''?parseFloat(eEl.value):'',
+      n:nEl&&nEl.value!==''?parseFloat(nEl.value):'',
+      z:zEl&&zEl.value!==''?parseFloat(zEl.value):'',
+      desc:descEl?descEl.value.trim():'',
+      accClass:accEl?accEl.value:SV_ACC[0],
+      status:'Active',
+      created:new Date().toISOString().slice(0,10),
+      verified:null,photo:null
+    });
+    persist();_svTab='registry';rSv();flash('Benchmark saved ✅');
+  }
+}
 function svSwitch(tab){_svTab=tab;rSv();}
 function svSelectBm(id){_svSelBm=(_svSelBm===id?null:id);rSv();}
 function svGoVerify(id){_svSelBm=id;_svTab='verify';rSv();}
 function svMapSelect(id){_svSelBm=(_svSelBm===id?null:id);rSv();}
 
-function svAddBm(){
-  var nameEl=document.getElementById('sv-bm-name');
-  if(!nameEl||!nameEl.value.trim()){flash('Enter a BM name');return;}
-  var eEl=document.getElementById('sv-bm-e');
-  var nEl=document.getElementById('sv-bm-n');
-  var zEl=document.getElementById('sv-bm-z');
-  SURVEY.bms.push({
-    id:'bm_'+Date.now(),
-    name:nameEl.value.trim(),
-    e:eEl&&eEl.value?parseFloat(eEl.value):'',
-    n:nEl&&nEl.value?parseFloat(nEl.value):'',
-    z:zEl&&zEl.value?parseFloat(zEl.value):'',
-    desc:document.getElementById('sv-bm-desc')?document.getElementById('sv-bm-desc').value.trim():'',
-    accClass:document.getElementById('sv-bm-acc')?document.getElementById('sv-bm-acc').value:SV_ACC[0],
-    status:'Active',
-    created:new Date().toISOString().slice(0,10),
-    verified:null,photo:null
-  });
-  persist();_svTab='registry';rSv();flash('Benchmark saved ✅');
-}
+// svAddBm replaced by svSaveBm
 
 function svDeleteBm(id){
   if(!confirm('Delete this BM and all its verifications?')) return;
@@ -4867,6 +5005,110 @@ function svExportVers(){
   var a=document.createElement('a');
   a.href=url;a.download='IC1_BM_Verifications_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
   URL.revokeObjectURL(url);flash('Verifications exported ✅');
+}
+
+
+// ══════════════════════════════════════════════════════════════
+// WELCOME SCREEN
+// ══════════════════════════════════════════════════════════════
+function wcInit(){
+  // Always show on every fresh page load
+  // (sessionStorage clears when tab closes — perfect for daily field use)
+  var passedThisSession = sessionStorage.getItem('ic1_session_ok');
+  if(passedThisSession){
+    // Already authenticated this session — skip straight in
+    document.getElementById('welcome-screen').style.display='none';
+    return;
+  }
+
+  // Welcome screen is already display:flex in HTML — just populate it
+  var savedName = localStorage.getItem('ic1_username')||'';
+
+  // Fill date
+  var d = new Date();
+  var dateEl = document.getElementById('wc-date');
+  if(dateEl) dateEl.textContent = d.toLocaleDateString('en-GB',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
+
+  // Pre-fill name if previously entered
+  var nameEl = document.getElementById('wc-name');
+  if(nameEl && savedName) nameEl.value = savedName;
+
+  // Animate progress bar
+  setTimeout(function(){
+    var ov = typeof calcOverallPct==='function' ? calcOverallPct() : 0;
+    var bar = document.getElementById('wc-progress-bar');
+    var pct = document.getElementById('wc-progress-pct');
+    if(bar) bar.style.width = ov+'%';
+    if(pct) pct.textContent = ov+'%';
+  }, 500);
+
+  // Keyboard navigation: name → Tab/Enter → password → Enter → submit
+  var nameInp = document.getElementById('wc-name');
+  var passInp = document.getElementById('wc-pass');
+  if(nameInp){
+    nameInp.addEventListener('keydown',function(e){
+      if(e.key==='Enter'||e.key==='Tab'){
+        e.preventDefault();
+        var p=document.getElementById('wc-pass');
+        if(p) p.focus();
+      }
+    });
+  }
+  if(passInp){
+    passInp.addEventListener('keydown',function(e){
+      if(e.key==='Enter') wcEnter();
+    });
+  }
+  // Auto-focus: name if empty, else password
+  setTimeout(function(){
+    var ni=document.getElementById('wc-name');
+    var pi=document.getElementById('wc-pass');
+    if(ni&&!ni.value&&pi) ni.focus();
+    else if(pi) pi.focus();
+  },200);
+}
+
+function wcEnter(){
+  var nameEl = document.getElementById('wc-name');
+  var passEl = document.getElementById('wc-pass');
+  var errEl  = document.getElementById('wc-pass-err');
+  var name   = nameEl ? nameEl.value.trim() : '';
+  var pass   = passEl ? passEl.value : '';
+
+  // Validate name
+  if(!name){
+    if(nameEl){ nameEl.style.border='1px solid #E74C3C'; nameEl.focus(); }
+    return;
+  }
+  // Validate password against stored admin password
+  var correctPw = (typeof ADMIN_HASH !== 'undefined' ? ADMIN_HASH : null)
+               || localStorage.getItem('ic1_adminpw')
+               || 'Lina@6072';
+  if(pass !== correctPw){
+    if(errEl) errEl.textContent = 'Incorrect access code — please try again';
+    if(passEl){ passEl.style.border='1px solid #E74C3C'; passEl.value=''; passEl.focus(); }
+    // Shake animation
+    var btn = document.getElementById('wc-enter-btn');
+    if(btn){ btn.style.transform='translateX(-6px)'; setTimeout(function(){btn.style.transform='translateX(6px)';setTimeout(function(){btn.style.transform='';},80);},80); }
+    return;
+  }
+  if(errEl) errEl.textContent='';
+
+  // Save name persistently + mark session as authenticated
+  try{ localStorage.setItem('ic1_username', name); }catch(e){}
+  try{ sessionStorage.setItem('ic1_session_ok','1'); }catch(e){}
+  if(typeof MY_NAME !== 'undefined') MY_NAME = name;
+
+  // Slide out
+  var ws = document.getElementById('welcome-screen');
+  ws.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+  ws.style.opacity = '0';
+  ws.style.transform = 'scale(0.97)';
+  setTimeout(function(){
+    ws.style.display = 'none';
+    nav('ov');
+    buildTicker();
+  }, 400);
 }
 
 function buildTicker(){
