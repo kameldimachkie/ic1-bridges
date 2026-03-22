@@ -4464,31 +4464,36 @@ function rOv(){
 
   // ── Build donut SVG ───────────────────────────────────────
   function buildDonutSVG(segments, cx, sublabel){
-    var r=52, stroke=14, circ=2*Math.PI*r;
+    var r=50, stroke=18, circ=2*Math.PI*r;
     var total=0;
     for(var i=0;i<segments.length;i++) total+=segments[i].val;
-    var svg="<svg viewBox='0 0 120 120' style='width:110px;height:110px;'>";
-    svg+="<circle cx='60' cy='60' r='"+r+"' fill='none' stroke='var(--panel)' stroke-width='"+stroke+"'/>";
+    var svg="<svg viewBox='0 0 120 120' style='width:112px;height:112px;'>";
+    // Background track — slightly visible
+    svg+="<circle cx='60' cy='60' r='"+r+"' fill='none' stroke='#1e2d44' stroke-width='"+(stroke+2)+"'/>";
     if(total>0){
       var cumAngle=-90;
       for(var i=0;i<segments.length;i++){
         if(segments[i].val<=0) continue;
         var pct=segments[i].val/total;
         var dashArr=circ*pct+" "+(circ*(1-pct));
+        // Gap between slices
+        var gapDash=(circ*pct-2)+" "+(circ*(1-pct)+2);
         svg+="<circle cx='60' cy='60' r='"+r+"' fill='none' stroke='"+segments[i].col+"' ";
-        svg+="stroke-width='"+stroke+"' stroke-dasharray='"+dashArr+"' ";
+        svg+="stroke-width='"+stroke+"' stroke-dasharray='"+gapDash+"' ";
         svg+="stroke-dashoffset='"+(circ*0.25)+"' ";
-        svg+="transform='rotate("+cumAngle+" 60 60)' stroke-linecap='butt'/>";
+        svg+="transform='rotate("+cumAngle+" 60 60)' stroke-linecap='butt' opacity='0.97'/>";
         cumAngle+=pct*360;
       }
     } else {
       svg+="<circle cx='60' cy='60' r='"+r+"' fill='none' stroke='#2a3f5a' stroke-width='"+stroke+"'/>";
     }
-    svg+="<text x='60' y='55' text-anchor='middle' font-family='Segoe UI,Arial,sans-serif' font-size='14' font-weight='900' fill='var(--text)'>"+cx+"</text>";
-    svg+="<text x='60' y='70' text-anchor='middle' font-family='Segoe UI,Arial,sans-serif' font-size='8' fill='var(--dimL)'>"+sublabel+"</text>";
+    // Center text
+    svg+="<text x='60' y='55' text-anchor='middle' font-family='Segoe UI,Arial,sans-serif' font-size='15' font-weight='900' fill='#f1f5f9'>"+cx+"</text>";
+    svg+="<text x='60' y='70' text-anchor='middle' font-family='Segoe UI,Arial,sans-serif' font-size='8' font-weight='600' fill='#64748b' letter-spacing='0.5'>"+sublabel+"</text>";
     svg+="</svg>";
     return svg;
   }
+
 
   // Weight segments
   var wSegs=[];
@@ -4502,20 +4507,32 @@ function rOv(){
   }
 
   // ── Donuts row ─────────────────────────────────────────────
+  // ── Twin donuts (SVG) ──────────────────────────────────────
+  // Weight segments
+  var wSegs=[];
+  for(var di=0;di<discs.length;di++){
+    if(discs[di].w>0) wSegs.push({col:discs[di].col,val:discs[di].w,label:discs[di].label,icon:discs[di].icon});
+  }
+  // Progress segments
+  var pSegs=[];
+  for(var di=0;di<discs.length;di++){
+    if(discs[di].w>0) pSegs.push({col:discs[di].col,val:Math.round(discs[di].pct*discs[di].w/100*10)/10,label:discs[di].label,icon:discs[di].icon});
+  }
+
+  // ── Donuts row ─────────────────────────────────────────────
   h+="<div style='display:flex;gap:10px;margin-bottom:14px;align-items:flex-start;'>";
 
   // LEFT: Weight donut + legend
   h+="<div style='flex:1;'>";
   h+="<div style='text-align:center;'>"+buildDonutSVG(wSegs,totalW+'%','WEIGHTS')+"</div>";
   h+="<div style='font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:1px;text-align:center;margin-bottom:8px;'>Weight Split</div>";
-  // Legend
   h+="<div style='background:var(--panel);border-radius:8px;padding:8px 10px;'>";
-  for(var i=0;i<discs.length;i++){
-    if(discs[i].w<=0) continue;
-    h+="<div data-disc='"+discs[i].id+"' onclick='ovDiscTip(this)' style='display:flex;align-items:center;gap:7px;padding:4px 0;border-bottom:1px solid var(--border);cursor:pointer;' id='wleg-"+discs[i].id+"'>";
-    h+="<div style='width:10px;height:10px;border-radius:2px;background:"+discs[i].col+";flex-shrink:0;'></div>";
-    h+="<div style='flex:1;font-size:11px;color:var(--fg);'>"+discs[i].icon+" "+discs[i].label+"</div>";
-    h+="<div style='font-size:11px;font-weight:800;color:"+discs[i].col+";'>"+discs[i].w+"%</div>";
+  for(var di=0;di<discs.length;di++){
+    if(discs[di].w<=0) continue;
+    h+="<div data-disc='"+discs[di].id+"' onclick='ovDiscTip(this)' style='display:flex;align-items:center;gap:7px;padding:4px 0;border-bottom:1px solid var(--border);cursor:pointer;' id='wleg-"+discs[di].id+"'>";
+    h+="<div style='width:10px;height:10px;border-radius:2px;background:"+discs[di].col+";flex-shrink:0;'></div>";
+    h+="<div style='flex:1;font-size:11px;color:var(--fg);'>"+discs[di].icon+" "+discs[di].label+"</div>";
+    h+="<div style='font-size:11px;font-weight:800;color:"+discs[di].col+";'>"+discs[di].w+"%</div>";
     h+="</div>";
   }
   h+="</div>";
@@ -4525,15 +4542,14 @@ function rOv(){
   h+="<div style='flex:1;'>";
   h+="<div style='text-align:center;'>"+buildDonutSVG(pSegs,ov+'%','PROGRESS')+"</div>";
   h+="<div style='font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:1px;text-align:center;margin-bottom:8px;'>Progress Split</div>";
-  // Progress legend
   h+="<div style='background:var(--panel);border-radius:8px;padding:8px 10px;'>";
-  for(var i=0;i<discs.length;i++){
-    if(discs[i].w<=0) continue;
-    var pCol2=discs[i].pct>=75?'var(--green)':discs[i].pct>0?discs[i].col:'var(--dim)';
+  for(var di=0;di<discs.length;di++){
+    if(discs[di].w<=0) continue;
+    var pCol2=discs[di].pct>=75?'var(--green)':discs[di].pct>0?discs[di].col:'var(--dim)';
     h+="<div style='display:flex;align-items:center;gap:7px;padding:4px 0;border-bottom:1px solid var(--border);'>";
-    h+="<div style='width:10px;height:10px;border-radius:2px;background:"+discs[i].col+";flex-shrink:0;'></div>";
-    h+="<div style='flex:1;font-size:11px;color:var(--fg);'>"+discs[i].icon+" "+discs[i].label+"</div>";
-    h+="<div style='font-size:11px;font-weight:800;color:"+pCol2+";'>"+discs[i].pct+"%</div>";
+    h+="<div style='width:10px;height:10px;border-radius:2px;background:"+discs[di].col+";flex-shrink:0;'></div>";
+    h+="<div style='flex:1;font-size:11px;color:var(--fg);'>"+discs[di].icon+" "+discs[di].label+"</div>";
+    h+="<div style='font-size:11px;font-weight:800;color:"+pCol2+";'>"+discs[di].pct+"%</div>";
     h+="</div>";
   }
   h+="</div>";
@@ -4546,7 +4562,7 @@ function rOv(){
   h+="<div id='disc-tip-name' style='font-size:13px;font-weight:800;color:var(--fg);margin-bottom:4px;'></div>";
   h+="<div id='disc-tip-w' style='font-size:12px;color:var(--gold);font-weight:700;'></div>";
   h+="<div id='disc-tip-p' style='font-size:11px;color:var(--dimL);margin-top:2px;'></div>";
-  h+='<button onclick="ovCloseTip();" style="margin-top:8px;padding:4px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--dimL);font-size:11px;cursor:pointer;font-family:inherit;">✕ Close</button>';
+  h+="<button onclick='ovCloseTip();' style='margin-top:8px;padding:4px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--dimL);font-size:11px;cursor:pointer;font-family:inherit;'>✕ Close</button>";
   h+="</div>";
 
   // ── Timeline KPIs ──────────────────────────────────────────
