@@ -300,6 +300,7 @@ body{display:flex;flex-direction:column;}
     
     <button class="nb"     id="tab-pl" onclick="nav('pl')">📅 Plan</button>
     <button class="nb"     id="tab-fr" onclick="nav('fr')">📋 Field</button>
+    <button class="nb" id="tab-sv" onclick="nav('sv')">📐 Survey</button>
     <button class="nb"     id="tab-rp" onclick="nav('rp')">Report</button>
     <button class="nb"     id="tab-mp" onclick="nav('mp')"><svg width="16" height="14" viewBox="0 0 22 18" fill="none" style="vertical-align:-3px;margin-right:4px"><line x1="1" y1="9" x2="21" y2="9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" opacity="0.75"/><line x1="8" y1="1" x2="8" y2="17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/><line x1="16" y1="1" x2="16" y2="17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/><path d="M3 9 Q7 4 11 4 Q15 4 19 9" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="11" cy="9" r="2.8" fill="currentColor" opacity="0.9"/><circle cx="11" cy="9" r="1.2" fill="#07090d"/></svg>Map</button>
     <button class="nb" id="tab-ch" onclick="nav('ch')">💬 Chat</button>
@@ -326,6 +327,7 @@ body{display:flex;flex-direction:column;}
   <div class="pg"    id="pg-tl"></div>
   <div class="pg"    id="pg-pl"></div>
   <div class="pg"    id="pg-fr"></div>
+  <div class="pg" id="pg-sv"></div>
   <div class="pg"    id="pg-rp"></div>
   <div class="pg"    id="pg-is"></div>
 <div class="pg"    id="pg-gn"></div>
@@ -529,6 +531,14 @@ var ROADS={ibn:{pct:0,status:"Not Started"},sattam:{pct:0,status:"Not Started"}}
 var FILL_SLOPE={lm_r:false,lm_l:false,mn_r:false,mn_l:false};
 var UTILITIES=[];  // legacy shim — new system uses UTIL_NETWORKS
 // ── DAILY REPORT DATA ─────────────────────────────────────────
+// ── SURVEY DATA ────────────────────────────────────────────────
+var SURVEY = {
+  bms:          [],   // [{id,name,e,n,z,desc,accClass,status,created,verified,photo}]
+  verifications:[],   // [{id,bmId,date,measuredZ,delta,pass,note,by}]
+  tasks:        [],   // [{id,type,desc,assigned,status,created,file}]
+};
+var _svTab = 'bms';   // 'bms' | 'verify' | 'tasks' | 'export'
+
 // ── FIELD REPORT DATA ─────────────────────────────────────────
 var FIELD = {
   photos:  [],  // [{id,date,discipline,caption,thumb,ts}]
@@ -594,6 +604,7 @@ function loadData(){
   // loadUtNetworks called after DOMContentLoaded
   try{CUSTOM_WEIGHTS=JSON.parse(localStorage.getItem("ic1b3_cw")||JSON.stringify(CUSTOM_WEIGHTS));}catch(e){}
   try{MESSAGES=JSON.parse(localStorage.getItem('ic1b3_msg')||'[]');}catch(e){MESSAGES=[];}
+  try{var _sv2=localStorage.getItem('ic1b3_survey');if(_sv2){var _sd=JSON.parse(_sv2);SURVEY.bms=_sd.bms||[];SURVEY.verifications=_sd.verifications||[];SURVEY.tasks=_sd.tasks||[];}}catch(e){}
   try{var _fld=localStorage.getItem('ic1b3_field');if(_fld){var _ff=JSON.parse(_fld);FIELD.photos=_ff.photos||[];FIELD.diary=_ff.diary||[];}}catch(e){}
   try{var _dly=localStorage.getItem('ic1b3_daily');if(_dly){var _dd=JSON.parse(_dly);DAILY.photos=_dd.photos||[];DAILY.entries=_dd.entries||[];DAILY.reports=_dd.reports||[];DAILY.snapshots=_dd.snapshots||[];DAILY.apiKey=_dd.apiKey||'';}}catch(e){}
   try{var _p=localStorage.getItem('ic1b3_plan');if(_p){var _pp=JSON.parse(_p);PLAN.curve=_pp.curve||[];PLAN.activities=_pp.activities||PLAN.activities;}}catch(e){}
@@ -611,6 +622,7 @@ function persist(){
   try{localStorage.setItem("ic1b3_cw",JSON.stringify(CUSTOM_WEIGHTS));}catch(e){}
   try{localStorage.setItem('ic1b3_msg',JSON.stringify(MESSAGES.slice(-20)));}catch(e){}
   try{localStorage.setItem('ic1b3_plan',JSON.stringify(PLAN));}catch(e){}
+  try{localStorage.setItem('ic1b3_survey',JSON.stringify({bms:SURVEY.bms,verifications:SURVEY.verifications,tasks:SURVEY.tasks}));}catch(e){}
   try{localStorage.setItem('ic1b3_field',JSON.stringify({photos:FIELD.photos.slice(-100),diary:FIELD.diary.slice(-500)}));}catch(e){}
   try{localStorage.setItem('ic1b3_daily',JSON.stringify({photos:DAILY.photos.slice(-50),entries:DAILY.entries.slice(-200),reports:DAILY.reports.slice(-30),snapshots:DAILY.snapshots.slice(-90),apiKey:DAILY.apiKey}));}catch(e){}
   // Record location and auto-push on every change
@@ -4317,6 +4329,546 @@ function navToMap(type, id, label){
   },300);
 }
 
+
+// ══════════════════════════════════════════════════════════════
+// SURVEY MODULE
+// ══════════════════════════════════════════════════════════════
+// SURVEY MODULE — BM Registry & Verification
+// ══════════════════════════════════════════════════════════════
+
+var _svTab    = 'registry';  // 'registry'|'add'|'verify'|'map'|'export'
+var _svSelBm  = null;
+var _svBmForm = false;
+
+var SV_ACC = ['Class A (±1mm)','Class B (±3mm)','Class C (±5mm)','Class D (±10mm)'];
+
+// Pre-seed 10 principal BMs if empty
+function svSeedBms(){
+  if(SURVEY.bms.length) return;
+  var seed=[
+    {id:'bm_001',name:'BM-001',e:388420.123,n:2508340.456,z:612.3840,desc:'Junction of King Khalid Rd & IC1 North approach. Brass disc in concrete pillar.',accClass:'Class A (±1mm)',status:'Active'},
+    {id:'bm_005',name:'BM-005',e:388512.780,n:2508290.110,z:611.9210,desc:'West abutment zone — Bridge A reference BM.',accClass:'Class A (±1mm)',status:'Active'},
+    {id:'bm_006',name:'BM-006',e:388605.445,n:2508241.330,z:612.1550,desc:'Between Bridge A and Bridge B. Iron spike in kerb.',accClass:'Class B (±3mm)',status:'Active'},
+    {id:'bm_007',name:'BM-007',e:388698.220,n:2508192.780,z:612.4120,desc:'Bridge B east abutment zone. Concrete monument.',accClass:'Class A (±1mm)',status:'Active'},
+    {id:'bm_008',name:'BM-008',e:388790.890,n:2508144.560,z:612.0630,desc:'Between Bridge B and Bridge C. Nail in asphalt.',accClass:'Class B (±3mm)',status:'Active'},
+    {id:'bm_010',name:'BM-010',e:388883.660,n:2508096.220,z:613.2780,desc:'Bridge C area. Reference for dual-carriageway M/N.',accClass:'Class A (±1mm)',status:'Active'},
+    {id:'bm_012',name:'BM-012',e:388976.110,n:2508048.430,z:612.8850,desc:'South end of interchange. Control network BM.',accClass:'Class A (±1mm)',status:'Active'},
+    {id:'bm_015',name:'BM-015',e:389068.990,n:2508000.780,z:613.1240,desc:'Sattam Road crossing reference.',accClass:'Class B (±3mm)',status:'Active'},
+    {id:'bm_017',name:'BM-017',e:389161.540,n:2507952.660,z:611.7610,desc:'Ibn Saud Road junction. Replaced original BM-017A.',accClass:'Class B (±3mm)',status:'Replaced'},
+    {id:'bm_020',name:'BM-020',e:389254.230,n:2507905.110,z:612.5930,desc:'Eastern perimeter. Reserve control BM.',accClass:'Class C (±5mm)',status:'Inactive'},
+  ];
+  var today=new Date().toISOString().slice(0,10);
+  for(var i=0;i<seed.length;i++){
+    SURVEY.bms.push({
+      id:seed[i].id,name:seed[i].name,
+      e:seed[i].e,n:seed[i].n,z:seed[i].z,
+      desc:seed[i].desc,accClass:seed[i].accClass,
+      status:seed[i].status,
+      created:today,verified:null,photo:null
+    });
+  }
+  persist();
+}
+
+function rSv(){
+  svSeedBms();
+  var activeBms  = SURVEY.bms.filter(function(b){return b.status==='Active';}).length;
+  var passVers   = SURVEY.verifications.filter(function(v){return v.pass;}).length;
+  var totalVers  = SURVEY.verifications.length;
+  var failVers   = totalVers - passVers;
+
+  var stCol = {Active:'#06D6A0',Inactive:'#4a5568',Replaced:'#FFC145'};
+  var stBg  = {Active:'rgba(6,214,160,0.12)',Inactive:'rgba(74,85,104,0.12)',Replaced:'rgba(255,193,69,0.12)'};
+
+  var h='';
+
+  // ── Header ─────────────────────────────────────────────────
+  h+='<div style="background:linear-gradient(135deg,#0a1628,#0a1e28 60%,#0a1628);';
+  h+='border-radius:14px;padding:16px;margin-bottom:14px;';
+  h+='border:1px solid rgba(167,139,250,0.2);position:relative;overflow:hidden;">';
+  h+='<div style="position:absolute;top:0;right:0;width:80px;height:80px;';
+  h+='background:radial-gradient(circle at top right,rgba(167,139,250,0.12),transparent 70%);pointer-events:none;"></div>';
+  h+='<div style="display:flex;align-items:flex-start;justify-content:space-between;">';
+  h+='<div>';
+  h+='<div style="font-size:11px;color:rgba(167,139,250,0.8);font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">IC1 Road Improvements</div>';
+  h+='<div style="font-size:20px;font-weight:900;color:#f1f5f9;letter-spacing:-0.5px;">Survey</div>';
+  h+='<div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:3px;">Benchmark Registry &nbsp;·&nbsp; Verification &nbsp;·&nbsp; Control Network</div>';
+  h+='<div style="display:flex;align-items:center;gap:6px;margin-top:8px;">';
+  h+='<span style="background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.3);color:#A78BFA;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;">'+SURVEY.bms.length+' BMs</span>';
+  h+='<span style="background:rgba(6,214,160,0.12);border:1px solid rgba(6,214,160,0.25);color:#06D6A0;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;">'+activeBms+' Active</span>';
+  if(totalVers>0) h+='<span style="background:rgba(88,166,255,0.12);border:1px solid rgba(88,166,255,0.25);color:#58A6FF;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;">'+passVers+'/'+totalVers+' Pass</span>';
+  h+='</div></div>';
+  h+='<div style="text-align:right;">';
+  h+='<div style="font-size:26px;font-weight:900;color:#A78BFA;line-height:1;">'+SURVEY.bms.length+'</div>';
+  h+='<div style="font-size:9px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px;margin-top:2px;">Total BMs</div>';
+  h+='</div></div></div>';
+
+  // ── Tab bar ─────────────────────────────────────────────────
+  h+='<div style="display:flex;gap:5px;margin-bottom:14px;background:rgba(255,255,255,0.04);border-radius:12px;padding:4px;">';
+  var svTabs=[['registry','Registry'],['add','Add BM'],['verify','Verify'],['map','Map'],['export','Export']];
+  for(var ti=0;ti<svTabs.length;ti++){
+    var isOn=_svTab===svTabs[ti][0];
+    h+='<button data-tab="'+svTabs[ti][0]+'" onclick="svSwitch(this.dataset.tab);" ';
+    h+='style="flex:1;padding:8px 4px;border-radius:9px;border:none;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;';
+    h+='background:'+(isOn?'#A78BFA':'transparent')+';';
+    h+='color:'+(isOn?'#000':'rgba(255,255,255,0.4)')+';';
+    h+='box-shadow:'+(isOn?'0 2px 8px rgba(167,139,250,0.35)':'none')+';">'+svTabs[ti][1]+'</button>';
+  }
+  h+='</div>';
+
+  // ════════════════════════════════════════════════════════════
+  // 1. REGISTRY
+  // ════════════════════════════════════════════════════════════
+  if(_svTab==='registry'){
+    // KPI strip
+    h+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:12px;">';
+    var kpis4=[
+      {v:SURVEY.bms.length+'', l:'Total BMs',  c:'#A78BFA'},
+      {v:activeBms+'',          l:'Active',      c:'#06D6A0'},
+      {v:SURVEY.bms.filter(function(b){return b.status==='Replaced';}).length+'', l:'Replaced', c:'#FFC145'},
+      {v:totalVers+'',           l:'Verifications', c:'#58A6FF'},
+    ];
+    for(var ki=0;ki<kpis4.length;ki++){
+      h+='<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:9px 6px;text-align:center;border-top:3px solid '+kpis4[ki].c+';">';
+      h+='<div style="font-size:18px;font-weight:900;color:'+kpis4[ki].c+';">'+kpis4[ki].v+'</div>';
+      h+='<div style="font-size:8px;color:var(--dimL);text-transform:uppercase;letter-spacing:0.5px;margin-top:3px;">'+kpis4[ki].l+'</div>';
+      h+='</div>';
+    }
+    h+='</div>';
+
+    // BM list card
+    h+='<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:10px;">';
+    h+='<div style="padding:12px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);">';
+    h+='<div style="font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;">Benchmark Master List</div>';
+    h+='<button onclick="svSwitch(\'add\');" style="padding:5px 12px;border-radius:7px;border:1px solid #A78BFA;background:rgba(167,139,250,0.1);color:#A78BFA;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;">+ Add BM</button>';
+    h+='</div>';
+
+    for(var bi=0;bi<SURVEY.bms.length;bi++){
+      var bm=SURVEY.bms[bi];
+      var bmSC=stCol[bm.status]||'#4a5568';
+      var bmSB=stBg[bm.status]||'rgba(74,85,104,0.12)';
+      var isSel=_svSelBm===bm.id;
+      // Last verification
+      var lastV=null;
+      for(var vi=SURVEY.verifications.length-1;vi>=0;vi--){
+        if(SURVEY.verifications[vi].bmId===bm.id){lastV=SURVEY.verifications[vi];break;}
+      }
+      h+='<div data-bmid="'+bm.id+'" onclick="svSelectBm(this.dataset.bmid);" ';
+      h+='style="display:flex;align-items:stretch;border-bottom:1px solid var(--border);cursor:pointer;';
+      h+='background:'+(isSel?'rgba(167,139,250,0.07)':'transparent')+';">';
+      // Color bar
+      h+='<div style="width:4px;background:'+(bm.status==='Active'?'#A78BFA':bm.status==='Replaced'?'#FFC145':'#4a5568')+';flex-shrink:0;"></div>';
+      // Main content
+      h+='<div style="flex:1;padding:10px 12px;">';
+      h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;">';
+      h+='<div style="font-size:13px;font-weight:900;color:var(--text);">'+bm.name+'</div>';
+      h+='<span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:6px;background:'+bmSB+';color:'+bmSC+';border:1px solid '+bmSC+'33;">'+bm.status+'</span>';
+      h+='</div>';
+      h+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:2px;">';
+      h+='<span style="font-size:11px;font-weight:800;color:#A78BFA;">Z: '+parseFloat(bm.z).toFixed(4)+' m</span>';
+      h+='<span style="font-size:10px;color:var(--dimL);">'+bm.accClass.split(' ')[0]+' '+bm.accClass.split(' ')[1]+'</span>';
+      h+='</div>';
+      h+='<div style="font-size:10px;color:var(--dimL);">';
+      if(lastV){
+        h+='Last verified: <b style="color:'+(lastV.pass?'#06D6A0':'#E74C3C')+'">'+(lastV.pass?'✓ PASS':'✗ FAIL')+' &nbsp;'+lastV.date+'</b>';
+      } else {
+        h+='<span style="color:var(--dimL);">Not verified</span>';
+      }
+      h+='</div></div>';
+      // Verify shortcut
+      h+='<div style="display:flex;align-items:center;padding:0 10px;border-left:1px solid var(--border);">';
+      h+='<button data-bid="'+bm.id+'" onclick="event.stopPropagation();svGoVerify(this.dataset.bid);" ';
+      h+='style="padding:6px 10px;border-radius:7px;border:1px solid rgba(6,214,160,0.3);background:rgba(6,214,160,0.08);color:#06D6A0;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;">Verify</button>';
+      h+='</div></div>';
+
+      // Expanded detail
+      if(isSel){
+        h+='<div style="padding:12px 14px 14px;background:rgba(167,139,250,0.05);border-bottom:1px solid var(--border);">';
+        h+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">';
+        var coords2=[['Easting (E)',parseFloat(bm.e).toFixed(3)+' m'],['Northing (N)',parseFloat(bm.n).toFixed(3)+' m'],['Elevation (Z)',parseFloat(bm.z).toFixed(4)+' m']];
+        for(var ci=0;ci<coords2.length;ci++){
+          h+='<div style="background:var(--panel);border-radius:8px;padding:8px;text-align:center;">';
+          h+='<div style="font-size:11px;font-weight:800;color:#A78BFA;">'+coords2[ci][1]+'</div>';
+          h+='<div style="font-size:8px;color:var(--dimL);text-transform:uppercase;letter-spacing:0.5px;margin-top:2px;">'+coords2[ci][0]+'</div>';
+          h+='</div>';
+        }
+        h+='</div>';
+        if(bm.desc) h+='<div style="font-size:11px;color:var(--dimL);line-height:1.6;margin-bottom:8px;">'+bm.desc+'</div>';
+        // Verification history
+        var bmVers=SURVEY.verifications.filter(function(v){return v.bmId===bm.id;});
+        if(bmVers.length){
+          h+='<div style="font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Verification History</div>';
+          for(var vhi=bmVers.length-1;vhi>=0;vhi--){
+            var vr=bmVers[vhi];
+            var vrc=vr.pass?'#06D6A0':'#E74C3C';
+            h+='<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:10px;">';
+            h+='<span style="color:var(--dimL);min-width:76px;">'+vr.date+'</span>';
+            h+='<span style="color:var(--fg);font-weight:700;">'+parseFloat(vr.measuredZ).toFixed(4)+' m</span>';
+            h+='<span style="color:'+vrc+';font-weight:800;">'+(vr.delta>=0?'Δ +':'Δ ')+parseFloat(vr.delta).toFixed(4)+' m</span>';
+            h+='<span style="font-size:9px;font-weight:700;background:'+vrc+'22;color:'+vrc+';padding:1px 7px;border-radius:5px;margin-left:auto;">'+(vr.pass?'PASS':'FAIL')+'</span>';
+            h+='</div>';
+          }
+        }
+        h+='<div style="display:flex;gap:6px;margin-top:10px;">';
+        h+='<button data-bid2="'+bm.id+'" onclick="svGoVerify(this.dataset.bid2);" ';
+        h+='style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(6,214,160,0.3);background:rgba(6,214,160,0.08);color:#06D6A0;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">Verify BM</button>';
+        h+='<button data-bid3="'+bm.id+'" onclick="svDeleteBm(this.dataset.bid3);" ';
+        h+='style="padding:8px 14px;border-radius:8px;border:1px solid rgba(231,76,60,0.3);background:transparent;color:#E74C3C;font-size:11px;cursor:pointer;font-family:inherit;">Delete</button>';
+        h+='</div></div>';
+      }
+    }
+    h+='</div>';
+  }
+
+  // ════════════════════════════════════════════════════════════
+  // 2. ADD BM
+  // ════════════════════════════════════════════════════════════
+  else if(_svTab==='add'){
+    h+='<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px;border-left:4px solid #A78BFA;">';
+    h+='<div style="font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;">Add New Benchmark</div>';
+    // BM Name + Accuracy Class
+    h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">';
+    h+='<div>';
+    h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">BM Name</label>';
+    h+='<input type="text" id="sv-bm-name" placeholder="e.g. BM-021" ';
+    h+='style="width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:13px;font-family:inherit;outline:none;">';
+    h+='</div>';
+    h+='<div>';
+    h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Accuracy Class</label>';
+    h+='<select id="sv-bm-acc" style="width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:12px;font-family:inherit;">';
+    for(var ac=0;ac<SV_ACC.length;ac++) h+='<option>'+SV_ACC[ac]+'</option>';
+    h+='</select>';
+    h+='</div></div>';
+    // E, N, Z
+    h+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;">';
+    var coordFields=[['sv-bm-e','Easting (E)'],['sv-bm-n','Northing (N)'],['sv-bm-z','Elevation (Z)']];
+    for(var cf=0;cf<coordFields.length;cf++){
+      h+='<div>';
+      h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">'+coordFields[cf][1]+'</label>';
+      h+='<input type="number" id="'+coordFields[cf][0]+'" step="0.0001" placeholder="0.0000" ';
+      h+='style="width:100%;padding:9px 8px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:12px;text-align:center;font-family:inherit;outline:none;">';
+      h+='</div>';
+    }
+    h+='</div>';
+    // Description
+    h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Description</label>';
+    h+='<textarea id="sv-bm-desc" placeholder="Location, monument type, reference notes..." ';
+    h+='style="width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:12px;font-family:inherit;height:60px;resize:none;outline:none;margin-bottom:8px;"></textarea>';
+    // Photo
+    h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Photo (optional)</label>';
+    h+='<input type="file" id="sv-bm-photo" accept="image/*" style="width:100%;padding:6px;font-size:11px;color:var(--fg);margin-bottom:12px;">';
+    // Map auto-link note
+    h+='<div style="background:rgba(88,166,255,0.08);border:1px solid rgba(88,166,255,0.2);border-radius:8px;padding:9px 12px;margin-bottom:12px;font-size:11px;color:#58A6FF;">BM will be automatically linked to the Map module after saving</div>';
+    h+='<button onclick="svAddBm();" ';
+    h+='style="width:100%;padding:11px;background:#A78BFA;border:none;border-radius:9px;color:#000;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;">Save Benchmark</button>';
+    h+='</div>';
+  }
+
+  // ════════════════════════════════════════════════════════════
+  // 3. VERIFY
+  // ════════════════════════════════════════════════════════════
+  else if(_svTab==='verify'){
+    h+='<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px;border-left:4px solid #06D6A0;">';
+    h+='<div style="font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;">BM Verification</div>';
+    // Select BM
+    h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Select Benchmark</label>';
+    h+='<select id="sv-ver-bm" onchange="svVerPreview();" ';
+    h+='style="width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:13px;font-family:inherit;margin-bottom:8px;">';
+    h+='<option value="">— Select BM —</option>';
+    for(var bi2=0;bi2<SURVEY.bms.length;bi2++){
+      var bm2=SURVEY.bms[bi2];
+      var selAttr=(_svSelBm===bm2.id?' selected':'');
+      h+='<option value="'+bm2.id+'"'+selAttr+'>'+bm2.name+' &nbsp;(Z: '+parseFloat(bm2.z).toFixed(4)+' m)</option>';
+    }
+    h+='</select>';
+    // Measured Z + Date
+    h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">';
+    h+='<div>';
+    h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Measured Z (m)</label>';
+    h+='<input type="number" id="sv-ver-z" step="0.0001" placeholder="0.0000" oninput="svVerPreview();" ';
+    h+='style="width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:14px;text-align:center;font-family:inherit;outline:none;font-weight:700;">';
+    h+='</div>';
+    h+='<div>';
+    h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Date</label>';
+    h+='<input type="date" id="sv-ver-date" value="'+new Date().toISOString().slice(0,10)+'" ';
+    h+='style="width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:12px;font-family:inherit;outline:none;">';
+    h+='</div></div>';
+    // Delta preview box
+    h+='<div id="sv-delta-box" style="background:var(--panel);border-radius:10px;padding:12px;margin-bottom:8px;text-align:center;">';
+    h+='<div style="font-size:11px;color:var(--dimL);">Select BM and enter measured Z to see delta</div>';
+    h+='</div>';
+    // Note
+    h+='<label style="font-size:10px;color:var(--dimL);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Note</label>';
+    h+='<input type="text" id="sv-ver-note" placeholder="Instrument, conditions, observer..." ';
+    h+='style="width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:12px;font-family:inherit;outline:none;margin-bottom:12px;">';
+    h+='<button onclick="svSaveVerification();" ';
+    h+='style="width:100%;padding:11px;background:#06D6A0;border:none;border-radius:9px;color:#000;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;">Save Verification</button>';
+    h+='</div>';
+
+    // Verification log
+    if(SURVEY.verifications.length){
+      h+='<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:10px;">';
+      h+='<div style="padding:12px 14px;border-bottom:1px solid var(--border);">';
+      h+='<div style="font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;">Verification Log ('+SURVEY.verifications.length+')</div>';
+      h+='</div>';
+      var recent=SURVEY.verifications.slice().reverse().slice(0,15);
+      for(var vi2=0;vi2<recent.length;vi2++){
+        var vr2=recent[vi2];
+        var vc2=vr2.pass?'#06D6A0':'#E74C3C';
+        var bmN='—';
+        for(var bi3=0;bi3<SURVEY.bms.length;bi3++) if(SURVEY.bms[bi3].id===vr2.bmId){bmN=SURVEY.bms[bi3].name;break;}
+        h+='<div style="display:flex;align-items:stretch;border-bottom:1px solid var(--border);">';
+        h+='<div style="width:4px;background:'+vc2+';flex-shrink:0;"></div>';
+        h+='<div style="flex:1;padding:9px 12px;">';
+        h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">';
+        h+='<span style="font-size:12px;font-weight:800;color:var(--text);">'+bmN+'</span>';
+        h+='<span style="font-size:9px;font-weight:700;background:'+vc2+'22;color:'+vc2+';padding:2px 8px;border-radius:6px;border:1px solid '+vc2+'33;">'+(vr2.pass?'PASS':'FAIL')+'</span>';
+        h+='</div>';
+        h+='<div style="font-size:10px;color:var(--dimL);">'+vr2.date+' &nbsp;·&nbsp; Z: '+parseFloat(vr2.measuredZ).toFixed(4)+' m &nbsp;·&nbsp; ';
+        h+='<b style="color:'+vc2+';">Δ '+(vr2.delta>=0?'+':'')+parseFloat(vr2.delta).toFixed(4)+' m</b></div>';
+        h+='</div></div>';
+      }
+      h+='</div>';
+    }
+  }
+
+  // ════════════════════════════════════════════════════════════
+  // 4. MAP INTEGRATION
+  // ════════════════════════════════════════════════════════════
+  else if(_svTab==='map'){
+    h+='<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px;border-left:4px solid #58A6FF;">';
+    h+='<div style="font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;">BM Map Integration</div>';
+    h+='<div style="font-size:11px;color:var(--dimL);line-height:1.7;margin-bottom:12px;">BM locations are plotted relative to the project alignment. Tap any BM below to highlight it on the Map module and open its details.</div>';
+    // Schematic BM layout
+    h+='<div style="background:#0d1a2e;border-radius:10px;overflow:hidden;margin-bottom:12px;">';
+    var svgW=320,svgH=200;
+    var svgMap='<svg viewBox="0 0 '+svgW+' '+svgH+'" style="width:100%;height:auto;" xmlns="http://www.w3.org/2000/svg">';
+    svgMap+='<rect width="'+svgW+'" height="'+svgH+'" fill="#0d1a2e"/>';
+    // Road line representing alignment
+    svgMap+='<line x1="20" y1="100" x2="300" y2="100" stroke="#D4A843" stroke-width="2" stroke-dasharray="12,6" opacity="0.4"/>';
+    svgMap+='<text x="160" y="92" text-anchor="middle" font-size="8" fill="#D4A843" font-family="Segoe UI,Arial" opacity="0.6">KING KHALID ROAD</text>';
+    // Plot BMs
+    var activeOnly=SURVEY.bms.filter(function(b){return b.status==='Active';});
+    var totalBms2=SURVEY.bms.length;
+    for(var bi4=0;bi4<SURVEY.bms.length;bi4++){
+      var bm4=SURVEY.bms[bi4];
+      var bx4=Math.round(20+(bi4/(totalBms2-1||1))*280);
+      var by4=bm4.status==='Active'?76:bm4.status==='Replaced'?124:76;
+      var bc4=bm4.status==='Active'?'#A78BFA':bm4.status==='Replaced'?'#FFC145':'#4a5568';
+      var isSel4=_svSelBm===bm4.id;
+      // Connector to road
+      svgMap+='<line x1="'+bx4+'" y1="100" x2="'+bx4+'" y2="'+by4+'" stroke="'+bc4+'" stroke-width="1" opacity="0.3"/>';
+      // BM circle
+      if(isSel4){
+        svgMap+='<circle cx="'+bx4+'" cy="'+by4+'" r="12" fill="'+bc4+'" opacity="0.2"/>';
+      }
+      svgMap+='<circle cx="'+bx4+'" cy="'+by4+'" r="7" fill="#0d1a2e" stroke="'+bc4+'" stroke-width="'+(isSel4?2.5:1.5)+'"/>';
+      // BM number (last digits)
+      var bmNum=bm4.name.replace('BM-','');
+      svgMap+='<text x="'+bx4+'" y="'+(by4+3.5)+'" text-anchor="middle" font-size="6" font-weight="800" fill="'+bc4+'" font-family="Segoe UI,Arial">'+bmNum+'</text>';
+    }
+    svgMap+='</svg>';
+    h+=svgMap;
+    h+='</div>';
+    // BM tap list
+    h+='<div style="font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Tap to highlight on Map</div>';
+    h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">';
+    for(var bi5=0;bi5<SURVEY.bms.length;bi5++){
+      var bm5=SURVEY.bms[bi5];
+      var bc5=stCol[bm5.status]||'#4a5568';
+      var isSel5=_svSelBm===bm5.id;
+      h+='<button data-bid="'+bm5.id+'" onclick="svMapSelect(this.dataset.bid);" ';
+      h+='style="padding:9px 10px;border-radius:9px;text-align:left;';
+      h+='border:1px solid '+(isSel5?'#A78BFA':'var(--border)')+';';
+      h+='background:'+(isSel5?'rgba(167,139,250,0.1)':'var(--panel)')+';';
+      h+='cursor:pointer;font-family:inherit;">';
+      h+='<div style="display:flex;align-items:center;gap:6px;">';
+      h+='<div style="width:8px;height:8px;border-radius:50%;background:'+bc5+';flex-shrink:0;"></div>';
+      h+='<span style="font-size:11px;font-weight:800;color:var(--text);">'+bm5.name+'</span>';
+      h+='</div>';
+      h+='<div style="font-size:10px;color:#A78BFA;margin-top:2px;">Z: '+parseFloat(bm5.z).toFixed(4)+' m</div>';
+      h+='</button>';
+    }
+    h+='</div></div>';
+    // Navigate to main map
+    h+='<button onclick="nav(\'mp\');" ';
+    h+='style="width:100%;padding:11px;background:rgba(88,166,255,0.1);border:1px solid rgba(88,166,255,0.3);border-radius:9px;color:#58A6FF;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;">Open Full Map Module</button>';
+  }
+
+  // ════════════════════════════════════════════════════════════
+  // 5. EXPORT & SYNC
+  // ════════════════════════════════════════════════════════════
+  else if(_svTab==='export'){
+    // Stats
+    h+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">';
+    var expKpis=[
+      {v:SURVEY.bms.length+'',       l:'Total BMs',         c:'#A78BFA'},
+      {v:activeBms+'',               l:'Active',             c:'#06D6A0'},
+      {v:passVers+'/'+totalVers,     l:'Pass/Verifications', c:'#58A6FF'},
+    ];
+    for(var ek=0;ek<expKpis.length;ek++){
+      h+='<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center;border-top:3px solid '+expKpis[ek].c+';">';
+      h+='<div style="font-size:18px;font-weight:900;color:'+expKpis[ek].c+';">'+expKpis[ek].v+'</div>';
+      h+='<div style="font-size:9px;color:var(--dimL);text-transform:uppercase;letter-spacing:0.5px;margin-top:3px;">'+expKpis[ek].l+'</div>';
+      h+='</div>';
+    }
+    h+='</div>';
+    // Export actions
+    var expActions=[
+      {lbl:'Export BM List (CSV)',       fn:'svExportBms',   col:'#A78BFA', desc:SURVEY.bms.length+' benchmarks — Name, E, N, Z, Class, Status'},
+      {lbl:'Export Verification Log',    fn:'svExportVers',  col:'#06D6A0', desc:SURVEY.verifications.length+' records — BM, Date, Measured Z, Delta, Pass/Fail'},
+    ];
+    for(var ea=0;ea<expActions.length;ea++){
+      var exp=expActions[ea];
+      h+='<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px;border-left:4px solid '+exp.col+';">';
+      h+='<div style="display:flex;align-items:center;justify-content:space-between;">';
+      h+='<div>';
+      h+='<div style="font-size:12px;font-weight:800;color:var(--text);margin-bottom:3px;">'+exp.lbl+'</div>';
+      h+='<div style="font-size:10px;color:var(--dimL);">'+exp.desc+'</div>';
+      h+='</div>';
+      h+='<button onclick="'+exp.fn+'();" ';
+      h+='style="padding:8px 16px;border-radius:8px;border:1px solid '+exp.col+';background:'+exp.col+'18;color:'+exp.col+';font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0;margin-left:10px;">Export</button>';
+      h+='</div></div>';
+    }
+    // Sync info
+    h+='<div style="background:rgba(88,166,255,0.07);border:1px solid rgba(88,166,255,0.2);border-radius:10px;padding:12px;">';
+    h+='<div style="font-size:10px;color:#58A6FF;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">Sync Status</div>';
+    h+='<div style="font-size:11px;color:var(--dimL);line-height:1.7;">BM positions are linked to the Map module. Verification results are synced to the team via JSONBin and appear in the Progress Report under the Survey discipline.</div>';
+    h+='</div>';
+  }
+
+  h+='<div style="height:20px;"></div>';
+  document.getElementById('pg-sv').innerHTML=h;
+
+  // Pre-select BM in verify tab if set
+  if(_svTab==='verify'&&_svSelBm){
+    setTimeout(function(){
+      var sel=document.getElementById('sv-ver-bm');
+      if(sel&&_svSelBm){sel.value=_svSelBm;svVerPreview();}
+    },40);
+  }
+}
+
+// ── Survey helpers ─────────────────────────────────────────────
+function svSwitch(tab){_svTab=tab;rSv();}
+function svSelectBm(id){_svSelBm=(_svSelBm===id?null:id);rSv();}
+function svGoVerify(id){_svSelBm=id;_svTab='verify';rSv();}
+function svMapSelect(id){_svSelBm=(_svSelBm===id?null:id);rSv();}
+
+function svAddBm(){
+  var nameEl=document.getElementById('sv-bm-name');
+  if(!nameEl||!nameEl.value.trim()){flash('Enter a BM name');return;}
+  var eEl=document.getElementById('sv-bm-e');
+  var nEl=document.getElementById('sv-bm-n');
+  var zEl=document.getElementById('sv-bm-z');
+  SURVEY.bms.push({
+    id:'bm_'+Date.now(),
+    name:nameEl.value.trim(),
+    e:eEl&&eEl.value?parseFloat(eEl.value):'',
+    n:nEl&&nEl.value?parseFloat(nEl.value):'',
+    z:zEl&&zEl.value?parseFloat(zEl.value):'',
+    desc:document.getElementById('sv-bm-desc')?document.getElementById('sv-bm-desc').value.trim():'',
+    accClass:document.getElementById('sv-bm-acc')?document.getElementById('sv-bm-acc').value:SV_ACC[0],
+    status:'Active',
+    created:new Date().toISOString().slice(0,10),
+    verified:null,photo:null
+  });
+  persist();_svTab='registry';rSv();flash('Benchmark saved ✅');
+}
+
+function svDeleteBm(id){
+  if(!confirm('Delete this BM and all its verifications?')) return;
+  SURVEY.bms=SURVEY.bms.filter(function(b){return b.id!==id;});
+  SURVEY.verifications=SURVEY.verifications.filter(function(v){return v.bmId!==id;});
+  if(_svSelBm===id) _svSelBm=null;
+  persist();rSv();flash('Benchmark deleted');
+}
+
+function svVerPreview(){
+  var selEl=document.getElementById('sv-ver-bm');
+  var measEl=document.getElementById('sv-ver-z');
+  var box=document.getElementById('sv-delta-box');
+  if(!box) return;
+  if(!selEl||!selEl.value||!measEl||!measEl.value||isNaN(parseFloat(measEl.value))){
+    box.innerHTML='<div style="font-size:11px;color:var(--dimL);">Select BM and enter measured Z to see delta</div>';
+    return;
+  }
+  var bm=null;
+  for(var i=0;i<SURVEY.bms.length;i++) if(SURVEY.bms[i].id===selEl.value){bm=SURVEY.bms[i];break;}
+  if(!bm||bm.z===''||bm.z===null){box.innerHTML='<div style="font-size:11px;color:var(--dimL);">BM has no design elevation</div>';return;}
+  var origZ=parseFloat(bm.z), mZ=parseFloat(measEl.value);
+  var delta=Math.round((mZ-origZ)*1e5)/1e5;
+  var tol=bm.accClass.indexOf('±1mm')>-1?0.001:bm.accClass.indexOf('±3mm')>-1?0.003:bm.accClass.indexOf('±5mm')>-1?0.005:0.01;
+  var pass=Math.abs(delta)<=tol;
+  var pc=pass?'#06D6A0':'#E74C3C';
+  box.innerHTML='<div style="display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap;">'
+    +'<div style="text-align:center;"><div style="font-size:14px;font-weight:900;color:#A78BFA;">'+origZ.toFixed(4)+'m</div><div style="font-size:8px;color:var(--dimL);text-transform:uppercase;margin-top:2px;">Design Z</div></div>'
+    +'<div style="font-size:18px;color:var(--dimL);">→</div>'
+    +'<div style="text-align:center;"><div style="font-size:14px;font-weight:900;color:#D4A843;">'+mZ.toFixed(4)+'m</div><div style="font-size:8px;color:var(--dimL);text-transform:uppercase;margin-top:2px;">Measured Z</div></div>'
+    +'<div style="font-size:18px;color:var(--dimL);">=</div>'
+    +'<div style="text-align:center;"><div style="font-size:16px;font-weight:900;color:'+pc+';">'+(delta>=0?'+':'')+delta.toFixed(4)+'m</div><div style="font-size:8px;color:var(--dimL);text-transform:uppercase;margin-top:2px;">Delta</div></div>'
+    +'<div style="padding:6px 14px;border-radius:20px;background:'+pc+'22;border:1px solid '+pc+'44;text-align:center;">'
+    +'<div style="font-size:12px;font-weight:900;color:'+pc+';">'+(pass?'✓ PASS':'✗ FAIL')+'</div>'
+    +'<div style="font-size:8px;color:var(--dimL);">tol ±'+(tol*1000)+'mm</div></div></div>';
+}
+
+function svSaveVerification(){
+  var selEl=document.getElementById('sv-ver-bm');
+  var measEl=document.getElementById('sv-ver-z');
+  var dateEl=document.getElementById('sv-ver-date');
+  var noteEl=document.getElementById('sv-ver-note');
+  if(!selEl||!selEl.value){flash('Select a benchmark');return;}
+  var mZ=parseFloat(measEl?measEl.value:0);
+  if(isNaN(mZ)){flash('Enter measured elevation');return;}
+  var bm=null;
+  for(var i=0;i<SURVEY.bms.length;i++) if(SURVEY.bms[i].id===selEl.value){bm=SURVEY.bms[i];break;}
+  if(!bm) return;
+  var origZ=parseFloat(bm.z);
+  var delta=Math.round((mZ-origZ)*1e5)/1e5;
+  var tol=bm.accClass.indexOf('±1mm')>-1?0.001:bm.accClass.indexOf('±3mm')>-1?0.003:bm.accClass.indexOf('±5mm')>-1?0.005:0.01;
+  SURVEY.verifications.push({
+    id:'ver_'+Date.now(),
+    bmId:bm.id,
+    date:dateEl?dateEl.value:new Date().toISOString().slice(0,10),
+    measuredZ:mZ,origZ:origZ,delta:delta,
+    pass:Math.abs(delta)<=tol,
+    note:noteEl?noteEl.value.trim():'',
+    by:typeof MY_NAME!=='undefined'?MY_NAME:'K. Dimachkie'
+  });
+  bm.verified=dateEl?dateEl.value:new Date().toISOString().slice(0,10);
+  persist();rSv();flash('Verification saved ✅');
+}
+
+function svExportBms(){
+  if(!SURVEY.bms.length){flash('No benchmarks to export');return;}
+  var csv='Name,Easting,Northing,Elevation(Z),AccuracyClass,Status,Created,LastVerified\n';
+  for(var i=0;i<SURVEY.bms.length;i++){
+    var b=SURVEY.bms[i];
+    csv+=b.name+','+b.e+','+b.n+','+b.z+','+b.accClass+','+b.status+','+b.created+','+(b.verified||'')+'\n';
+  }
+  var blob=new Blob([csv],{type:'text/csv'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url;a.download='IC1_BM_List_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+  URL.revokeObjectURL(url);flash('BM list exported ✅');
+}
+
+function svExportVers(){
+  if(!SURVEY.verifications.length){flash('No verifications to export');return;}
+  var csv='BM_Name,Date,DesignZ,MeasuredZ,Delta_m,Result,Note,By\n';
+  for(var i=0;i<SURVEY.verifications.length;i++){
+    var v=SURVEY.verifications[i];
+    var nm='';
+    for(var j=0;j<SURVEY.bms.length;j++) if(SURVEY.bms[j].id===v.bmId){nm=SURVEY.bms[j].name;break;}
+    csv+=nm+','+v.date+','+v.origZ+','+v.measuredZ+','+v.delta+','+(v.pass?'PASS':'FAIL')+','+v.note+','+v.by+'\n';
+  }
+  var blob=new Blob([csv],{type:'text/csv'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url;a.download='IC1_BM_Verifications_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+  URL.revokeObjectURL(url);flash('Verifications exported ✅');
+}
+
 function buildTicker(){
   var items=[];
 
@@ -4389,7 +4941,7 @@ function countAllPiers(){
 // ═══════════════════════════════════════════════════════════════
 // NAVIGATION
 // ═══════════════════════════════════════════════════════════════
-var ALL_TABS=["ov","tr","rd","fs","ut","rp","pl","fr","mp","ch","ws"];
+var ALL_TABS=["ov","tr","rd","fs","ut","rp","pl","fr","sv","mp","ch","ws"];
 
 function nav(id){
   for(var i=0;i<ALL_TABS.length;i++){
@@ -4420,6 +4972,7 @@ function nav(id){
   else if(id==="rp") rRp();
   else if(id==="pl") rPl();
   else if(id==="fr") rFr();
+  else if(id==="sv") rSv();
   else if(id==="is") rIs();
   else if(id==="rd") rRd();
   else if(id==="mp") rMp();
@@ -6409,6 +6962,7 @@ function pullSync(){
   try{localStorage.setItem("ic1b3_cw",JSON.stringify(CUSTOM_WEIGHTS));}catch(e){}
   try{localStorage.setItem('ic1b3_msg',JSON.stringify(MESSAGES.slice(-20)));}catch(e){}
   try{localStorage.setItem('ic1b3_plan',JSON.stringify(PLAN));}catch(e){}
+  try{localStorage.setItem('ic1b3_survey',JSON.stringify({bms:SURVEY.bms,verifications:SURVEY.verifications,tasks:SURVEY.tasks}));}catch(e){}
   try{localStorage.setItem('ic1b3_field',JSON.stringify({photos:FIELD.photos.slice(-100),diary:FIELD.diary.slice(-500)}));}catch(e){}
   try{localStorage.setItem('ic1b3_daily',JSON.stringify({photos:DAILY.photos.slice(-50),entries:DAILY.entries.slice(-200),reports:DAILY.reports.slice(-30),snapshots:DAILY.snapshots.slice(-90),apiKey:DAILY.apiKey}));}catch(e){}
       // Update sync label
