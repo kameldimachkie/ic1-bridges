@@ -5162,6 +5162,14 @@ function wcEnter(){
   try{ localStorage.setItem('ic1_username', name); }catch(e){}
   try{ sessionStorage.setItem('ic1_session_ok','1'); }catch(e){}
   if(typeof MY_NAME !== 'undefined') MY_NAME = name;
+  // Immediately apply the admin-assigned role for this user
+  try{
+    var _wa=JSON.parse(localStorage.getItem('ic1_role_assignments')||'{}');
+    if(_wa[name]){
+      MY_ROLE=_wa[name];
+      localStorage.setItem('ic1_my_role',MY_ROLE);
+    }
+  }catch(e){}
 
   // Slide out
   var ws = document.getElementById('welcome-screen');
@@ -5378,22 +5386,27 @@ function apIsLocked(itemId){
 function apApprove(itemId, action){
   // action: 'approved' | 'rejected'
   if(!MY_NAME){flash('Set your name first — go to Setup');return;}
-  if(!MY_ROLE){flash('Set your role first — tap "Set My Role" above');return;}
+  if(!MY_ROLE){flash('You are not authorized for this approval level.');return;}
 
   var ap=apGetOrCreate(itemId);
   if(ap.locked){flash('This item is locked after final approval');return;}
 
+  // Re-read role from assignments at approval time (ensures freshness)
+  try{
+    var _aa=JSON.parse(localStorage.getItem('ic1_role_assignments')||'{}');
+    if(_aa[MY_NAME]) MY_ROLE=_aa[MY_NAME];
+  }catch(e){}
   // Find required level for this role
   var roleObj=null;
   for(var i=0;i<APPROVAL_ROLES.length;i++) if(APPROVAL_ROLES[i].id===MY_ROLE) roleObj=APPROVAL_ROLES[i];
-  if(!roleObj){flash('Unknown role — update your role in Setup');return;}
+  if(!roleObj){flash('You are not authorized for this approval level.');return;}
 
   var requiredLevel=apCurrentLevel(itemId);
   if(requiredLevel>4){flash('All approvals already complete');return;}
 
   if(roleObj.level!==requiredLevel){
     var needed=APPROVAL_ROLES[requiredLevel-1];
-    flash('This step requires '+needed.label+' approval');
+    flash('You are not authorized for this approval level.');
     return;
   }
 
@@ -5720,6 +5733,8 @@ function adSaveRole(){
     MY_ROLE=picked.value;
     try{localStorage.setItem('ic1_my_role',MY_ROLE);}catch(e){}
   }
+  // Also update ic1_my_role for any user whose session is active
+  // (they will pick it up on next role re-read)
   nameEl.value='';
   if(picked) picked.checked=false;
   flash('Role assigned ✅');
