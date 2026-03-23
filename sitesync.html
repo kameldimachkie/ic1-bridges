@@ -9,6 +9,10 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#050d1a">
+<meta name="description" content="SiteSync — IC1 Road Improvements Construction Intelligence Platform">
+<link rel="manifest" href="sitesync-manifest.json">
+<link rel="apple-touch-icon" href="sitesync_icon_512.png">
 <meta name="apple-mobile-web-app-title" content="SiteSync">
 <meta name="theme-color" content="#07090d">
 <title>SiteSync v3.2</title>
@@ -383,6 +387,24 @@ body{display:flex;flex-direction:column;}
       font-size:10px;color:rgba(255,255,255,0.18);letter-spacing:0.5px;">
       Khatib &amp; Alami &nbsp;·&nbsp; Head of Surveying &nbsp;·&nbsp;
       <span id="wc-version">SiteSync v3.2</span>
+    </div>
+
+    <!-- Install banner -->
+    <div id="ss-install-banner" style="display:none;margin-top:16px;width:100%;max-width:340px;
+      padding:12px 14px;background:rgba(212,168,67,0.1);
+      border:1px solid rgba(212,168,67,0.3);border-radius:10px;text-align:left;">
+      <div style="font-size:12px;font-weight:700;color:#D4A843;margin-bottom:4px;">📲 Install SiteSync</div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-bottom:8px;">
+        Add to your home screen for the full app experience — works offline too.</div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="ssInstallApp();" style="flex:1;padding:8px;border-radius:7px;
+          background:#D4A843;border:none;color:#000;font-weight:700;font-size:12px;
+          cursor:pointer;font-family:inherit;">Install App</button>
+        <button onclick="document.getElementById('ss-install-banner').style.display='none';"
+          style="padding:8px 12px;border-radius:7px;background:transparent;
+          border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.35);
+          font-size:11px;cursor:pointer;font-family:inherit;">Later</button>
+      </div>
     </div>
 
   </div>
@@ -6264,6 +6286,37 @@ function acPostLogin(){
 }
 
 
+
+// ── PWA Install Prompt ────────────────────────────────────────
+var _ssInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', function(e){
+  e.preventDefault();
+  _ssInstallPrompt = e;
+  var banner = document.getElementById('ss-install-banner');
+  if(banner) banner.style.display = 'block';
+});
+
+function ssInstallApp(){
+  if(_ssInstallPrompt){
+    _ssInstallPrompt.prompt();
+    _ssInstallPrompt.userChoice.then(function(r){
+      if(r.outcome==='accepted') flash('SiteSync installed ✅');
+      _ssInstallPrompt = null;
+      var banner = document.getElementById('ss-install-banner');
+      if(banner) banner.style.display = 'none';
+    });
+  } else {
+    // iOS Safari fallback
+    flash('On iPhone: tap Share → Add to Home Screen');
+  }
+}
+
+window.addEventListener('appinstalled', function(){
+  flash('SiteSync installed on your device ✅');
+  var banner = document.getElementById('ss-install-banner');
+  if(banner) banner.style.display = 'none';
+});
+
 function buildTicker(){
   var items=[];
 
@@ -10231,6 +10284,15 @@ function rMp(){
     st.textContent='@keyframes red-pulse{0%,100%{opacity:0}50%{opacity:0.9}}@keyframes red-mid{0%,100%{opacity:0.1}50%{opacity:0.55}}@keyframes arc-flash{0%,100%{opacity:0.4}50%{opacity:1}}';
     document.head.appendChild(st);
   }
+}
+
+// ── Service Worker ────────────────────────────────────────────
+if('serviceWorker' in navigator){
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('sw.js')
+      .then(function(){ console.log('[SiteSync SW] Registered'); })
+      .catch(function(e){ console.log('[SiteSync SW] Error:', e); });
+  });
 }
 </script>
 </body>
