@@ -397,22 +397,7 @@ body{display:flex;flex-direction:column;}
 <div id="tab-loader"></div>
 <div id="app">
 <div id="hdr">
-  <div class="hdr-top" style="position:relative;">
-  <!-- Avatar trigger -->
-  <button id="hdr-avatar" onclick="acOpen();" aria-label="Account"
-    style="position:absolute;top:auto;bottom:8px;right:12px;width:44px;height:44px;
-    display:flex;align-items:center;justify-content:center;
-    background:transparent;border:none;cursor:pointer;z-index:10;padding:0;">
-    <div id="hdr-avatar-inner"
-      style="width:32px;height:32px;border-radius:50%;
-      background:linear-gradient(135deg,#D4A843,#A07830);
-      display:flex;align-items:center;justify-content:center;
-      font-size:13px;font-weight:800;color:#000;
-      border:2px solid rgba(212,168,67,0.5);
-      letter-spacing:0.5px;user-select:none;">
-      ?
-    </div>
-  </button>
+  <div class="hdr-top" style="display:flex;align-items:center;justify-content:space-between;">
     <div class="hdr-brand" style="display:flex;align-items:center;gap:10px;">
       <svg width="42" height="42" viewBox="0 0 42 42" xmlns="http://www.w3.org/2000/svg">
   <!-- Road surface -->
@@ -440,7 +425,19 @@ body{display:flex;flex-direction:column;}
         <div class="name">K. DIMACHKIE &nbsp;—&nbsp; Head of Surveying</div>
       </div>
     </div>
-    <div class="hdr-right">
+    <button id="hdr-avatar" onclick="acOpen();" aria-label="Account"
+    style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;
+    background:transparent;border:none;cursor:pointer;padding:0;flex-shrink:0;">
+    <div id="hdr-avatar-inner"
+      style="width:32px;height:32px;border-radius:50%;
+      background:linear-gradient(135deg,#D4A843,#A07830);
+      display:flex;align-items:center;justify-content:center;
+      font-size:13px;font-weight:800;color:#000;
+      border:2px solid rgba(212,168,67,0.5);
+      letter-spacing:0.5px;user-select:none;">?
+    </div>
+  </button>
+  <div class="hdr-right">
       <div id="clk">00:00:00</div>
       <div id="cld"></div>
       <div class="hdr-btns">
