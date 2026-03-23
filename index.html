@@ -1578,6 +1578,23 @@ function rWs(){
   h+='<button onclick="wsSave();" style="flex:1;padding:12px;border-radius:10px;background:var(--gold);border:none;color:#000;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">💾 Save All Weights</button>';
   h+='</div>';
 
+  // ── Logout / Switch User + Exit App ─────────────────────────
+  h+='<div class="card" style="margin-top:12px;">';
+  h+='<div class="ct" style="margin-bottom:10px;">Session</div>';
+  // Logout / Switch User
+  h+='<button onclick="wsLogoutUser();" ';
+  h+='style="width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,193,69,0.4);';
+  h+='background:rgba(255,193,69,0.08);color:#FFC145;font-weight:700;font-size:13px;';
+  h+='cursor:pointer;font-family:inherit;margin-bottom:8px;">🔄 Logout / Switch User</button>';
+  h+='<div style="font-size:10px;color:var(--dimL);margin-bottom:12px;line-height:1.5;">Clears your username and role. Returns to the welcome screen so a different user can sign in.</div>';
+  // Exit App
+  h+='<button onclick="wsExitApp();" ';
+  h+='style="width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);';
+  h+='background:rgba(255,255,255,0.04);color:var(--dimL);font-weight:700;font-size:13px;';
+  h+='cursor:pointer;font-family:inherit;margin-bottom:4px;">✕ Exit App</button>';
+  h+='<div style="font-size:10px;color:var(--dimL);line-height:1.5;">Closes the app window. Does not delete any project data.</div>';
+  h+='</div>';
+
   document.getElementById("pg-ws").innerHTML=h;
 
   // Update totals after render
@@ -1683,6 +1700,44 @@ function wsRemoveRole(name){
   localStorage.setItem('ic1_role_assignments',JSON.stringify(assignments));
   flash('Role removed');
   rWs();
+}
+
+function wsLogoutUser(){
+  // Clear username, role, and session — data and progress preserved
+  try{ localStorage.removeItem('ic1_username'); }catch(e){}
+  try{ localStorage.removeItem('ic1_my_role'); }catch(e){}
+  try{ sessionStorage.removeItem('ic1_session_ok'); }catch(e){}
+  if(typeof MY_NAME !== 'undefined') MY_NAME = '';
+  if(typeof MY_ROLE !== 'undefined') MY_ROLE = '';
+  // Stop sync timers
+  if(window._syncTimer) clearInterval(window._syncTimer);
+  if(window._hbTimer)   clearInterval(window._hbTimer);
+  // Show welcome screen
+  var ws = document.getElementById('welcome-screen');
+  if(ws){
+    var ni = document.getElementById('wc-name');
+    var pi = document.getElementById('wc-pass');
+    var ei = document.getElementById('wc-pass-err');
+    if(ni){ ni.value=''; }
+    if(pi){ pi.value=''; }
+    if(ei){ ei.textContent=''; }
+    ws.style.transition='none';
+    ws.style.opacity='1';
+    ws.style.transform='scale(1)';
+    ws.style.display='flex';
+    ws.style.flexDirection='column';
+    setTimeout(function(){ if(ni) ni.focus(); }, 200);
+  }
+}
+
+function wsExitApp(){
+  // Try to close the PWA window
+  try{ window.close(); }catch(e){}
+  // If window.close() is blocked (most browsers block it unless opened by script)
+  // redirect to blank page as fallback
+  setTimeout(function(){
+    try{ window.location.href='about:blank'; }catch(e){}
+  }, 300);
 }
 
 function lockAdmin(){
