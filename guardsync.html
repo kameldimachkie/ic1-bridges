@@ -1,0 +1,1508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#050d1a">
+<meta name="description" content="GuardSync — Security Guard Time Clock & Payroll">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<!-- Inline manifest for standalone use -->
+
+<title>GuardSync — Time Clock</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+:root{
+  --bg:#050d1a;--card:#0d1828;--panel:#111f33;--border:rgba(255,255,255,0.08);
+  --text:#f1f5f9;--fg:#e2e8f0;--dim:rgba(255,255,255,0.4);--dimL:rgba(255,255,255,0.35);
+  --gold:#D4A843;--green:#06D6A0;--blue:#58A6FF;--red:#E74C3C;--amber:#FFC145;
+  --purple:#A78BFA;--cyan:#38BDF8;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Segoe UI',Arial,sans-serif;overflow:hidden;}
+#app{height:100%;display:flex;flex-direction:column;}
+
+/* ── Header ── */
+#hdr{background:#08111e;border-bottom:1px solid var(--border);padding:10px 16px;
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.hdr-logo{font-size:18px;font-weight:900;color:var(--gold);letter-spacing:1px;}
+.hdr-logo span{color:var(--fg);font-weight:400;}
+.hdr-meta{font-size:10px;color:var(--dimL);text-align:right;}
+.hdr-meta b{color:var(--amber);font-weight:700;}
+
+/* ── Nav ── */
+#nav{display:flex;background:#08111e;border-top:1px solid var(--border);
+  flex-shrink:0;order:3;}
+.nb{flex:1;padding:10px 4px 8px;background:transparent;border:none;
+  color:var(--dimL);font-size:9px;font-weight:700;text-transform:uppercase;
+  letter-spacing:0.5px;cursor:pointer;font-family:inherit;
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  transition:color 0.15s;}
+.nb.on{color:var(--gold);}
+.nb .ni{font-size:20px;}
+
+/* ── Pages ── */
+#pages{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;order:2;}
+.pg{display:none;padding:12px;min-height:100%;}
+.pg.on{display:block;animation:pg-in 0.2s ease both;}
+@keyframes pg-in{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── Cards ── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;
+  padding:14px;margin-bottom:10px;}
+.card-title{font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;
+  letter-spacing:1.5px;margin-bottom:10px;}
+.section-title{font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;
+  letter-spacing:1.5px;margin-bottom:8px;}
+
+/* ── Buttons ── */
+.btn{width:100%;padding:13px;border:none;border-radius:11px;font-weight:800;
+  font-size:14px;cursor:pointer;font-family:inherit;letter-spacing:0.3px;
+  transition:transform 0.1s,opacity 0.1s;}
+.btn:active{transform:scale(0.97);opacity:0.9;}
+.btn-gold{background:linear-gradient(135deg,#D4A843,#C9A44C);color:#000;}
+.btn-green{background:#06D6A0;color:#000;}
+.btn-red{background:#E74C3C;color:#fff;}
+.btn-blue{background:#58A6FF;color:#000;}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--dimL);}
+
+/* ── Inputs ── */
+.inp{width:100%;padding:11px 14px;border-radius:9px;border:1px solid var(--border);
+  background:var(--panel);color:var(--fg);font-size:14px;font-family:inherit;
+  outline:none;transition:border-color 0.2s;}
+.inp:focus{border-color:var(--gold);}
+.inp-label{font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;
+  letter-spacing:0.5px;display:block;margin-bottom:5px;}
+.inp-group{margin-bottom:10px;}
+
+/* ── Badges ── */
+.badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:9px;font-weight:700;}
+.badge-green{background:rgba(6,214,160,0.15);color:#06D6A0;border:1px solid rgba(6,214,160,0.3);}
+.badge-red{background:rgba(231,76,60,0.15);color:#E74C3C;border:1px solid rgba(231,76,60,0.3);}
+.badge-amber{background:rgba(255,193,69,0.15);color:#FFC145;border:1px solid rgba(255,193,69,0.3);}
+.badge-blue{background:rgba(88,166,255,0.15);color:#58A6FF;border:1px solid rgba(88,166,255,0.3);}
+.badge-dim{background:rgba(255,255,255,0.06);color:var(--dimL);border:1px solid var(--border);}
+
+/* ── Clock button ── */
+#clock-btn{width:180px;height:180px;border-radius:50%;border:none;cursor:pointer;
+  font-family:inherit;font-weight:900;font-size:22px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:6px;margin:0 auto;transition:transform 0.15s,box-shadow 0.15s;
+  box-shadow:0 0 0 0 rgba(6,214,160,0);}
+#clock-btn.clocked-out{background:linear-gradient(145deg,#06D6A0,#04a87d);color:#000;
+  box-shadow:0 8px 32px rgba(6,214,160,0.4);}
+#clock-btn.clocked-in{background:linear-gradient(145deg,#E74C3C,#c0392b);color:#fff;
+  box-shadow:0 8px 32px rgba(231,76,60,0.4);}
+#clock-btn:active{transform:scale(0.95);}
+#clock-btn.on-break{background:linear-gradient(145deg,#FFC145,#d4a43a);color:#000;
+  box-shadow:0 8px 32px rgba(255,193,69,0.4);}
+
+/* ── Live timer ── */
+#live-timer{font-size:32px;font-weight:900;color:var(--gold);text-align:center;
+  font-variant-numeric:tabular-nums;letter-spacing:2px;}
+
+/* ── Row ── */
+.row{display:flex;align-items:center;gap:8px;padding:10px 0;
+  border-bottom:1px solid var(--border);}
+.row:last-child{border-bottom:none;}
+
+/* ── Status top bar ── */
+#status-bar{height:3px;background:linear-gradient(90deg,var(--gold),var(--green));
+  width:100%;flex-shrink:0;order:0;}
+
+/* ── Welcome ── */
+#welcome{position:fixed;inset:0;z-index:9999;background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:32px 24px;text-align:center;}
+
+/* ══ DESKTOP LAYOUT ══ */
+@media (min-width: 768px){
+  body{ overflow:auto; }
+  #app{ flex-direction:row; height:100vh; }
+  #hdr{ display:none; }
+  #nav{ display:none; }
+  #status-bar{ display:none; }
+  #pages{ flex:1; overflow-y:auto; padding:24px; background:#07101e; }
+  .pg{ padding:0; }
+
+  /* Sidebar */
+  #sidebar{
+    width:220px; flex-shrink:0;
+    background:#08111e;
+    border-right:1px solid rgba(255,255,255,0.07);
+    display:flex; flex-direction:column;
+    padding:0;
+  }
+  #sidebar-logo{
+    padding:20px 20px 16px;
+    border-bottom:1px solid rgba(255,255,255,0.07);
+  }
+  #sidebar-user{
+    padding:14px 20px 12px;
+    border-bottom:1px solid rgba(255,255,255,0.07);
+  }
+  .sb-item{
+    display:flex; align-items:center; gap:12px;
+    padding:13px 20px; cursor:pointer;
+    font-size:13px; font-weight:600; color:rgba(255,255,255,0.45);
+    border-left:3px solid transparent;
+    transition:all 0.15s; border:none; background:transparent;
+    width:100%; text-align:left; font-family:inherit;
+  }
+  .sb-item:hover{ background:rgba(255,255,255,0.04); color:var(--fg); }
+  .sb-item.on{ color:var(--gold); border-left:3px solid var(--gold); background:rgba(212,168,67,0.06); }
+  .sb-item .sb-icon{ font-size:18px; width:24px; text-align:center; }
+  #sidebar-footer{ margin-top:auto; padding:16px 20px; border-top:1px solid rgba(255,255,255,0.07); }
+
+  /* Desktop cards grid */
+  .desk-grid{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:16px; }
+  .desk-grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+  .desk-grid-3{ display:grid; grid-template-columns:2fr 1fr; gap:16px; margin-bottom:16px; }
+  .card{ border-radius:12px; }
+  .desk-page-title{ font-size:22px; font-weight:900; color:var(--fg); margin-bottom:20px; display:flex; align-items:center; gap:10px; }
+  .desk-page-title span{ font-size:13px; color:var(--dimL); font-weight:400; }
+}
+@media (max-width:767px){
+  #sidebar{ display:none; }
+}
+</style>
+</head>
+<body>
+
+<div id="welcome">
+  <div style="font-size:48px;margin-bottom:16px;">🛡</div>
+  <div style="font-size:30px;font-weight:900;color:var(--gold);letter-spacing:2px;margin-bottom:4px;">GUARDSYNC</div>
+  <div style="font-size:12px;color:var(--dimL);letter-spacing:3px;text-transform:uppercase;margin-bottom:32px;">Security Time Clock</div>
+
+  <div style="width:100%;max-width:320px;">
+    <div class="inp-group">
+      <label class="inp-label">Your Name <span style="color:rgba(255,255,255,0.25);font-weight:400;">(optional if PIN is unique)</span></label>
+      <input class="inp" id="wl-name" type="text" placeholder="Enter your full name">
+    </div>
+    <div class="inp-group">
+      <label class="inp-label">PIN</label>
+      <input class="inp" id="wl-pin" type="password" inputmode="numeric" placeholder="Enter your PIN" maxlength="6">
+    </div>
+    <div id="wl-err" style="font-size:11px;color:var(--red);min-height:16px;margin-bottom:10px;"></div>
+    <button class="btn btn-gold" onclick="wlEnter()">Sign In →</button>
+    <div id="install-banner" style="display:none;margin-top:14px;padding:12px 14px;
+      background:rgba(212,168,67,0.1);border:1px solid rgba(212,168,67,0.3);
+      border-radius:10px;text-align:left;">
+      <div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:4px;">📲 Install GuardSync</div>
+      <div style="font-size:11px;color:var(--dimL);margin-bottom:8px;">Add to your home screen for the full app experience — works offline too.</div>
+      <button onclick="installApp();" style="padding:8px 16px;border-radius:7px;background:var(--gold);border:none;color:#000;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;">Install App</button>
+      <button onclick="document.getElementById('install-banner').style.display='none';" style="margin-left:8px;padding:8px 14px;border-radius:7px;background:transparent;border:1px solid var(--border);color:var(--dimL);font-size:11px;cursor:pointer;font-family:inherit;">Not now</button>
+    </div>
+    <div style="font-size:10px;color:var(--dimL);margin-top:12px;line-height:1.6;">
+      Contact your manager to get your PIN.<br>
+      <span style="color:rgba(212,168,67,0.5);">Default guard PIN: 1234 &nbsp;·&nbsp; Manager PIN: 0000</span>
+    </div>
+  </div>
+</div>
+
+<div id="app" style="display:none;">
+
+  <!-- Desktop sidebar (hidden on mobile) -->
+  <div id="sidebar">
+    <div id="sidebar-logo">
+      <div style="font-size:22px;font-weight:900;color:var(--gold);letter-spacing:1px;">GUARD<span style="color:var(--fg);font-weight:400;">SYNC</span></div>
+      <div style="font-size:10px;color:var(--dimL);margin-top:2px;" id="sb-sync-lbl">Connecting...</div>
+    </div>
+    <div id="sidebar-user">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div id="sb-avatar" style="width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg,#D4A843,#A07830);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:#000;flex-shrink:0;">?</div>
+        <div>
+          <div id="sb-name" style="font-size:13px;font-weight:700;color:var(--fg);"></div>
+          <div id="sb-role" style="font-size:10px;color:var(--dimL);text-transform:uppercase;letter-spacing:0.5px;margin-top:1px;"></div>
+        </div>
+      </div>
+    </div>
+    <div style="padding:8px 0;flex:1;">
+      <button class="sb-item" onclick="nav('cl')" id="sb-cl"><span class="sb-icon">⏱</span>Clock</button>
+      <button class="sb-item" onclick="nav('ts')" id="sb-ts"><span class="sb-icon">📋</span>Timesheet</button>
+      <button class="sb-item" onclick="nav('si')" id="sb-si"><span class="sb-icon">📍</span>Sites</button>
+      <button class="sb-item" onclick="nav('pr')" id="sb-pr"><span class="sb-icon">💰</span>Payroll</button>
+      <button class="sb-item" onclick="nav('mg')" id="sb-mg"><span class="sb-icon">⚙️</span>Manager</button>
+      <button class="sb-item" onclick="nav('db')" id="sb-db"><span class="sb-icon">📊</span>Dashboard</button>
+    </div>
+    <div id="sidebar-footer">
+      <div id="sb-clock" style="font-size:20px;font-weight:900;color:var(--fg);margin-bottom:4px;"></div>
+      <div style="font-size:10px;color:var(--dimL);" id="sb-date"></div>
+      <button onclick="sbLogout();" style="margin-top:12px;width:100%;padding:8px;border-radius:8px;border:1px solid rgba(231,76,60,0.3);background:transparent;color:var(--red);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Sign Out</button>
+    </div>
+  </div>
+  <div id="status-bar"></div>
+  <div id="hdr">
+    <div>
+      <div class="hdr-logo">GUARD<span>SYNC</span></div>
+      <div style="font-size:10px;color:var(--dimL);margin-top:1px;" id="hdr-site">—</div>
+    </div>
+    <div class="hdr-meta" style="display:flex;align-items:center;gap:8px;">
+    <div id="sync-dot" title="Syncing..." style="width:8px;height:8px;border-radius:50%;background:#FFC145;flex-shrink:0;transition:background 0.3s;"></div>
+      <div id="hdr-time" style="font-size:14px;font-weight:700;color:var(--fg);"></div>
+      <div id="hdr-name" style="color:var(--amber);"></div>
+    </div>
+  </div>
+
+  <div id="pages">
+    <div class="pg" id="pg-cl"></div>
+    <div class="pg" id="pg-ts"></div>
+    <div class="pg" id="pg-si"></div>
+    <div class="pg" id="pg-pr"></div>
+    <div class="pg" id="pg-db"></div>
+    <div class="pg" id="pg-mg"></div>
+  </div>
+
+  <div id="nav">
+    <button class="nb" onclick="nav('cl')"><span class="ni">⏱</span>Clock</button>
+    <button class="nb" onclick="nav('ts')"><span class="ni">📋</span>Timesheet</button>
+    <button class="nb" onclick="nav('si')"><span class="ni">📍</span>Sites</button>
+    <button class="nb" onclick="nav('pr')"><span class="ni">💰</span>Payroll</button>
+    <button class="nb" onclick="nav('mg')"><span class="ni">⚙️</span>Manager</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// DATA
+// ══════════════════════════════════════════════════════════════
+var USERS    = JSON.parse(localStorage.getItem('gs_users')   || '[]');
+var RECORDS  = JSON.parse(localStorage.getItem('gs_records') || '[]');
+var SITES    = JSON.parse(localStorage.getItem('gs_sites')   || '[]');
+
+// Seed default data if empty
+if(!USERS.length){
+  USERS=[
+    {id:'u1',name:'Manager',pin:'0000',role:'manager',siteId:'',hourlyRate:0},
+    {id:'u2',name:'Ahmed Ali',pin:'1234',role:'guard',siteId:'s1',hourlyRate:18},
+    {id:'u3',name:'Khalid Omar',pin:'1234',role:'guard',siteId:'s1',hourlyRate:18},
+    {id:'u4',name:'Samir Hassan',pin:'1234',role:'guard',siteId:'s2',hourlyRate:20},
+    {id:'u5',name:'Nasser Jaber',pin:'1234',role:'guard',siteId:'s2',hourlyRate:18},
+  ];
+  saveUsers();
+}
+if(!SITES.length){
+  SITES=[
+    {id:'s1',name:'Site Alpha — North Gate',address:'King Fahd Road, Riyadh'},
+    {id:'s2',name:'Site Bravo — South Gate',address:'Prince Sultan Road, Riyadh'},
+    {id:'s3',name:'Site Charlie — HQ',address:'Olaya District, Riyadh'},
+  ];
+  saveSites();
+}
+
+var ME = null;
+var _curTab = 'cl';
+var _timer  = null;
+var _clockTimer = null;
+var OVERTIME_THRESHOLD = 9; // hours
+
+function saveUsers(){  try{localStorage.setItem('gs_users',   JSON.stringify(USERS));  }catch(e){}}
+function saveRecords(){try{localStorage.setItem('gs_records', JSON.stringify(RECORDS));}catch(e){}}
+function saveSites(){  try{localStorage.setItem('gs_sites',   JSON.stringify(SITES));  }catch(e){}}
+
+// ── Today helpers ──────────────────────────────────────────────
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function fmtTime(ts){ var d=new Date(ts); return d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}); }
+function fmtDate(ts){ var d=new Date(ts); return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }
+function elapsed(ms){
+  var s=Math.floor(ms/1000);
+  var h=Math.floor(s/3600); s-=h*3600;
+  var m=Math.floor(s/60); s-=m*60;
+  return (h<10?'0':'')+h+':'+(m<10?'0':'')+m+':'+(s<10?'0':'')+s;
+}
+function elapsedH(ms){ return Math.round(ms/36000)/100; }
+
+// ── Get current clock record for user ──────────────────────────
+function getActiveRecord(userId){
+  for(var i=RECORDS.length-1;i>=0;i--){
+    var r=RECORDS[i];
+    if(r.userId===userId && !r.clockOut) return r;
+  }
+  return null;
+}
+
+// ── Welcome screen ─────────────────────────────────────────────
+function wlEnter(){
+  var name = (document.getElementById('wl-name').value||'').trim();
+  var pin  = (document.getElementById('wl-pin').value||'').trim();
+  var err  = document.getElementById('wl-err');
+  if(!name){ err.textContent='Enter your name'; return; }
+  if(!pin){  err.textContent='Enter your PIN';  return; }
+
+  // Find user — match by PIN first, then narrow by name if needed
+  var found = null;
+  var pinMatches = USERS.filter(function(u){ return u.pin===pin; });
+  if(pinMatches.length===1){
+    // Unique PIN — login without needing exact name
+    found = pinMatches[0];
+  } else if(pinMatches.length>1){
+    // Multiple users share PIN — also match name
+    for(var i=0;i<pinMatches.length;i++){
+      if(pinMatches[i].name.toLowerCase()===name.toLowerCase()){
+        found=pinMatches[i]; break;
+      }
+    }
+    if(!found) found=pinMatches[0]; // fallback: first match
+  }
+  if(!found){ err.textContent='PIN not recognised — contact your manager'; return; }
+
+  ME = found;
+  document.getElementById('welcome').style.display='none';
+  document.getElementById('app').style.display='flex';
+  document.getElementById('hdr-name').textContent=ME.name;
+
+  // Start clock
+  startHdrClock();
+  gsInit();
+  nav('cl');
+}
+
+function startHdrClock(){
+  function tick(){
+    var d=new Date();
+    document.getElementById('hdr-time').textContent =
+      d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  }
+  tick();
+  setInterval(tick,1000);
+}
+
+// ══════════════════════════════════════════════════════════════
+// NAV
+// ══════════════════════════════════════════════════════════════
+function nav(id){
+  _curTab=id;
+  var pgs=document.querySelectorAll('.pg');
+  pgs.forEach(function(p){ p.classList.remove('on'); });
+  document.getElementById('pg-'+id).classList.add('on');
+  var nbs=document.querySelectorAll('.nb');
+  nbs.forEach(function(b,i){
+    b.classList.toggle('on',['cl','ts','si','pr','mg'][i]===id);
+  });
+  // Sidebar highlight
+  ['cl','ts','si','pr','mg','db'].forEach(function(t){
+    var el=document.getElementById('sb-'+t);
+    if(el) el.classList.toggle('on',t===id);
+  });
+  if(id==='cl') rCl();
+  else if(id==='ts') rTs();
+  else if(id==='si') rSi();
+  else if(id==='pr') rPr();
+  else if(id==='db') rDb();
+  else if(id==='mg') rMg();
+}
+
+// ══════════════════════════════════════════════════════════════
+// CLOCK PAGE
+// ══════════════════════════════════════════════════════════════
+function rCl(){
+  var active = getActiveRecord(ME.id);
+  var isIn   = !!active;
+  var onBreak = active && active.breakStart && !active.breakEnd;
+
+  var site = null;
+  if(ME.siteId) for(var i=0;i<SITES.length;i++) if(SITES[i].id===ME.siteId){site=SITES[i];break;}
+  document.getElementById('hdr-site').textContent = site ? site.name : 'No site assigned';
+
+  var h='';
+
+  // Status card
+  h+='<div style="text-align:center;padding:28px 16px 20px;">';
+  h+='<div style="font-size:11px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:16px;">';
+  if(isIn && !onBreak) h+='<span class="badge badge-green">● On Duty</span>';
+  else if(onBreak)     h+='<span class="badge badge-amber">● On Break</span>';
+  else                 h+='<span class="badge badge-dim">● Off Duty</span>';
+  h+='</div>';
+
+  // Timer
+  h+='<div id="live-timer">'+(isIn?elapsed(Date.now()-active.clockIn):'00:00:00')+'</div>';
+  h+='<div style="font-size:11px;color:var(--dimL);margin-top:6px;margin-bottom:28px;">';
+  if(isIn) h+='Since '+fmtTime(active.clockIn);
+  else h+='Not clocked in';
+  h+='</div>';
+
+  // Main clock button
+  var btnClass = onBreak ? 'on-break' : isIn ? 'clocked-in' : 'clocked-out';
+  var btnLabel = onBreak ? '⏸ On Break' : isIn ? 'Clock Out' : 'Clock In';
+  var btnIcon  = onBreak ? '▶ Resume' : isIn ? '⏹' : '▶';
+  h+='<button id="clock-btn" class="'+btnClass+'" onclick="doMainClock();">';
+  h+='<div style="font-size:36px;">'+btnIcon+'</div>';
+  h+='<div>'+btnLabel+'</div>';
+  h+='</button>';
+  h+='</div>';
+
+  // Break button (only when clocked in and not on break)
+  if(isIn && !onBreak){
+    h+='<div style="display:flex;gap:8px;margin-bottom:10px;">';
+    h+='<button class="btn" onclick="startBreak();" style="flex:1;padding:12px;border-radius:10px;background:rgba(255,193,69,0.12);border:1px solid rgba(255,193,69,0.3);color:#FFC145;font-weight:700;font-size:13px;">☕ Start Break</button>';
+    h+='</div>';
+  }
+  if(onBreak){
+    h+='<div style="margin-bottom:10px;">';
+    h+='<button class="btn" onclick="endBreak();" style="padding:12px;border-radius:10px;background:rgba(6,214,160,0.12);border:1px solid rgba(6,214,160,0.3);color:#06D6A0;font-weight:700;font-size:13px;">▶ End Break &amp; Resume</button>';
+    h+='</div>';
+  }
+
+  // Today summary
+  if(isIn && active){
+    h+='<div class="card">';
+    h+='<div class="card-title">Today\'s Shift</div>';
+    h+='<div class="row"><span style="color:var(--dimL);font-size:12px;">Clock In</span><span style="margin-left:auto;font-weight:700;color:var(--green);">'+fmtTime(active.clockIn)+'</span></div>';
+    if(active.gpsIn) h+='<div class="row"><span style="color:var(--dimL);font-size:12px;">📍 GPS</span><span style="margin-left:auto;font-size:11px;color:var(--blue);">'+active.gpsIn+'</span></div>';
+    if(active.siteId){
+      var sn=''; for(var i=0;i<SITES.length;i++) if(SITES[i].id===active.siteId){sn=SITES[i].name;break;}
+      h+='<div class="row"><span style="color:var(--dimL);font-size:12px;">📍 Site</span><span style="margin-left:auto;font-size:11px;color:var(--gold);">'+sn+'</span></div>';
+    }
+    h+='</div>';
+  }
+
+  // GPS note
+  h+='<div style="text-align:center;font-size:10px;color:rgba(255,255,255,0.2);margin-top:8px;">GPS location captured on every clock-in</div>';
+
+  document.getElementById('pg-cl').innerHTML=h;
+
+  // Start live timer
+  clearInterval(_clockTimer);
+  if(isIn){
+    _clockTimer=setInterval(function(){
+      var el=document.getElementById('live-timer');
+      var ar=getActiveRecord(ME.id);
+      if(el&&ar) el.textContent=elapsed(Date.now()-ar.clockIn);
+    },1000);
+  }
+}
+
+// ── Clock actions ──────────────────────────────────────────────
+function doMainClock(){
+  var active = getActiveRecord(ME.id);
+  var onBreak = active && active.breakStart && !active.breakEnd;
+  if(onBreak){ endBreak(); return; }
+  if(active){ doClockOut(active); }
+  else { doClockIn(); }
+}
+
+function doClockIn(){
+  var rec = {
+    id: 'r_'+Date.now(),
+    userId: ME.id,
+    userName: ME.name,
+    siteId: ME.siteId||'',
+    clockIn: Date.now(),
+    clockOut: null,
+    breakStart: null, breakEnd: null,
+    gpsIn: null, gpsOut: null,
+    status: 'pending', // pending | approved | rejected
+    note: ''
+  };
+  // Get GPS
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(function(pos){
+      rec.gpsIn = pos.coords.latitude.toFixed(5)+', '+pos.coords.longitude.toFixed(5);
+      saveRecords();
+    },function(){},{timeout:8000});
+  }
+  RECORDS.push(rec);
+  saveRecords(); setTimeout(gsPush,500);
+  flash('Clocked in ✅');
+  rCl();
+}
+
+function doClockOut(active){
+  active.clockOut = Date.now();
+  var hrs = elapsedH(active.clockOut - active.clockIn);
+  if(hrs > OVERTIME_THRESHOLD){
+    active.overtime = true;
+    flash('⚠️ Overtime alert! '+hrs+'h worked today');
+  }
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(function(pos){
+      active.gpsOut = pos.coords.latitude.toFixed(5)+', '+pos.coords.longitude.toFixed(5);
+      saveRecords();
+    },function(){},{timeout:8000});
+  }
+  saveRecords(); setTimeout(gsPush,500);
+  clearInterval(_clockTimer);
+  flash('Clocked out. Total: '+hrs+'h');
+  rCl();
+}
+
+function startBreak(){
+  var active=getActiveRecord(ME.id);
+  if(!active) return;
+  active.breakStart=Date.now();
+  saveRecords(); setTimeout(gsPush,500);
+  flash('Break started ☕');
+  rCl();
+}
+
+function endBreak(){
+  var active=getActiveRecord(ME.id);
+  if(!active) return;
+  active.breakEnd=Date.now();
+  saveRecords(); setTimeout(gsPush,500);
+  flash('Break ended — back on duty');
+  rCl();
+}
+
+// ══════════════════════════════════════════════════════════════
+// TIMESHEET PAGE
+// ══════════════════════════════════════════════════════════════
+function rTs(){
+  var myRecords = RECORDS.filter(function(r){ return r.userId===ME.id; });
+  myRecords.sort(function(a,b){ return b.clockIn-a.clockIn; });
+
+  // Total this week
+  var weekStart = new Date(); weekStart.setHours(0,0,0,0);
+  weekStart.setDate(weekStart.getDate()-weekStart.getDay());
+  var weekMs = 0;
+  myRecords.forEach(function(r){
+    if(r.clockIn >= weekStart.getTime() && r.clockOut){
+      weekMs += r.clockOut - r.clockIn;
+    }
+  });
+  var weekH = Math.round(weekMs/36000)/100;
+  var overtimeH = Math.max(0, weekH-40);
+
+  var h='';
+
+  // Week summary
+  h+='<div class="card" style="border-left:4px solid var(--gold);">';
+  h+='<div class="card-title">This Week</div>';
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">';
+  h+='<div style="background:var(--panel);border-radius:9px;padding:10px;text-align:center;border-top:3px solid var(--gold);">';
+  h+='<div style="font-size:18px;font-weight:900;color:var(--gold);">'+weekH+'h</div>';
+  h+='<div style="font-size:9px;color:var(--dimL);text-transform:uppercase;margin-top:3px;">Total</div></div>';
+  h+='<div style="background:var(--panel);border-radius:9px;padding:10px;text-align:center;border-top:3px solid var(--red);">';
+  h+='<div style="font-size:18px;font-weight:900;color:'+(overtimeH>0?'var(--red)':'var(--dimL)')+';">'+overtimeH+'h</div>';
+  h+='<div style="font-size:9px;color:var(--dimL);text-transform:uppercase;margin-top:3px;">Overtime</div></div>';
+  h+='<div style="background:var(--panel);border-radius:9px;padding:10px;text-align:center;border-top:3px solid var(--blue);">';
+  h+='<div style="font-size:18px;font-weight:900;color:var(--blue);">'+myRecords.filter(function(r){return r.clockOut&&new Date(r.clockIn)>=weekStart;}).length+'</div>';
+  h+='<div style="font-size:9px;color:var(--dimL);text-transform:uppercase;margin-top:3px;">Shifts</div></div>';
+  h+='</div></div>';
+
+  // Records
+  h+='<div class="card">';
+  h+='<div class="card-title">Shift History</div>';
+  if(!myRecords.length){
+    h+='<div style="text-align:center;padding:20px;font-size:11px;color:var(--dimL);">No shifts recorded yet</div>';
+  } else {
+    myRecords.slice(0,30).forEach(function(r){
+      var dur = r.clockOut ? elapsedH(r.clockOut-r.clockIn)+'h' : 'Active';
+      var site=''; for(var i=0;i<SITES.length;i++) if(SITES[i].id===r.siteId){site=SITES[i].name.split('—')[0].trim();break;}
+      var stBadge = r.status==='approved'?'badge-green':r.status==='rejected'?'badge-red':'badge-amber';
+      var stLabel = r.status==='approved'?'Approved':r.status==='rejected'?'Rejected':'Pending';
+      h+='<div style="padding:10px 0;border-bottom:1px solid var(--border);">';
+      h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">';
+      h+='<span style="font-size:12px;font-weight:700;color:var(--fg);">'+fmtDate(r.clockIn)+'</span>';
+      h+='<span class="badge '+stBadge+'">'+stLabel+'</span></div>';
+      h+='<div style="display:flex;align-items:center;gap:10px;font-size:11px;color:var(--dimL);">';
+      h+='<span>In: <b style="color:var(--green);">'+fmtTime(r.clockIn)+'</b></span>';
+      if(r.clockOut) h+='<span>Out: <b style="color:var(--red);">'+fmtTime(r.clockOut)+'</b></span>';
+      h+='<span style="margin-left:auto;font-weight:800;color:var(--gold);">'+dur+'</span>';
+      if(r.overtime) h+='<span class="badge badge-red">OT</span>';
+      h+='</div>';
+      if(site) h+='<div style="font-size:10px;color:var(--blue);margin-top:3px;">📍 '+site+'</div>';
+      h+='</div>';
+    });
+  }
+  h+='</div>';
+
+  document.getElementById('pg-ts').innerHTML=h;
+}
+
+// ══════════════════════════════════════════════════════════════
+// SITES PAGE
+// ══════════════════════════════════════════════════════════════
+function rSi(){
+  var h='';
+
+  // My assigned site
+  var mySite=null;
+  if(ME.siteId) for(var i=0;i<SITES.length;i++) if(SITES[i].id===ME.siteId){mySite=SITES[i];break;}
+
+  h+='<div class="card" style="border-left:4px solid var(--blue);">';
+  h+='<div class="card-title">My Assigned Site</div>';
+  if(mySite){
+    h+='<div style="font-size:15px;font-weight:800;color:var(--fg);margin-bottom:4px;">'+mySite.name+'</div>';
+    h+='<div style="font-size:11px;color:var(--dimL);">📍 '+mySite.address+'</div>';
+  } else {
+    h+='<div style="font-size:12px;color:var(--amber);">No site assigned — contact your manager</div>';
+  }
+  h+='</div>';
+
+  // All sites
+  h+='<div class="section-title">All Sites</div>';
+  SITES.forEach(function(s){
+    // Count guards at this site
+    var activeGuards = RECORDS.filter(function(r){
+      return r.siteId===s.id && !r.clockOut && r.userId!==ME.id;
+    }).length;
+    var activeMe = mySite&&mySite.id===s.id&&getActiveRecord(ME.id)?1:0;
+    var total = activeGuards + activeMe;
+
+    h+='<div class="card">';
+    h+='<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px;">';
+    h+='<div>';
+    h+='<div style="font-size:13px;font-weight:800;color:var(--fg);">'+s.name+'</div>';
+    h+='<div style="font-size:11px;color:var(--dimL);margin-top:2px;">'+s.address+'</div>';
+    h+='</div>';
+    h+='<span class="badge '+(total>0?'badge-green':'badge-dim')+'">'+total+' on duty</span>';
+    h+='</div>';
+    h+='</div>';
+  });
+
+  document.getElementById('pg-si').innerHTML=h;
+}
+
+// ══════════════════════════════════════════════════════════════
+// MANAGER PAGE
+// ══════════════════════════════════════════════════════════════
+function rMg(){
+  if(ME.role!=='manager'){
+    document.getElementById('pg-mg').innerHTML=
+      '<div class="card" style="text-align:center;padding:32px;">'
+      +'<div style="font-size:32px;margin-bottom:12px;">🔒</div>'
+      +'<div style="font-size:13px;font-weight:700;color:var(--fg);">Manager Access Only</div>'
+      +'<div style="font-size:11px;color:var(--dimL);margin-top:6px;">Contact your manager for access.</div>'
+      +'</div>';
+    return;
+  }
+
+  // Overtime alerts
+  var otAlerts=[];
+  USERS.forEach(function(u){
+    if(u.role!=='guard') return;
+    var weekMs=0;
+    var wStart=new Date(); wStart.setHours(0,0,0,0);
+    wStart.setDate(wStart.getDate()-wStart.getDay());
+    RECORDS.filter(function(r){return r.userId===u.id&&r.clockOut&&r.clockIn>=wStart.getTime();})
+      .forEach(function(r){weekMs+=r.clockOut-r.clockIn;});
+    var weekH=Math.round(weekMs/36000)/100;
+    if(weekH>40) otAlerts.push({name:u.name,hours:weekH});
+  });
+
+  // Currently on duty
+  var onDuty = RECORDS.filter(function(r){return !r.clockOut;});
+
+  // Pending approvals
+  var pending = RECORDS.filter(function(r){return r.clockOut&&r.status==='pending';});
+
+  var h='';
+
+  // Header stats
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;">';
+  h+='<div class="card" style="text-align:center;border-top:3px solid var(--green);padding:10px 6px;">';
+  h+='<div style="font-size:20px;font-weight:900;color:var(--green);">'+onDuty.length+'</div>';
+  h+='<div style="font-size:9px;color:var(--dimL);text-transform:uppercase;margin-top:2px;">On Duty</div></div>';
+  h+='<div class="card" style="text-align:center;border-top:3px solid var(--amber);padding:10px 6px;">';
+  h+='<div style="font-size:20px;font-weight:900;color:var(--amber);">'+pending.length+'</div>';
+  h+='<div style="font-size:9px;color:var(--dimL);text-transform:uppercase;margin-top:2px;">Pending</div></div>';
+  h+='<div class="card" style="text-align:center;border-top:3px solid var(--red);padding:10px 6px;">';
+  h+='<div style="font-size:20px;font-weight:900;color:var(--red);">'+otAlerts.length+'</div>';
+  h+='<div style="font-size:9px;color:var(--dimL);text-transform:uppercase;margin-top:2px;">Overtime</div></div>';
+  h+='</div>';
+
+  // Overtime alerts
+  if(otAlerts.length){
+    h+='<div class="card" style="border-left:4px solid var(--red);margin-bottom:10px;">';
+    h+='<div class="card-title" style="color:var(--red);">⚠️ Overtime Alerts</div>';
+    otAlerts.forEach(function(a){
+      h+='<div class="row"><span style="font-size:12px;font-weight:700;color:var(--fg);">'+a.name+'</span>';
+      h+='<span class="badge badge-red" style="margin-left:auto;">'+a.hours+'h this week</span></div>';
+    });
+    h+='</div>';
+  }
+
+  // Live — On Duty
+  h+='<div class="card" style="border-left:4px solid var(--green);">';
+  h+='<div class="card-title">Currently On Duty ('+onDuty.length+')</div>';
+  if(!onDuty.length){
+    h+='<div style="font-size:11px;color:var(--dimL);text-align:center;padding:12px;">No one clocked in right now</div>';
+  } else {
+    onDuty.forEach(function(r){
+      var siteName=''; for(var i=0;i<SITES.length;i++) if(SITES[i].id===r.siteId){siteName=SITES[i].name.split('—')[0].trim();break;}
+      var hrs=elapsedH(Date.now()-r.clockIn);
+      var isOt=hrs>OVERTIME_THRESHOLD;
+      h+='<div class="row">';
+      h+='<div style="width:36px;height:36px;border-radius:9px;background:rgba(6,214,160,0.12);border:1px solid rgba(6,214,160,0.25);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:var(--green);flex-shrink:0;">'+r.userName[0]+'</div>';
+      h+='<div style="flex:1;">';
+      h+='<div style="font-size:12px;font-weight:800;color:var(--fg);">'+r.userName+'</div>';
+      h+='<div style="font-size:10px;color:var(--dimL);">'+(siteName||'No site')+' · In: '+fmtTime(r.clockIn)+'</div>';
+      h+='</div>';
+      h+='<span class="badge '+(isOt?'badge-red':'badge-green')+'" style="flex-shrink:0;">'+hrs+'h'+(isOt?' OT':'')+'</span>';
+      h+='</div>';
+    });
+  }
+  h+='</div>';
+
+  // Pending approvals
+  h+='<div class="card" style="border-left:4px solid var(--amber);">';
+  h+='<div class="card-title">Pending Approvals ('+pending.length+')</div>';
+  if(!pending.length){
+    h+='<div style="font-size:11px;color:var(--dimL);text-align:center;padding:12px;">No pending timesheets</div>';
+  } else {
+    pending.slice(0,20).forEach(function(r){
+      var dur=elapsedH(r.clockOut-r.clockIn);
+      h+='<div style="padding:10px 0;border-bottom:1px solid var(--border);">';
+      h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">';
+      h+='<div>';
+      h+='<div style="font-size:12px;font-weight:800;color:var(--fg);">'+r.userName+'</div>';
+      h+='<div style="font-size:10px;color:var(--dimL);">'+fmtDate(r.clockIn)+' · '+fmtTime(r.clockIn)+' – '+fmtTime(r.clockOut)+' · <b style="color:var(--gold);">'+dur+'h</b></div>';
+      h+='</div>';
+      if(r.overtime) h+='<span class="badge badge-red">OT</span>';
+      h+='</div>';
+      h+='<div style="display:flex;gap:6px;">';
+      h+='<button data-rid="'+r.id+'" onclick="mgApprove(this.dataset.rid);" style="flex:1;padding:8px;border-radius:8px;border:none;background:#06D6A0;color:#000;font-weight:700;font-size:12px;cursor:pointer;">✓ Approve</button>';
+      h+='<button data-rid="'+r.id+'" onclick="mgReject(this.dataset.rid);" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(231,76,60,0.4);background:transparent;color:var(--red);font-weight:700;font-size:12px;cursor:pointer;">✕ Reject</button>';
+      h+='</div></div>';
+    });
+  }
+  h+='</div>';
+
+  // Add employee section
+  h+='<div class="card" style="border-left:4px solid var(--purple);">';
+  h+='<div class="card-title">Add Employee</div>';
+  h+='<div class="inp-group"><label class="inp-label">Full Name</label>';
+  h+='<input class="inp" id="mg-emp-name" placeholder="Employee full name"></div>';
+  h+='<div class="inp-group"><label class="inp-label">PIN (4–6 digits)</label>';
+  h+='<input class="inp" id="mg-emp-pin" type="number" placeholder="e.g. 5678" maxlength="6"></div>';
+  h+='<div class="inp-group"><label class="inp-label">Hourly Rate (USD $)</label>';
+  h+='<input class="inp" id="mg-emp-rate" type="number" placeholder="e.g. 18.50" step="0.01" min="0"></div>';
+  h+='<div class="inp-group"><label class="inp-label">Assign Site</label>';
+  h+='<select class="inp" id="mg-emp-site">';
+  h+='<option value="">No site</option>';
+  SITES.forEach(function(s){ h+='<option value="'+s.id+'">'+s.name+'</option>'; });
+  h+='</select></div>';
+  h+='<button class="btn btn-gold" onclick="mgAddEmployee();">+ Add Employee</button>';
+  h+='</div>';
+
+  // Employee list
+  h+='<div class="card">';
+  h+='<div class="card-title">All Employees ('+USERS.filter(function(u){return u.role==='guard';}).length+')</div>';
+  USERS.filter(function(u){return u.role==='guard';}).forEach(function(u){
+    var site=''; for(var i=0;i<SITES.length;i++) if(SITES[i].id===u.siteId){site=SITES[i].name.split('—')[0].trim();break;}
+    var isActive=getActiveRecord(u.id);
+    h+='<div class="row">';
+    h+='<div style="width:36px;height:36px;border-radius:9px;background:rgba(88,166,255,0.12);border:1px solid rgba(88,166,255,0.25);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:var(--blue);flex-shrink:0;">'+u.name[0]+'</div>';
+    h+='<div style="flex:1;">';
+    h+='<div style="font-size:12px;font-weight:800;color:var(--fg);">'+u.name+'</div>';
+    h+='<div style="font-size:10px;color:var(--dimL);">'+(site||'No site assigned')+' · PIN: '+u.pin+'</div>';
+    h+='</div>';
+    h+='<span class="badge '+(isActive?'badge-green':'badge-dim')+'">'+(isActive?'On Duty':'Off')+'</span>';
+    h+='</div>';
+  });
+  h+='</div>';
+
+  // Export
+  h+='<div class="card" style="border-left:4px solid var(--cyan);">';
+  h+='<div class="card-title">Export</div>';
+  h+='<button class="btn" onclick="mgExport();" style="background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.3);color:var(--cyan);font-weight:700;font-size:13px;">📥 Export Timesheets (CSV)</button>';
+  h+='</div>';
+
+  document.getElementById('pg-mg').innerHTML=h;
+}
+
+function mgApprove(rid){
+  for(var i=0;i<RECORDS.length;i++) if(RECORDS[i].id===rid){RECORDS[i].status='approved';break;}
+  saveRecords(); gsPush(); flash('Timesheet approved ✅'); rMg();
+}
+function mgReject(rid){
+  for(var i=0;i<RECORDS.length;i++) if(RECORDS[i].id===rid){RECORDS[i].status='rejected';break;}
+  saveRecords(); gsPush(); flash('Timesheet rejected'); rMg();
+}
+
+function mgAddEmployee(){
+  var name=(document.getElementById('mg-emp-name').value||'').trim();
+  var pin=(document.getElementById('mg-emp-pin').value||'').trim();
+  var siteId=document.getElementById('mg-emp-site').value;
+  if(!name||!pin){flash('Enter name and PIN');return;}
+  var rate=parseFloat(document.getElementById('mg-emp-rate').value)||0;
+  USERS.push({id:'u'+Date.now(),name:name,pin:pin,role:'guard',siteId:siteId,hourlyRate:rate});
+  saveUsers(); gsPush(); flash('Employee added ✅'); rMg();
+}
+
+function mgExport(){
+  var rows=['Name,Date,Clock In,Clock Out,Hours,Site,Overtime,Status'];
+  RECORDS.forEach(function(r){
+    if(!r.clockOut) return;
+    var site=''; for(var i=0;i<SITES.length;i++) if(SITES[i].id===r.siteId){site=SITES[i].name;break;}
+    rows.push([
+      r.userName, fmtDate(r.clockIn), fmtTime(r.clockIn), fmtTime(r.clockOut),
+      elapsedH(r.clockOut-r.clockIn), site, r.overtime?'Yes':'No', r.status
+    ].join(','));
+  });
+  var blob=new Blob([rows.join('\r\n')],{type:'text/csv'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url; a.download='GuardSync_Timesheets_'+todayStr()+'.csv'; a.click();
+  URL.revokeObjectURL(url);
+  flash('Exported ✅');
+}
+
+// ══════════════════════════════════════════════════════════════
+// FLASH
+// ══════════════════════════════════════════════════════════════
+function flash(msg){
+  var el=document.getElementById('flash-msg');
+  if(!el){
+    el=document.createElement('div');
+    el.id='flash-msg';
+    el.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);'
+      +'background:#0d2444;border:1px solid var(--gold);border-radius:10px;'
+      +'padding:10px 20px;font-size:13px;font-weight:700;color:var(--fg);'
+      +'z-index:9999;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,0.5);'
+      +'animation:pg-in 0.2s ease both;';
+    document.body.appendChild(el);
+  }
+  el.textContent=msg;
+  el.style.display='block';
+  clearTimeout(window._flashT);
+  window._flashT=setTimeout(function(){if(el)el.style.display='none';},3000);
+}
+
+// ══════════════════════════════════════════════════════════════
+// JSONBIN SYNC ENGINE
+// ══════════════════════════════════════════════════════════════
+var GS_KEY  = '$2a$10$bgI6v0OmKAoR5tfMCC2vHOelUm5qMZ0.gxfLua1FXxyI0l1F6nOKW';
+var GS_BIN  = localStorage.getItem('gs_bin_id') || '';
+var GS_SYNC_INTERVAL = 20000; // 20 seconds
+var _syncBusy = false;
+
+function gsApiUrl(){ return 'https://api.jsonbin.io/v3/b/'+GS_BIN; }
+
+// ── Create bin on first run ────────────────────────────────────
+function gsCreateBin(){
+  fetch('https://api.jsonbin.io/v3/b',{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'X-Master-Key':GS_KEY,
+      'X-Bin-Name':'guardsync-data',
+      'X-Bin-Private':'false'
+    },
+    body:JSON.stringify({records:RECORDS,users:USERS,sites:SITES,lastSync:new Date().toISOString()})
+  })
+  .then(function(r){return r.json();})
+  .then(function(d){
+    if(d.metadata&&d.metadata.id){
+      GS_BIN=d.metadata.id;
+      localStorage.setItem('gs_bin_id',GS_BIN);
+      console.log('[GuardSync] Bin created:',GS_BIN);
+      flash('Sync connected ✅');
+      startSync();
+    }
+  })
+  .catch(function(e){console.log('[GuardSync] Bin create failed:',e);});
+}
+
+// ── Push local data to bin ─────────────────────────────────────
+function gsPush(){
+  if(!GS_BIN||_syncBusy) return;
+  _syncBusy=true;
+  var payload={
+    records:RECORDS,
+    users:USERS,
+    sites:SITES,
+    lastSync:new Date().toISOString()
+  };
+  fetch(gsApiUrl(),{
+    method:'PUT',
+    headers:{'Content-Type':'application/json','X-Master-Key':GS_KEY},
+    body:JSON.stringify(payload)
+  })
+  .then(function(r){return r.json();})
+  .then(function(d){
+    _syncBusy=false;
+    updateSyncDot(true);
+    console.log('[GuardSync] Push OK');
+  })
+  .catch(function(e){
+    _syncBusy=false;
+    updateSyncDot(false);
+    console.log('[GuardSync] Push failed:',e);
+  });
+}
+
+// ── Pull latest data from bin ──────────────────────────────────
+function gsPull(){
+  if(!GS_BIN||_syncBusy) return;
+  fetch(gsApiUrl()+'/latest',{
+    headers:{'X-Master-Key':GS_KEY}
+  })
+  .then(function(r){return r.json();})
+  .then(function(d){
+    if(!d.record) return;
+    var remote=d.record;
+    // Merge records — keep any local records not in remote
+    var remoteIds=remote.records.map(function(r){return r.id;});
+    var localOnly=RECORDS.filter(function(r){return remoteIds.indexOf(r.id)<0;});
+    RECORDS=remote.records.concat(localOnly);
+    // Users and sites — remote wins (manager controls these)
+    if(remote.users&&remote.users.length) USERS=remote.users;
+    if(remote.sites&&remote.sites.length) SITES=remote.sites;
+    saveRecords(); saveUsers(); saveSites();
+    updateSyncDot(true);
+    // Refresh current tab
+    if(_curTab==='mg'&&ME&&ME.role==='manager') rMg();
+    if(_curTab==='ts') rTs();
+    if(_curTab==='si') rSi();
+  })
+  .catch(function(e){
+    updateSyncDot(false);
+    console.log('[GuardSync] Pull failed:',e);
+  });
+}
+
+function updateSyncDot(ok){
+  var dot=document.getElementById('sync-dot');
+  if(dot){
+    dot.style.background=ok?'var(--green)':'var(--red)';
+    dot.title=ok?'Synced':'Sync error';
+  }
+}
+
+function startSync(){
+  if(!GS_BIN) return;
+  gsPull();
+  setInterval(function(){
+    gsPull();
+    if(ME) gsPush();
+  },GS_SYNC_INTERVAL);
+}
+
+// ── Init sync on app start ─────────────────────────────────────
+function gsInit(){
+  if(!GS_BIN){
+    gsCreateBin();
+  } else {
+    startSync();
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// PAYROLL PAGE — Texas / Federal FLSA rules
+// OT = over 40h/week at 1.5x rate
+// ══════════════════════════════════════════════════════════════
+function rPr(){
+  if(ME.role!=='manager'){
+    document.getElementById('pg-pr').innerHTML=
+      '<div class="card" style="text-align:center;padding:32px;">'
+      +'<div style="font-size:32px;margin-bottom:12px;">🔒</div>'
+      +'<div style="font-size:13px;font-weight:700;">Manager Access Only</div></div>';
+    return;
+  }
+
+  // Week selector (default = current week)
+  var today=new Date();
+  var wStart=new Date(today); wStart.setHours(0,0,0,0);
+  wStart.setDate(today.getDate()-today.getDay()); // Sunday
+  var wEnd=new Date(wStart); wEnd.setDate(wStart.getDate()+6); wEnd.setHours(23,59,59,999);
+
+  // Allow week navigation via _prWeekOffset
+  if(typeof _prWeekOffset==='undefined') window._prWeekOffset=0;
+  wStart.setDate(wStart.getDate()+_prWeekOffset*7);
+  wEnd.setDate(wEnd.getDate()+_prWeekOffset*7);
+
+  var wLabel=wStart.toLocaleDateString('en-US',{month:'short',day:'numeric'})
+    +' – '+wEnd.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+
+  // Calculate payroll per employee
+  var guards=USERS.filter(function(u){return u.role==='guard';});
+  var rows=[];
+  var grandTotal=0;
+
+  guards.forEach(function(u){
+    var rate=u.hourlyRate||0;
+    var weekRecords=RECORDS.filter(function(r){
+      return r.userId===u.id && r.clockOut &&
+        r.clockIn>=wStart.getTime() && r.clockIn<=wEnd.getTime();
+    });
+    var totalMs=0;
+    var shifts=weekRecords.length;
+    weekRecords.forEach(function(r){ totalMs+=r.clockOut-r.clockIn; });
+    var totalH=Math.round(totalMs/36000)/100;
+    var regH=Math.min(totalH,40);
+    var otH=Math.max(0,totalH-40);
+    var regPay=Math.round(regH*rate*100)/100;
+    var otPay=Math.round(otH*rate*1.5*100)/100;
+    var total=Math.round((regPay+otPay)*100)/100;
+    grandTotal+=total;
+    rows.push({name:u.name,rate:rate,shifts:shifts,totalH:totalH,regH:regH,otH:otH,regPay:regPay,otPay:otPay,total:total});
+  });
+  grandTotal=Math.round(grandTotal*100)/100;
+
+  var h='';
+
+  // Week navigator
+  h+='<div class="card" style="border-left:4px solid var(--gold);">';
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">';
+  h+='<button onclick="_prWeekOffset--;rPr();" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--dimL);font-size:16px;cursor:pointer;">‹</button>';
+  h+='<div style="text-align:center;">';
+  h+='<div style="font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:1px;">Pay Period</div>';
+  h+='<div style="font-size:13px;font-weight:800;color:var(--fg);">'+wLabel+'</div>';
+  if(_prWeekOffset===0) h+='<div style="font-size:9px;color:var(--green);">Current Week</div>';
+  h+='</div>';
+  h+='<button onclick="_prWeekOffset++;rPr();" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--dimL);font-size:16px;cursor:pointer;">›</button>';
+  h+='</div></div>';
+
+  // Grand total card
+  h+='<div class="card" style="border-left:4px solid var(--green);margin-bottom:10px;">';
+  h+='<div class="card-title">Weekly Payroll Summary</div>';
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">';
+  var totalOtH=rows.reduce(function(a,r){return a+r.otH;},0);
+  var totalShifts=rows.reduce(function(a,r){return a+r.shifts;},0);
+  h+='<div style="background:var(--panel);border-radius:9px;padding:10px;text-align:center;border-top:3px solid var(--gold);">';
+  h+='<div style="font-size:16px;font-weight:900;color:var(--gold);">$'+grandTotal.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+'</div>';
+  h+='<div style="font-size:9px;color:var(--dimL);text-transform:uppercase;margin-top:3px;">Total Payroll</div></div>';
+  h+='<div style="background:var(--panel);border-radius:9px;padding:10px;text-align:center;border-top:3px solid var(--red);">';
+  h+='<div style="font-size:16px;font-weight:900;color:'+(totalOtH>0?'var(--red)':'var(--dimL)')+';">'+Math.round(totalOtH*100)/100+'h</div>';
+  h+='<div style="font-size:9px;color:var(--dimL);text-transform:uppercase;margin-top:3px;">Overtime Hours</div></div>';
+  h+='<div style="background:var(--panel);border-radius:9px;padding:10px;text-align:center;border-top:3px solid var(--blue);">';
+  h+='<div style="font-size:16px;font-weight:900;color:var(--blue);">'+totalShifts+'</div>';
+  h+='<div style="font-size:9px;color:var(--dimL);text-transform:uppercase;margin-top:3px;">Total Shifts</div></div>';
+  h+='</div></div>';
+
+  // Per employee breakdown
+  h+='<div class="card">';
+  h+='<div class="card-title">Employee Breakdown</div>';
+  if(!rows.filter(function(r){return r.shifts>0;}).length){
+    h+='<div style="text-align:center;padding:20px;font-size:11px;color:var(--dimL);">No shifts recorded for this period</div>';
+  } else {
+    rows.forEach(function(r){
+      if(r.shifts===0) return;
+      h+='<div style="padding:12px 0;border-bottom:1px solid var(--border);">';
+      h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">';
+      h+='<div>';
+      h+='<div style="font-size:13px;font-weight:800;color:var(--fg);">'+r.name+'</div>';
+      h+='<div style="font-size:10px;color:var(--dimL);">$'+r.rate+'/hr · '+r.shifts+' shift'+(r.shifts>1?'s':'')+'</div>';
+      h+='</div>';
+      h+='<div style="font-size:16px;font-weight:900;color:var(--gold);">$'+r.total.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+'</div>';
+      h+='</div>';
+      // Detail row
+      h+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">';
+      h+='<div style="background:var(--panel);border-radius:7px;padding:7px;text-align:center;">';
+      h+='<div style="font-size:11px;font-weight:700;color:var(--fg);">'+r.totalH+'h</div>';
+      h+='<div style="font-size:9px;color:var(--dimL);margin-top:1px;">Total</div></div>';
+      h+='<div style="background:var(--panel);border-radius:7px;padding:7px;text-align:center;">';
+      h+='<div style="font-size:11px;font-weight:700;color:var(--green);">$'+r.regPay.toFixed(2)+'</div>';
+      h+='<div style="font-size:9px;color:var(--dimL);margin-top:1px;">Regular ('+r.regH+'h)</div></div>';
+      h+='<div style="background:var(--panel);border-radius:7px;padding:7px;text-align:center;">';
+      h+='<div style="font-size:11px;font-weight:700;color:'+(r.otH>0?'var(--red)':'var(--dimL)')+';">$'+r.otPay.toFixed(2)+'</div>';
+      h+='<div style="font-size:9px;color:var(--dimL);margin-top:1px;">OT 1.5× ('+r.otH+'h)</div></div>';
+      h+='</div>';
+      h+='</div>';
+    });
+  }
+  h+='</div>';
+
+  // Set hourly rates
+  h+='<div class="card" style="border-left:4px solid var(--purple);">';
+  h+='<div class="card-title">Set Hourly Rates</div>';
+  guards.forEach(function(u){
+    h+='<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);">';
+    h+='<span style="flex:1;font-size:12px;font-weight:700;color:var(--fg);">'+u.name+'</span>';
+    h+='<span style="font-size:11px;color:var(--dimL);">$</span>';
+    h+='<input type="number" step="0.01" min="0" value="'+(u.hourlyRate||0)+'" ';
+    h+='data-uid="'+u.id+'" onchange="prSetRate(this.dataset.uid,this.value);" ';
+    h+='style="width:72px;padding:6px 8px;border-radius:7px;border:1px solid var(--border);';
+    h+='background:var(--panel);color:var(--fg);font-size:13px;text-align:center;font-family:inherit;">';
+    h+='<span style="font-size:10px;color:var(--dimL);">/hr</span>';
+    h+='</div>';
+  });
+  h+='</div>';
+
+  // Export button
+  h+='<button class="btn btn-gold" onclick="prExport('+wStart.getTime()+','+wEnd.getTime()+');" style="margin-top:4px;">📥 Export Payroll CSV</button>';
+  h+='<div style="text-align:center;font-size:10px;color:var(--dimL);margin-top:8px;line-height:1.6;">Texas · Federal FLSA · OT = 1.5× after 40h/week</div>';
+
+  document.getElementById('pg-pr').innerHTML=h;
+}
+
+function prSetRate(uid, val){
+  var rate=parseFloat(val)||0;
+  for(var i=0;i<USERS.length;i++) if(USERS[i].id===uid){USERS[i].hourlyRate=rate;break;}
+  saveUsers();
+  flash('Rate updated ✅');
+}
+
+function prExport(wStartMs, wEndMs){
+  var guards=USERS.filter(function(u){return u.role==='guard';});
+  var rows=['Employee,Hourly Rate,Shifts,Total Hours,Regular Hours,OT Hours,Regular Pay,OT Pay (1.5x),Total Pay'];
+  var grandTotal=0;
+  guards.forEach(function(u){
+    var rate=u.hourlyRate||0;
+    var weekRecords=RECORDS.filter(function(r){
+      return r.userId===u.id&&r.clockOut&&r.clockIn>=wStartMs&&r.clockIn<=wEndMs;
+    });
+    var totalMs=0;
+    weekRecords.forEach(function(r){totalMs+=r.clockOut-r.clockIn;});
+    var totalH=Math.round(totalMs/36000)/100;
+    var regH=Math.min(totalH,40);
+    var otH=Math.max(0,totalH-40);
+    var regPay=Math.round(regH*rate*100)/100;
+    var otPay=Math.round(otH*rate*1.5*100)/100;
+    var total=Math.round((regPay+otPay)*100)/100;
+    grandTotal+=total;
+    rows.push([u.name,'$'+rate,weekRecords.length,totalH,regH,otH,'$'+regPay,'$'+otPay,'$'+total].join(','));
+  });
+  rows.push(['TOTAL','','','','','','','','$'+Math.round(grandTotal*100)/100].join(','));
+  var blob=new Blob([rows.join('\n')],{type:'text/csv'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url;
+  a.download='GuardSync_Payroll_'+new Date(wStartMs).toISOString().slice(0,10)+'.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  flash('Payroll exported ✅');
+}
+
+// ══════════════════════════════════════════════════════════════
+// SIDEBAR + DESKTOP DASHBOARD
+// ══════════════════════════════════════════════════════════════
+function sbInit(){
+  var nameEl=document.getElementById('sb-name');
+  var roleEl=document.getElementById('sb-role');
+  var avatarEl=document.getElementById('sb-avatar');
+  if(nameEl) nameEl.textContent=ME.name;
+  if(roleEl) roleEl.textContent=ME.role==='manager'?'Manager':'Security Guard';
+  if(avatarEl) avatarEl.textContent=ME.name[0];
+  // Sidebar clock
+  function sbTick(){
+    var d=new Date();
+    var clk=document.getElementById('sb-clock');
+    var dt=document.getElementById('sb-date');
+    if(clk) clk.textContent=d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+    if(dt)  dt.textContent=d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+  }
+  sbTick(); setInterval(sbTick,1000);
+}
+
+function sbLogout(){
+  document.getElementById('app').style.display='none';
+  document.getElementById('welcome').style.display='flex';
+  ME=null;
+  var ni=document.getElementById('wl-name');
+  var pi=document.getElementById('wl-pin');
+  if(ni) ni.value=''; if(pi) pi.value='';
+}
+
+// ── DESKTOP DASHBOARD ─────────────────────────────────────────
+function rDb(){
+  if(ME.role!=='manager'){
+    document.getElementById('pg-db').innerHTML='<div class="card" style="text-align:center;padding:32px;"><div style="font-size:32px;">🔒</div><div style="margin-top:10px;font-weight:700;">Manager Access Only</div></div>';
+    return;
+  }
+  var onDuty=RECORDS.filter(function(r){return !r.clockOut;});
+  var today=new Date(); today.setHours(0,0,0,0);
+  var todayRecs=RECORDS.filter(function(r){return r.clockOut&&r.clockIn>=today.getTime();});
+  var pending=RECORDS.filter(function(r){return r.clockOut&&r.status==='pending';});
+
+  // Today total hours + cost
+  var todayMs=0, todayCost=0;
+  todayRecs.forEach(function(r){
+    var h=elapsedH(r.clockOut-r.clockIn);
+    todayMs+=r.clockOut-r.clockIn;
+    var u=USERS.filter(function(u){return u.id===r.userId;})[0];
+    if(u) todayCost+=h*(u.hourlyRate||0);
+  });
+  var todayH=Math.round(todayMs/36000)/100;
+  todayCost=Math.round(todayCost*100)/100;
+
+  // OT alerts this week
+  var wStart=new Date(); wStart.setHours(0,0,0,0);
+  wStart.setDate(wStart.getDate()-wStart.getDay());
+  var otAlerts=[];
+  USERS.filter(function(u){return u.role==='guard';}).forEach(function(u){
+    var wMs=0;
+    RECORDS.filter(function(r){return r.userId===u.id&&r.clockOut&&r.clockIn>=wStart.getTime();})
+      .forEach(function(r){wMs+=r.clockOut-r.clockIn;});
+    var wH=Math.round(wMs/36000)/100;
+    if(wH>40) otAlerts.push({name:u.name,h:wH});
+  });
+
+  // Weekly payroll
+  var weekMs2=0, weekCost=0;
+  RECORDS.filter(function(r){return r.clockOut&&r.clockIn>=wStart.getTime();}).forEach(function(r){
+    weekMs2+=r.clockOut-r.clockIn;
+    var u=USERS.filter(function(u){return u.id===r.userId;})[0];
+    if(u){var h=elapsedH(r.clockOut-r.clockIn);var reg=Math.min(h,40);var ot=Math.max(0,h-40);weekCost+=reg*(u.hourlyRate||0)+ot*(u.hourlyRate||0)*1.5;}
+  });
+  weekCost=Math.round(weekCost*100)/100;
+
+  var h='';
+  h+='<div class="desk-page-title">📊 Live Dashboard <span>Auto-refreshes every 30s</span></div>';
+
+  // KPI row
+  h+='<div class="desk-grid" style="margin-bottom:16px;">';
+  var kpis=[
+    {icon:'🟢',v:onDuty.length+' Guards',l:'On Duty Now',c:'var(--green)',bg:'rgba(6,214,160,0.08)',border:'rgba(6,214,160,0.25)'},
+    {icon:'⏰',v:todayH+'h / $'+todayCost,l:'Today Hours / Cost',c:'var(--gold)',bg:'rgba(212,168,67,0.08)',border:'rgba(212,168,67,0.25)'},
+    {icon:'💰',v:'$'+weekCost.toLocaleString('en-US',{minimumFractionDigits:2}),l:'This Week Payroll',c:'var(--blue)',bg:'rgba(88,166,255,0.08)',border:'rgba(88,166,255,0.25)'},
+    {icon:'⚠️',v:otAlerts.length+' Employees',l:'Overtime Alerts',c:otAlerts.length?'var(--red)':'var(--dimL)',bg:otAlerts.length?'rgba(231,76,60,0.08)':'rgba(255,255,255,0.03)',border:otAlerts.length?'rgba(231,76,60,0.25)':'var(--border)'},
+    {icon:'📋',v:pending.length+' Shifts',l:'Pending Approvals',c:pending.length?'var(--amber)':'var(--dimL)',bg:pending.length?'rgba(255,193,69,0.08)':'rgba(255,255,255,0.03)',border:pending.length?'rgba(255,193,69,0.25)':'var(--border)'},
+    {icon:'👥',v:USERS.filter(function(u){return u.role==='guard';}).length+' Guards',l:'Total Employees',c:'var(--purple)',bg:'rgba(167,139,250,0.08)',border:'rgba(167,139,250,0.25)'},
+  ];
+  kpis.forEach(function(k){
+    h+='<div style="background:'+k.bg+';border:1px solid '+k.border+';border-radius:12px;padding:16px;">';
+    h+='<div style="font-size:24px;margin-bottom:8px;">'+k.icon+'</div>';
+    h+='<div style="font-size:20px;font-weight:900;color:'+k.c+';margin-bottom:4px;">'+k.v+'</div>';
+    h+='<div style="font-size:11px;color:var(--dimL);text-transform:uppercase;letter-spacing:0.5px;">'+k.l+'</div>';
+    h+='</div>';
+  });
+  h+='</div>';
+
+  // Two column: On Duty + Sites
+  h+='<div class="desk-grid-2">';
+
+  // On Duty
+  h+='<div class="card">';
+  h+='<div class="card-title">🟢 Currently On Duty ('+onDuty.length+')</div>';
+  if(!onDuty.length){
+    h+='<div style="text-align:center;padding:20px;font-size:12px;color:var(--dimL);">No guards clocked in</div>';
+  } else {
+    onDuty.forEach(function(r){
+      var site=''; for(var i=0;i<SITES.length;i++) if(SITES[i].id===r.siteId){site=SITES[i].name.split('—')[0].trim();break;}
+      var hrs=elapsedH(Date.now()-r.clockIn);
+      var isOt=hrs>OVERTIME_THRESHOLD;
+      h+='<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">';
+      h+='<div style="width:38px;height:38px;border-radius:9px;background:rgba(6,214,160,0.12);border:1px solid rgba(6,214,160,0.25);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;color:var(--green);flex-shrink:0;">'+r.userName[0]+'</div>';
+      h+='<div style="flex:1;"><div style="font-size:13px;font-weight:700;color:var(--fg);">'+r.userName+'</div>';
+      h+='<div style="font-size:11px;color:var(--dimL);">'+(site||'No site')+' · Since '+fmtTime(r.clockIn)+'</div></div>';
+      h+='<span style="font-size:12px;font-weight:800;color:'+(isOt?'var(--red)':'var(--green)')+'">'+hrs+'h'+(isOt?' OT':'')+'</span>';
+      h+='</div>';
+    });
+  }
+  h+='</div>';
+
+  // Sites
+  h+='<div class="card">';
+  h+='<div class="card-title">📍 Sites Overview</div>';
+  SITES.forEach(function(s){
+    var count=onDuty.filter(function(r){return r.siteId===s.id;}).length;
+    h+='<div style="padding:12px 0;border-bottom:1px solid var(--border);">';
+    h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">';
+    h+='<div style="font-size:13px;font-weight:700;color:var(--fg);">'+s.name+'</div>';
+    h+='<span style="font-size:12px;font-weight:800;color:'+(count>0?'var(--green)':'var(--dimL)')+'">';
+    h+=count+' on duty</span></div>';
+    h+='<div style="font-size:11px;color:var(--dimL);">'+s.address+'</div>';
+    h+='</div>';
+  });
+  h+='</div>';
+  h+='</div>'; // end desk-grid-2
+
+  // Two column: Pending approvals + OT alerts
+  h+='<div class="desk-grid-2">';
+
+  // Pending
+  h+='<div class="card" style="border-left:4px solid var(--amber);">';
+  h+='<div class="card-title">📋 Pending Approvals ('+pending.length+')</div>';
+  if(!pending.length){
+    h+='<div style="text-align:center;padding:20px;font-size:12px;color:var(--dimL);">All timesheets approved ✅</div>';
+  } else {
+    pending.slice(0,8).forEach(function(r){
+      var dur=elapsedH(r.clockOut-r.clockIn);
+      h+='<div style="padding:10px 0;border-bottom:1px solid var(--border);">';
+      h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">';
+      h+='<div><div style="font-size:12px;font-weight:700;color:var(--fg);">'+r.userName+'</div>';
+      h+='<div style="font-size:10px;color:var(--dimL);">'+fmtDate(r.clockIn)+' · '+dur+'h</div></div>';
+      if(r.overtime) h+='<span style="font-size:9px;background:rgba(231,76,60,0.15);color:var(--red);padding:2px 7px;border-radius:5px;">OT</span>';
+      h+='</div>';
+      h+='<div style="display:flex;gap:6px;">';
+      h+='<button data-rid="'+r.id+'" onclick="mgApprove(this.dataset.rid);rDb();" style="flex:1;padding:7px;border-radius:7px;border:none;background:#06D6A0;color:#000;font-weight:700;font-size:11px;cursor:pointer;">✓ Approve</button>';
+      h+='<button data-rid="'+r.id+'" onclick="mgReject(this.dataset.rid);rDb();" style="flex:1;padding:7px;border-radius:7px;border:1px solid rgba(231,76,60,0.4);background:transparent;color:var(--red);font-weight:700;font-size:11px;cursor:pointer;">✕ Reject</button>';
+      h+='</div></div>';
+    });
+  }
+  h+='</div>';
+
+  // OT alerts
+  h+='<div class="card" style="border-left:4px solid var(--red);">';
+  h+='<div class="card-title">⚠️ Overtime Alerts</div>';
+  if(!otAlerts.length){
+    h+='<div style="text-align:center;padding:20px;font-size:12px;color:var(--dimL);">No overtime this week ✅</div>';
+  } else {
+    otAlerts.forEach(function(a){
+      h+='<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">';
+      h+='<div style="font-size:13px;font-weight:700;color:var(--fg);">'+a.name+'</div>';
+      h+='<span style="font-size:12px;font-weight:800;color:var(--red);">'+a.h+'h this week</span>';
+      h+='</div>';
+    });
+  }
+  h+='</div>';
+  h+='</div>'; // end desk-grid-2
+
+  document.getElementById('pg-db').innerHTML=h;
+}
+
+// ── PWA Install Prompt ────────────────────────────────────────
+var _installPrompt = null;
+window.addEventListener('beforeinstallprompt', function(e){
+  e.preventDefault();
+  _installPrompt = e;
+  var banner = document.getElementById('install-banner');
+  if(banner) banner.style.display = 'block';
+});
+function installApp(){
+  if(_installPrompt){
+    _installPrompt.prompt();
+    _installPrompt.userChoice.then(function(r){
+      if(r.outcome==='accepted') flash('GuardSync installed ✅');
+      _installPrompt=null;
+      var banner=document.getElementById('install-banner');
+      if(banner) banner.style.display='none';
+    });
+  } else {
+    flash('On iPhone: tap Share then Add to Home Screen');
+  }
+}
+window.addEventListener('appinstalled',function(){
+  flash('GuardSync installed ✅');
+  var banner=document.getElementById('install-banner');
+  if(banner) banner.style.display='none';
+});
+
+// Auto-refresh manager view every 30s
+setInterval(function(){
+  if(!ME) return;
+  if(_curTab==='mg'&&ME.role==='manager') rMg();
+  if(_curTab==='db'&&ME.role==='manager') rDb();
+},30000);
+
+// ══════════════════════════════════════════════════════════════
+// JSONBIN SYNC
+// ══════════════════════════════════════════════════════════════
+var GS_MASTER_KEY = '$2a$10$bgI6v0OmKAoR5tfMCC2vHOelUm5qMZ0.gxfLua1FXxyI0l1F6nOKW';
+var GS_BIN_ID     = localStorage.getItem('gs_bin_id') || '';
+var _syncing      = false;
+var _lastSync     = 0;
+
+function gsPayload(){
+  return {
+    users:   USERS,
+    records: RECORDS,
+    sites:   SITES,
+    ts:      Date.now()
+  };
+}
+
+async function gsCreateBin(){
+  try{
+    var resp = await fetch('https://api.jsonbin.io/v3/b',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'X-Master-Key': GS_MASTER_KEY,
+        'X-Bin-Name':   'guardsync-data',
+        'X-Private':    'false'
+      },
+      body: JSON.stringify(gsPayload())
+    });
+    var data = await resp.json();
+    GS_BIN_ID = data.metadata.id;
+    localStorage.setItem('gs_bin_id', GS_BIN_ID);
+    console.log('[GuardSync] Bin created:', GS_BIN_ID);
+    gsSyncStatus('✅ Sync active');
+  }catch(e){
+    console.error('[GuardSync] Create bin error:', e);
+    gsSyncStatus('⚠️ Sync error');
+  }
+}
+
+async function gsPush(){
+  if(_syncing) return;
+  if(!GS_BIN_ID){ await gsCreateBin(); return; }
+  _syncing = true;
+  try{
+    await fetch('https://api.jsonbin.io/v3/b/'+GS_BIN_ID,{
+      method:'PUT',
+      headers:{
+        'Content-Type':'application/json',
+        'X-Master-Key': GS_MASTER_KEY
+      },
+      body: JSON.stringify(gsPayload())
+    });
+    _lastSync = Date.now();
+    gsSyncStatus('✅ Synced '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}));
+  }catch(e){
+    gsSyncStatus('⚠️ Sync failed');
+  }
+  _syncing = false;
+}
+
+async function gsPull(){
+  if(!GS_BIN_ID) return;
+  try{
+    var resp = await fetch('https://api.jsonbin.io/v3/b/'+GS_BIN_ID+'/latest',{
+      headers:{'X-Master-Key': GS_MASTER_KEY}
+    });
+    var data = await resp.json();
+    var remote = data.record;
+    if(!remote) return;
+    // Merge: keep local records + remote records, deduplicate by id
+    var allRecords = (remote.records||[]).concat(RECORDS);
+    var seen = {};
+    RECORDS = allRecords.filter(function(r){
+      if(seen[r.id]) return false;
+      seen[r.id] = true;
+      return true;
+    });
+    // Users and sites: remote wins (manager controls these)
+    if(remote.users&&remote.users.length)  USERS  = remote.users;
+    if(remote.sites&&remote.sites.length)  SITES  = remote.sites;
+    saveRecords(); saveUsers(); saveSites();
+    if(_curTab==='mg') rMg();
+    if(_curTab==='ts') rTs();
+    if(_curTab==='si') rSi();
+  }catch(e){
+    console.error('[GuardSync] Pull error:', e);
+  }
+}
+
+function gsSyncStatus(msg){
+  var el = document.getElementById('gs-sync-lbl');
+  if(el) el.textContent = msg;
+  var sb = document.getElementById('sb-sync-lbl');
+  if(sb) sb.textContent = msg;
+}
+
+// Start sync on login
+function gsStartSync(){
+  if(!GS_BIN_ID){
+    gsCreateBin();
+  } else {
+    gsPull();
+  }
+  // Push every 20s, pull every 30s
+  setInterval(function(){ gsPush(); }, 20000);
+  setInterval(function(){ gsPull(); }, 30000);
+}
+
+// Override saveRecords to also push
+var _origSaveRecords = saveRecords;
+saveRecords = function(){
+  _origSaveRecords();
+  setTimeout(gsPush, 500);
+};
+var _origSaveUsers = saveUsers;
+saveUsers = function(){
+  _origSaveUsers();
+  setTimeout(gsPush, 500);
+};
+var _origSaveSites = saveSites;
+saveSites = function(){
+  _origSaveSites();
+  setTimeout(gsPush, 500);
+};
+// ── Service Worker Registration ──────────────────────────────
+if('serviceWorker' in navigator){
+  window.addEventListener('load',function(){
+    navigator.serviceWorker.register('sw-guard.js')
+      .then(function(){console.log('[GuardSync SW] Registered');})
+      .catch(function(e){console.log('[GuardSync SW] Error:',e);});
+  });
+}
+</script>
+</body>
+</html>
