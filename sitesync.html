@@ -247,96 +247,160 @@ body{display:flex;flex-direction:column;}
 <body>
 <div id="ticker"><div id="ticker-inner"></div></div>
 <!-- Welcome / Splash screen -->
-<div id="welcome-screen" style="display:flex;flex-direction:column;position:fixed;inset:0;z-index:9999;background:linear-gradient(160deg,#050d1a 0%,#0a1628 50%,#0d1e10 100%);overflow:hidden;">
+<div id="welcome-screen" style="display:flex;flex-direction:column;position:fixed;inset:0;z-index:9999;
+  background:#050d1a;overflow:hidden;">
 
-  <!-- Animated background grid -->
-  <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(212,168,67,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(212,168,67,0.04) 1px,transparent 1px);background-size:40px 40px;"></div>
+  <!-- Animated background particles -->
+  <canvas id="wc-canvas" style="position:absolute;inset:0;opacity:0.35;"></canvas>
 
-  <!-- Corner accents -->
-  <div style="position:absolute;top:0;left:0;width:120px;height:120px;background:radial-gradient(circle at top left,rgba(212,168,67,0.12),transparent 70%);"></div>
-  <div style="position:absolute;bottom:0;right:0;width:180px;height:180px;background:radial-gradient(circle at bottom right,rgba(6,214,160,0.08),transparent 70%);"></div>
+  <!-- Gold accent lines -->
+  <div style="position:absolute;top:0;left:0;right:0;height:3px;
+    background:linear-gradient(90deg,transparent,#D4A843,#06D6A0,transparent);"></div>
+  <div style="position:absolute;bottom:0;left:0;right:0;height:1px;
+    background:linear-gradient(90deg,transparent,#D4A843 50%,transparent);opacity:0.4;"></div>
+
+  <!-- Corner glow -->
+  <div style="position:absolute;top:-60px;right:-60px;width:200px;height:200px;
+    background:radial-gradient(circle,rgba(212,168,67,0.15),transparent 70%);pointer-events:none;"></div>
+  <div style="position:absolute;bottom:-40px;left:-40px;width:160px;height:160px;
+    background:radial-gradient(circle,rgba(6,214,160,0.08),transparent 70%);pointer-events:none;"></div>
 
   <!-- Content -->
-  <div style="position:relative;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;text-align:center;">
+  <div style="position:relative;flex:1;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;padding:32px 24px;text-align:center;">
 
-    <!-- Logo mark -->
-    <div style="margin-bottom:20px;">
-      <svg width="72" height="72" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
-        <polygon points="36,4 66,20 66,52 36,68 6,52 6,20" fill="none" stroke="#D4A843" stroke-width="2"/>
-        <polygon points="36,12 58,24 58,48 36,60 14,48 14,24" fill="#D4A843" opacity="0.08"/>
-        <text x="36" y="43" text-anchor="middle" font-family="Segoe UI,Arial" font-size="18" font-weight="900" fill="#D4A843">KD</text>
+    <!-- Logo -->
+    <div style="margin-bottom:22px;animation:wc-drop 0.6s cubic-bezier(0.34,1.56,0.64,1) both;">
+      <svg width="76" height="76" viewBox="0 0 76 76" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="hex-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#D4A843"/>
+            <stop offset="100%" stop-color="#06D6A0"/>
+          </linearGradient>
+        </defs>
+        <polygon points="38,4 68,21 68,55 38,72 8,55 8,21"
+          fill="none" stroke="url(#hex-grad)" stroke-width="2"/>
+        <polygon points="38,14 58,25 58,51 38,62 18,51 18,25"
+          fill="#D4A843" opacity="0.07"/>
+        <text x="38" y="46" text-anchor="middle"
+          font-family="Segoe UI,Arial" font-size="20" font-weight="900" fill="#D4A843">KD</text>
       </svg>
     </div>
 
-    <!-- Brand -->
-    <div style="font-size:32px;font-weight:900;color:#f1f5f9;letter-spacing:2px;margin-bottom:4px;">SITESYNC</div>
-    <div style="font-size:11px;color:rgba(212,168,67,0.7);letter-spacing:3px;text-transform:uppercase;margin-bottom:28px;">Construction Intelligence Platform</div>
+    <!-- Brand name -->
+    <div style="animation:wc-rise 0.5s 0.15s ease both;">
+      <div style="font-size:34px;font-weight:900;color:#f1f5f9;letter-spacing:3px;
+        margin-bottom:5px;text-shadow:0 0 40px rgba(212,168,67,0.3);">SITESYNC</div>
+      <div style="font-size:11px;color:rgba(212,168,67,0.65);letter-spacing:4px;
+        text-transform:uppercase;margin-bottom:28px;">Construction Intelligence</div>
+    </div>
 
     <!-- Project card -->
-    <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:18px 24px;width:100%;max-width:340px;margin-bottom:24px;">
-      <div style="font-size:11px;color:rgba(255,255,255,0.35);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;">Active Project</div>
-      <div style="font-size:17px;font-weight:900;color:#f1f5f9;margin-bottom:2px;">IC1 Road Improvements</div>
-      <div style="font-size:12px;color:rgba(255,255,255,0.45);margin-bottom:14px;">Interchange 1 &nbsp;·&nbsp; Diriyah, Riyadh</div>
-      <!-- Progress bar -->
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
-        <div style="flex:1;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;">
-          <div id="wc-progress-bar" style="height:6px;background:linear-gradient(90deg,#D4A843,#06D6A0);border-radius:3px;width:0%;transition:width 0.8s ease;"></div>
+    <div style="animation:wc-rise 0.5s 0.25s ease both;width:100%;max-width:340px;margin-bottom:20px;">
+      <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);
+        border-radius:16px;padding:16px 20px;">
+        <div style="font-size:10px;color:rgba(255,255,255,0.3);font-weight:700;
+          letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;">Active Project</div>
+        <div style="font-size:17px;font-weight:900;color:#f1f5f9;margin-bottom:2px;">
+          IC1 Road Improvements</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-bottom:14px;">
+          Interchange 1 &nbsp;·&nbsp; Diriyah, Riyadh</div>
+        <!-- Progress bar -->
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:5px;">
+          <div style="flex:1;height:5px;background:rgba(255,255,255,0.07);border-radius:3px;overflow:hidden;">
+            <div id="wc-progress-bar" style="height:5px;
+              background:linear-gradient(90deg,#D4A843,#06D6A0);
+              border-radius:3px;width:0%;transition:width 1s cubic-bezier(0.4,0,0.2,1);"></div>
+          </div>
+          <div id="wc-progress-pct" style="font-size:13px;font-weight:900;color:#D4A843;
+            min-width:36px;text-align:right;">—%</div>
         </div>
-        <div id="wc-progress-pct" style="font-size:14px;font-weight:900;color:#D4A843;min-width:40px;text-align:right;">—%</div>
-      </div>
-      <div style="font-size:10px;color:rgba(255,255,255,0.3);">Overall Physical Progress</div>
-    </div>
-
-    <!-- Date + weather strip -->
-    <div style="display:flex;gap:10px;margin-bottom:24px;width:100%;max-width:340px;">
-      <div style="flex:1;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 12px;text-align:left;">
-        <div style="font-size:10px;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">Date</div>
-        <div id="wc-date" style="font-size:13px;font-weight:700;color:#f1f5f9;"></div>
-      </div>
-      <div style="flex:1;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 12px;text-align:left;">
-        <div style="font-size:10px;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">Location</div>
-        <div style="font-size:13px;font-weight:700;color:#f1f5f9;">Diriyah</div>
+        <div style="font-size:9px;color:rgba(255,255,255,0.25);text-align:left;">
+          Overall Physical Progress</div>
       </div>
     </div>
 
-    <!-- User name entry -->
-    <div style="width:100%;max-width:340px;margin-bottom:16px;">
-      <div style="font-size:10px;color:rgba(255,255,255,0.4);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Your Name</div>
-      <input id="wc-name" type="text" placeholder="Enter your name to continue..."
-        style="width:100%;padding:13px 16px;border-radius:10px;border:1px solid rgba(212,168,67,0.3);background:rgba(255,255,255,0.06);color:#f1f5f9;font-size:14px;font-family:inherit;outline:none;text-align:center;letter-spacing:0.3px;">
+    <!-- Date strip -->
+    <div style="animation:wc-rise 0.5s 0.3s ease both;display:flex;gap:8px;
+      margin-bottom:20px;width:100%;max-width:340px;">
+      <div style="flex:1;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);
+        border-radius:10px;padding:9px 12px;text-align:left;">
+        <div style="font-size:9px;color:rgba(255,255,255,0.28);text-transform:uppercase;
+          letter-spacing:1px;margin-bottom:3px;">Date</div>
+        <div id="wc-date" style="font-size:12px;font-weight:700;color:#f1f5f9;"></div>
+      </div>
+      <div style="flex:1;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);
+        border-radius:10px;padding:9px 12px;text-align:left;">
+        <div style="font-size:9px;color:rgba(255,255,255,0.28);text-transform:uppercase;
+          letter-spacing:1px;margin-bottom:3px;">Location</div>
+        <div style="font-size:12px;font-weight:700;color:#f1f5f9;">Diriyah, KSA</div>
+      </div>
     </div>
 
-    <!-- Password entry -->
-    <div style="width:100%;max-width:340px;margin-bottom:16px;">
-      <div style="font-size:10px;color:rgba(255,255,255,0.4);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Access Code</div>
+    <!-- Name + Password fields -->
+    <div style="animation:wc-rise 0.5s 0.35s ease both;width:100%;max-width:340px;margin-bottom:12px;">
+      <div style="font-size:10px;color:rgba(255,255,255,0.38);font-weight:700;
+        letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;text-align:left;">Your Name</div>
+      <input id="wc-name" type="text" placeholder="Enter your name..."
+        style="width:100%;padding:12px 16px;border-radius:10px;
+        border:1px solid rgba(212,168,67,0.25);background:rgba(255,255,255,0.05);
+        color:#f1f5f9;font-size:14px;font-family:inherit;outline:none;
+        text-align:left;margin-bottom:10px;box-sizing:border-box;
+        transition:border-color 0.2s;">
+      <div style="font-size:10px;color:rgba(255,255,255,0.38);font-weight:700;
+        letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;text-align:left;">Access Code</div>
       <input id="wc-pass" type="password" placeholder="Enter access code..."
-        style="width:100%;padding:13px 16px;border-radius:10px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:#f1f5f9;font-size:14px;font-family:inherit;outline:none;text-align:center;letter-spacing:2px;">
-      <div id="wc-pass-err" style="font-size:10px;color:#E74C3C;margin-top:5px;min-height:14px;text-align:center;"></div>
-      <div style="font-size:10px;color:rgba(255,255,255,0.25);margin-top:6px;text-align:center;line-height:1.6;">
-        Access code provided by the Head of Surveying.<br>Contact <span style="color:rgba(212,168,67,0.6);">K. Dimachkie</span> if you need access.
+        style="width:100%;padding:12px 16px;border-radius:10px;
+        border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);
+        color:#f1f5f9;font-size:14px;font-family:inherit;outline:none;
+        text-align:left;letter-spacing:2px;box-sizing:border-box;
+        transition:border-color 0.2s;">
+      <div id="wc-pass-err" style="font-size:10px;color:#E74C3C;
+        min-height:16px;margin-top:6px;text-align:left;"></div>
+      <div style="font-size:10px;color:rgba(255,255,255,0.2);margin-top:4px;line-height:1.6;text-align:left;">
+        Access code provided by the Head of Surveying.<br>
+        Contact <span style="color:rgba(212,168,67,0.55);">K. Dimachkie</span> if you need access.
       </div>
     </div>
 
     <!-- Enter button -->
-    <button id="wc-enter-btn" onclick="wcEnter();"
-      style="width:100%;max-width:340px;padding:15px;background:linear-gradient(135deg,#D4A843,#C9A44C);border:none;border-radius:12px;color:#000;font-weight:900;font-size:15px;cursor:pointer;font-family:inherit;letter-spacing:0.5px;margin-bottom:20px;">
-      Enter App →
-    </button>
+    <div style="animation:wc-rise 0.5s 0.4s ease both;width:100%;max-width:340px;margin-bottom:20px;">
+      <button id="wc-enter-btn" onclick="wcEnter();"
+        style="width:100%;padding:15px;
+        background:linear-gradient(135deg,#D4A843 0%,#C9A44C 50%,#D4A843 100%);
+        background-size:200% auto;
+        border:none;border-radius:12px;color:#000;font-weight:900;font-size:15px;
+        cursor:pointer;font-family:inherit;letter-spacing:0.5px;
+        box-shadow:0 4px 24px rgba(212,168,67,0.35);
+        transition:transform 0.15s,box-shadow 0.15s;
+        active:transform:scale(0.97);">
+        Enter App &nbsp;→
+      </button>
+    </div>
 
     <!-- Footer -->
-    <div style="font-size:10px;color:rgba(255,255,255,0.2);letter-spacing:0.5px;">
-      Khatib &amp; Alami &nbsp;·&nbsp; Head of Surveying &nbsp;·&nbsp; <span id="wc-version">SiteSync v3.2</span>
+    <div style="animation:wc-rise 0.5s 0.45s ease both;
+      font-size:10px;color:rgba(255,255,255,0.18);letter-spacing:0.5px;">
+      Khatib &amp; Alami &nbsp;·&nbsp; Head of Surveying &nbsp;·&nbsp;
+      <span id="wc-version">SiteSync v3.2</span>
     </div>
 
   </div>
 </div>
 
+<!-- Welcome screen animations -->
+<style>
+@keyframes wc-drop{from{opacity:0;transform:translateY(-20px) scale(0.8)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes wc-rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+</style>
+
+<div id="tab-loader"></div>
 <div id="app">
 <div id="hdr">
   <div class="hdr-top" style="position:relative;">
   <!-- Avatar trigger -->
   <button id="hdr-avatar" onclick="acOpen();" aria-label="Account"
-    style="position:absolute;top:12px;right:16px;width:44px;height:44px;
+    style="position:absolute;top:auto;bottom:8px;right:12px;width:44px;height:44px;
     display:flex;align-items:center;justify-content:center;
     background:transparent;border:none;cursor:pointer;z-index:10;padding:0;">
     <div id="hdr-avatar-inner"
@@ -1731,15 +1795,32 @@ function wsLogoutUser(){
 }
 
 function wsExitApp(){
-  // Try to close the PWA window
   try{ window.close(); }catch(e){}
-  // If window.close() is blocked (most browsers block it unless opened by script)
-  // redirect to blank page as fallback
   setTimeout(function(){
-    try{ window.location.href='about:blank'; }catch(e){}
-  }, 300);
+    var ua=navigator.userAgent||'';
+    var msg='Close this browser tab to exit the app.';
+    if(/Android/i.test(ua)) msg='Tap the square (Recent Apps) button then swipe the app away — or tap Back twice.';
+    else if(/iPhone|iPad/i.test(ua)) msg='Press the Home button or swipe up from the bottom to exit.';
+    var ov=document.createElement('div');
+    ov.id='exit-overlay';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(5,10,20,0.96);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;';
+    var btn=document.createElement('button');
+    btn.textContent='Stay in App';
+    btn.style.cssText='padding:13px 32px;background:linear-gradient(135deg,#D4A843,#C9A44C);border:none;border-radius:12px;color:#000;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;';
+    btn.onclick=function(){ov.remove();};
+    var icon=document.createElement('div');
+    icon.style.cssText='font-size:48px;margin-bottom:20px;';
+    icon.textContent='👋';
+    var title=document.createElement('div');
+    title.style.cssText='font-size:20px;font-weight:900;color:#f1f5f9;margin-bottom:12px;';
+    title.textContent='To Exit SiteSync';
+    var body=document.createElement('div');
+    body.style.cssText='font-size:14px;color:#94a3b8;line-height:1.8;margin-bottom:28px;';
+    body.textContent=msg;
+    ov.appendChild(icon);ov.appendChild(title);ov.appendChild(body);ov.appendChild(btn);
+    document.body.appendChild(ov);
+  },400);
 }
-
 function lockAdmin(){
   ADMIN_UNLOCKED=false;
   flash('Admin locked 🔒');
@@ -5209,6 +5290,28 @@ function wcInit(){
   // Welcome screen is already display:flex in HTML — just populate it
   var savedName = localStorage.getItem('ic1_username')||'';
 
+  // Particle canvas
+  var canvas=document.getElementById('wc-canvas');
+  if(canvas){
+    canvas.width=window.innerWidth; canvas.height=window.innerHeight;
+    var ctx=canvas.getContext('2d');
+    var pts=[];
+    for(var i=0;i<55;i++) pts.push({x:Math.random()*canvas.width,y:Math.random()*canvas.height,r:Math.random()*1.5+0.5,dx:(Math.random()-0.5)*0.4,dy:(Math.random()-0.5)*0.4,o:Math.random()*0.5+0.2});
+    function drawPts(){
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      for(var i=0;i<pts.length;i++){
+        var p=pts[i];
+        ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+        ctx.fillStyle='rgba(212,168,67,'+p.o+')';ctx.fill();
+        p.x+=p.dx;p.y+=p.dy;
+        if(p.x<0||p.x>canvas.width) p.dx*=-1;
+        if(p.y<0||p.y>canvas.height) p.dy*=-1;
+      }
+      window._wcParticles=requestAnimationFrame(drawPts);
+    }
+    drawPts();
+  }
+
   // Fill date
   var d = new Date();
   var dateEl = document.getElementById('wc-date');
@@ -5299,6 +5402,7 @@ function wcEnter(){
   ws.style.transform = 'scale(0.97)';
   setTimeout(function(){
     ws.style.display = 'none';
+    if(window._wcParticles) cancelAnimationFrame(window._wcParticles);
     acUpdateAvatar();
     nav('ov');
     buildTicker();
@@ -6238,6 +6342,17 @@ function countAllPiers(){
 var ALL_TABS=["ov","tr","rd","fs","ut","rp","pl","fr","sv","rd2","mp","ch","ad","ws"];
 
 function nav(id){
+  // Top loading bar flash
+  var ldr=document.getElementById('tab-loader');
+  if(ldr){ldr.style.width='0%';ldr.style.transition='none';
+    requestAnimationFrame(function(){
+      ldr.style.transition='width 0.18s ease';
+      ldr.style.width='70%';
+      setTimeout(function(){ldr.style.width='100%';
+        setTimeout(function(){ldr.style.width='0%';ldr.style.transition='none';},180);
+      },180);
+    });
+  }
   // Check for pending approval notifications on tab switch
   try{ apCheckNotifications(); }catch(e){}
   for(var i=0;i<ALL_TABS.length;i++){
