@@ -13,7 +13,7 @@
 <meta name="description" content="SiteSync — IC1 Road Improvements Construction Intelligence Platform">
 <link rel="manifest" href="sitesync-manifest.json">
 <meta name="apple-mobile-web-app-title" content="SiteSync">
-<link rel="apple-touch-icon" href="sitesync_icon_512.png">
+<link rel="apple-touch-icon" href="file_00000000bc3c7246845d377da7f07358.png">
 <meta name="apple-mobile-web-app-title" content="SiteSync">
 <meta name="theme-color" content="#07090d">
 <title>SiteSync v3.2</title>
@@ -10294,13 +10294,33 @@ function rMp(){
   }
 }
 
-// ── Service Worker ────────────────────────────────────────────
+// ── Service Worker (inline) ──────────────────────────────────
 if('serviceWorker' in navigator){
-  window.addEventListener('load', function(){
-    navigator.serviceWorker.register('sw.js')
-      .then(function(){ console.log('[SiteSync SW] Registered'); })
-      .catch(function(e){ console.log('[SiteSync SW] Error:', e); });
-  });
+  var swCode=[
+    'var C="ss-v5";',
+    'self.addEventListener("install",function(e){',
+    '  e.waitUntil(caches.open(C).then(function(c){',
+    '    return c.add("sitesync.html");',
+    '  }));',
+    '  self.skipWaiting();',
+    '});',
+    'self.addEventListener("activate",function(e){',
+    '  e.waitUntil(caches.keys().then(function(ks){',
+    '    return Promise.all(ks.filter(function(k){return k!==C;}).map(function(k){return caches.delete(k);}));',
+    '  }));',
+    '  self.clients.claim();',
+    '});',
+    'self.addEventListener("fetch",function(e){',
+    '  e.respondWith(caches.match(e.request).then(function(r){',
+    '    return r||fetch(e.request);',
+    '  }));',
+    '});'
+  ].join("\n");
+  var swBlob=new Blob([swCode],{type:'text/javascript'});
+  var swUrl=URL.createObjectURL(swBlob);
+  navigator.serviceWorker.register(swUrl)
+    .then(function(){console.log('[SiteSync SW] OK');})
+    .catch(function(e){console.log('[SiteSync SW] Error:',e);});
 }
 </script>
 </body>
