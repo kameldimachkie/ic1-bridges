@@ -777,7 +777,7 @@ var PLAN = {
     fillslope: []
   }
 };
-var ADMIN_HASH=localStorage.getItem('ic1_adminpw')||'Lina@6072';
+var ADMIN_HASH=localStorage.getItem('ic1_adminpw')||'0000';
 // Custom weights storage
 var CUSTOM_WEIGHTS={
   project:{pre:7,roads:6,fs:0.7}, // bridges auto-calc
@@ -5390,7 +5390,7 @@ function wcEnter(){
   // Validate password against stored admin password
   var correctPw = (typeof ADMIN_HASH !== 'undefined' ? ADMIN_HASH : null)
                || localStorage.getItem('ic1_adminpw')
-               || 'Lina@6072';
+               || '0000';
   if(pass !== correctPw){
     if(errEl) errEl.textContent = 'Incorrect access code — please try again';
     if(passEl){ passEl.style.border='1px solid #E74C3C'; passEl.value=''; passEl.focus(); }
@@ -5978,7 +5978,7 @@ function adUnlock(){
   var pw=document.getElementById('ad-pw');
   var err=document.getElementById('ad-pw-err');
   if(!pw) return;
-  var correctPw=(typeof ADMIN_HASH!=='undefined'?ADMIN_HASH:null)||localStorage.getItem('ic1_adminpw')||'Lina@6072';
+  var correctPw=(typeof ADMIN_HASH!=='undefined'?ADMIN_HASH:null)||localStorage.getItem('ic1_adminpw')||'0000';
   if(pw.value===correctPw){
     _adUnlocked=true;
     rAd();
