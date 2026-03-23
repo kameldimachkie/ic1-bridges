@@ -12,6 +12,7 @@
 <meta name="theme-color" content="#050d1a">
 <meta name="description" content="SiteSync — IC1 Road Improvements Construction Intelligence Platform">
 <link rel="manifest" href="sitesync-manifest.json">
+<meta name="apple-mobile-web-app-title" content="SiteSync">
 <link rel="apple-touch-icon" href="sitesync_icon_512.png">
 <meta name="apple-mobile-web-app-title" content="SiteSync">
 <meta name="theme-color" content="#07090d">
@@ -549,7 +550,7 @@ body{display:flex;flex-direction:column;}
 
 
 <script>
-if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('./sw.js').catch(function(e){});});}
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(e){});});}
 </script>
 <script>
 // ═══════════════════════════════════════════════════════════════
@@ -815,6 +816,13 @@ function loadData(){
   try{var _apr=localStorage.getItem('ic1b3_approvals');if(_apr) APPROVALS=JSON.parse(_apr);}catch(e){}
   try{var _nfr=localStorage.getItem('ic1b3_notifs');if(_nfr) AP_NOTIFS=JSON.parse(_nfr);}catch(e){}
   try{ MY_ROLE=localStorage.getItem('ic1_my_role')||''; }catch(e){}
+  // Migrate: if stored pw is the old default, clear it so new default '0000' takes effect
+  try{
+    var _oldPw=localStorage.getItem('ic1_adminpw');
+    if(_oldPw==='Lina@6072'||_oldPw==='Lina#6072'){
+      localStorage.removeItem('ic1_adminpw');
+    }
+  }catch(e){}
   try{var _sv2=localStorage.getItem('ic1b3_survey');if(_sv2){var _sd=JSON.parse(_sv2);SURVEY.bms=_sd.bms||[];SURVEY.verifications=_sd.verifications||[];SURVEY.tasks=_sd.tasks||[];}}catch(e){}
   try{var _fld=localStorage.getItem('ic1b3_field');if(_fld){var _ff=JSON.parse(_fld);FIELD.photos=_ff.photos||[];FIELD.diary=_ff.diary||[];}}catch(e){}
   try{var _dly=localStorage.getItem('ic1b3_daily');if(_dly){var _dd=JSON.parse(_dly);DAILY.photos=_dd.photos||[];DAILY.entries=_dd.entries||[];DAILY.reports=_dd.reports||[];DAILY.snapshots=_dd.snapshots||[];DAILY.apiKey=_dd.apiKey||'';}}catch(e){}
