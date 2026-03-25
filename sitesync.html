@@ -201,7 +201,32 @@ body{display:flex;flex-direction:column;}
   .nb{text-align:left;font-size:14px!important;padding:10px 16px!important;min-height:42px!important;}
 
   /* ── Main content area ──────────────────────────────────── */
-  #main{flex:1;max-width:960px;padding:20px 28px;}
+  #main{flex:1;width:100%;min-width:0;padding:20px 28px;overflow-y:auto;}
+
+  /* ── Responsive scaling for all desktop sizes ──────────── */
+  @media(min-width:1280px){
+    #main{padding:24px 36px;}
+    .card{padding:20px;}
+    .pg{max-width:100%;width:100%;}
+  }
+  @media(min-width:1440px){
+    #hdr{width:260px;}
+    #main{padding:24px 40px;}
+    .kpi-grid{grid-template-columns:repeat(4,1fr);}
+  }
+  @media(min-width:1600px){
+    #main{padding:28px 48px;}
+    #hdr{width:270px;}
+  }
+  @media(min-width:1920px){
+    #main{padding:32px 64px;}
+    #hdr{width:300px;}
+  }
+  @media(min-width:2560px){
+    #main{padding:36px 96px;}
+    #hdr{width:320px;}
+    .card{padding:24px;}
+  }
 
   /* ── Cards ─────────────────────────────────────────────── */
   .card{padding:20px;}
@@ -924,6 +949,7 @@ JB_CONNECTED=true;
 // State
 var curBr="A";
 var curPier=null;
+var _mpSelBr=null;
 var deferredPrompt=null;
 
 // ═══════════════════════════════════════════════════════════════
@@ -5197,7 +5223,8 @@ function svSaveBm(){
       created:new Date().toISOString().slice(0,10),
       verified:null,photo:null
     });
-    persist();_svTab='registry';rSv();flash('Benchmark saved ✅');
+    try{localStorage.setItem('ic1b3_survey',JSON.stringify({bms:SURVEY.bms,verifications:SURVEY.verifications,tasks:SURVEY.tasks}));}catch(e){}
+  persist();_svTab='registry';rSv();flash('Benchmark saved ✅');
   }
 }
 function svSwitch(tab){_svTab=tab;rSv();}
@@ -5395,6 +5422,26 @@ function wcEnter(){
     if(nameEl){ nameEl.style.border='1px solid #E74C3C'; nameEl.focus(); }
     return;
   }
+
+  // ── Check name against approved user list ──────────────────
+  // Admin bypass: if name is 'Admin' or 'admin', skip name check
+  var isAdmin = (name.toLowerCase()==='admin' || name===MY_NAME);
+  if(!isAdmin){
+    var assignments = JSON.parse(localStorage.getItem('ic1_role_assignments')||'{}');
+    var approvedNames = Object.keys(assignments);
+    var nameFound = false;
+    for(var _ni=0;_ni<approvedNames.length;_ni++){
+      if(approvedNames[_ni].toLowerCase()===name.toLowerCase()){
+        nameFound=true; break;
+      }
+    }
+    if(!nameFound && approvedNames.length > 0){
+      if(errEl) errEl.textContent = 'Your name is not on the approved list. Contact the administrator.';
+      if(nameEl){ nameEl.style.border='1px solid #E74C3C'; nameEl.focus(); }
+      return;
+    }
+  }
+
   // Validate password against stored admin password
   var correctPw = (typeof ADMIN_HASH !== 'undefined' ? ADMIN_HASH : null)
                || localStorage.getItem('ic1_adminpw')
@@ -5957,7 +6004,7 @@ function rAd(){
   h+='<div style="background:rgba(231,76,60,0.06);border:1px solid rgba(231,76,60,0.15);border-radius:10px;padding:12px;">';
   h+='<div style="font-size:10px;color:#E74C3C;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">How Role Assignment Works</div>';
   var infos=[
-    'Users enter their name on the welcome screen — this is their identity in the system.',
+    'Only names registered here can log into SiteSync. Unregistered names are blocked at the welcome screen.',
     'The name must match exactly (case-sensitive) what the user types on the welcome screen.',
     'Once assigned, the role is loaded automatically each time that user opens the app.',
     'Users see their role as read-only in Setup — they cannot change it.',
@@ -6782,7 +6829,7 @@ function rTr(){
 
   // ── Bridge pill selector ────────────────────────────────────
   h+='<div style="margin-bottom:14px;">';
-  h+='<div style="font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;">Select Bridge</div>';
+  h+='<div style="font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;"><span style="font-size:16px;font-weight:800;color:#fff;">Select Bridge</span></div>';
   h+='<div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;">';
 
   for(var bi=0;bi<BRIDGES.length;bi++){
@@ -7722,7 +7769,10 @@ function rRp(){
     h+='<div style="background:rgba(255,193,69,0.08);border:1px solid rgba(255,193,69,0.2);border-radius:9px;padding:9px 12px;margin-bottom:10px;font-size:11px;color:#FFC145;">No role assigned — contact the administrator (🔐 Setup).</div>';
   }
   h+=buildApprovalBlock('report_'+new Date().toISOString().slice(0,10));
-  h+='<button onclick="dlPDF();" style="width:100%;padding:13px;background:linear-gradient(135deg,#D4A843,#C9A44C);border:none;border-radius:11px;color:#000;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;letter-spacing:0.3px;">📥 Download Report PDF</button>';
+  h+='<div style="display:flex;gap:8px;">';
+  h+='<button onclick="dlPDF();" style="flex:2;padding:13px;background:linear-gradient(135deg,#D4A843,#C9A44C);border:none;border-radius:11px;color:#000;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;">📥 Download PDF</button>';
+  h+='<button onclick="window.print();" style="flex:1;padding:13px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:11px;color:var(--dimL);font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;">🖨 Print</button>';
+  h+='</div>';
 
   document.getElementById('pg-rp').innerHTML=h;
 }
@@ -10016,6 +10066,8 @@ function rGn(){
   if(gnMode==="dash")  { rGnDash(h);   return; }
 }
 
+function mpToggleBr(id){_mpSelBr=(_mpSelBr===id?null:id);rMp();}
+
 function rMp(){
   var ibnPct   = Math.round((ROADS.ibn.pct||0)*10)/10;
   var satPct   = Math.round((ROADS.sattam.pct||0)*10)/10;
@@ -10131,19 +10183,19 @@ function rMp(){
     var b=BCIRC[i];
     var bpct=calcBrPct(b.id);
     var bcol=brColor(bpct);
-    var isActive=bpct>0&&bpct<100;
+    var isActive=(bpct>0&&bpct<100)||(_mpSelBr===b.id);
     var isComplete=bpct>=100;
 
     // Wide red blinking rings for active bridges
     if(isActive){
       // Outermost wide red pulse
-      svg+='<circle class="blink-outer" cx="'+b.x+'" cy="'+b.y+'" r="36" fill="#E74C3C" opacity="0"/>';
+      svg+='<circle class="blink-outer" cx="'+b.x+'" cy="'+b.y+'" r="36" fill="#FFD700" opacity="0"/>';
       // Mid red ring
-      svg+='<circle class="blink-mid" cx="'+b.x+'" cy="'+b.y+'" r="28" fill="none" stroke="#E74C3C" stroke-width="4" opacity="0.1"/>';
+      svg+='<circle class="blink-mid" cx="'+b.x+'" cy="'+b.y+'" r="28" fill="none" stroke="#FFD700" stroke-width="4" opacity="0.1"/>';
     }
 
     // Bridge circle base
-    svg+='<circle cx="'+b.x+'" cy="'+b.y+'" r="'+brR+'" fill="#0d1a2e" stroke="'+bcol+'" stroke-width="'+(isActive?3:isComplete?2.5:1.5)+'"/>';
+    svg+='<circle onclick="mpToggleBr('+JSON.stringify(b.id)+')" style="cursor:pointer;" cx="'+b.x+'" cy="'+b.y+'" r="'+brR+'" fill="#0d1a2e" stroke="'+bcol+'" stroke-width="'+(isActive?3:isComplete?2.5:1.5)+'"/>';
 
     // Progress arc
     if(bpct>0&&bpct<100){
@@ -10152,7 +10204,7 @@ function rMp(){
       var ay2=b.y-brR*Math.cos(angle3);
       var alg=bpct>50?1:0;
       var arcClass=' class="blink-arc"';
-      svg+='<path'+arcClass+' d="M '+b.x+' '+(b.y-brR)+' A '+brR+' '+brR+' 0 '+alg+' 1 '+Math.round(ax2*10)/10+' '+Math.round(ay2*10)/10+'" fill="none" stroke="#E74C3C" stroke-width="5" stroke-linecap="round"/>';
+      svg+='<path'+arcClass+' d="M '+b.x+' '+(b.y-brR)+' A '+brR+' '+brR+' 0 '+alg+' 1 '+Math.round(ax2*10)/10+' '+Math.round(ay2*10)/10+'" fill="none" stroke="#FFD700" stroke-width="5" stroke-linecap="round"/>';
     } else if(isComplete){
       svg+='<circle cx="'+b.x+'" cy="'+b.y+'" r="'+brR+'" fill="'+bcol+'" opacity="0.2"/>';
     }
