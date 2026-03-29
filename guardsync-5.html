@@ -1105,15 +1105,15 @@ function btShowMore(){
   if(!overlay||!grid) return;
 
   // Build grid of all sections
-  var h='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">';
+  var h='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding:8px;">';
   BT_ALL.forEach(function(tab){
     var isPinned=BT_PINNED.indexOf(tab.id)>-1;
     h+='<button onclick="btSelectMore(&quot;'+tab.id+'&quot;,&quot;'+tab.fn+'&quot;);" style="'+
-      'padding:14px 8px;border-radius:12px;border:1px solid var(--border);'+
-      'background:'+(isPinned?'rgba(212,168,67,0.08)':'var(--card)')+';'+
-      'cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:6px;">'+
-      '<span style="font-size:24px;">'+tab.icon+'</span>'+
-      '<span style="font-size:10px;font-weight:700;color:'+(isPinned?'var(--gold)':'var(--text)')+';text-align:center;line-height:1.2;">'+tab.label+'</span>'+
+      'padding:20px 10px;border-radius:16px;border:1px solid var(--border);'+
+      'background:'+(isPinned?'rgba(212,168,67,0.1)':'var(--card)')+';'+
+      'cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:10px;min-height:105px;">'+
+      '<span style="font-size:36px;line-height:1;">'+tab.icon+'</span>'+
+      '<span style="font-size:13px;font-weight:700;color:'+(isPinned?'var(--gold)':'var(--text)')+';text-align:center;line-height:1.3;">'+tab.label+'</span>'+
       '</button>';
   });
   h+='</div>';
@@ -1314,15 +1314,13 @@ html,body{
 #more-overlay{
   display:none;
   position:fixed; inset:0; z-index:2000;
-  background:rgba(0,0,0,0.7);
-  backdrop-filter:blur(4px);
+  background:#0d1117;
 }
 #more-menu{
   position:fixed;
-  top:0; left:50%;
-  transform:translateX(-50%);
-  width:100%; max-width:390px;
-  height:100vh;
+  inset:0;
+  width:100%;
+  height:100%;
   background:#0d1117;
   border-radius:0;
   border:none;
@@ -5011,15 +5009,15 @@ function btShowMore(){
   if(!overlay||!grid) return;
 
   // Build grid of all sections
-  var h='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">';
+  var h='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding:8px;">';
   BT_ALL.forEach(function(tab){
     var isPinned=BT_PINNED.indexOf(tab.id)>-1;
     h+='<button onclick="btSelectMore(&quot;'+tab.id+'&quot;,&quot;'+tab.fn+'&quot;);" style="'+
-      'padding:14px 8px;border-radius:12px;border:1px solid var(--border);'+
-      'background:'+(isPinned?'rgba(212,168,67,0.08)':'var(--card)')+';'+
-      'cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:6px;">'+
-      '<span style="font-size:24px;">'+tab.icon+'</span>'+
-      '<span style="font-size:10px;font-weight:700;color:'+(isPinned?'var(--gold)':'var(--text)')+';text-align:center;line-height:1.2;">'+tab.label+'</span>'+
+      'padding:20px 10px;border-radius:16px;border:1px solid var(--border);'+
+      'background:'+(isPinned?'rgba(212,168,67,0.1)':'var(--card)')+';'+
+      'cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:10px;min-height:105px;">'+
+      '<span style="font-size:36px;line-height:1;">'+tab.icon+'</span>'+
+      '<span style="font-size:13px;font-weight:700;color:'+(isPinned?'var(--gold)':'var(--text)')+';text-align:center;line-height:1.3;">'+tab.label+'</span>'+
       '</button>';
   });
   h+='</div>';
