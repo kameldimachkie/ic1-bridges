@@ -352,6 +352,7 @@ function wcEnter(){
     setTimeout(function(){try{pwLoad();podCheckAndRun();}catch(e){}},2000);
     setTimeout(function(){try{milestoneCheck();}catch(e){}},3000);
     setTimeout(function(){try{bmProxStart();}catch(e){}},4000);
+    setTimeout(function(){try{nearestStart();nearestAddButton();}catch(e){}},4500);
   }, 400);
 }
 
@@ -1543,6 +1544,264 @@ body{display:flex;flex-direction:column;}
 
 </head>
 <body>
+
+
+
+<!-- SPLASH SCREEN - CONSTRUCTION REVEAL -->
+<div id="splash-screen" style="position:fixed;inset:0;z-index:99999;background:#000;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+  <canvas id="splash-canvas" style="position:absolute;inset:0;width:100%;height:100%;"></canvas>
+</div>
+
+<script>
+(function(){
+  var splash = document.getElementById('splash-screen');
+  var canvas = document.getElementById('splash-canvas');
+  var ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  var W = canvas.width, H = canvas.height;
+  var cx = W/2, cy = H/2;
+  var t = 0;
+  var animFrame;
+  var done = false;
+
+  // Colors
+  var gold = '#D4A843';
+  var goldL = '#FFD700';
+  var steel = '#58A6FF';
+  var dark = '#07090d';
+
+  // Stars background
+  var stars = [];
+  for(var i=0;i<80;i++){
+    stars.push({x:Math.random()*W, y:Math.random()*H, r:Math.random()*1.5+0.3, a:Math.random()});
+  }
+
+  // Draw crane
+  function drawCrane(progress){
+    ctx.save();
+    ctx.strokeStyle = gold;
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+
+    // Crane tower (draws up from bottom)
+    var towerH = 120 * Math.min(progress*2, 1);
+    var towerX = cx - 60;
+    var towerY = cy + 60;
+    
+    // Tower base
+    if(progress > 0.05){
+      ctx.beginPath();
+      ctx.moveTo(towerX, towerY);
+      ctx.lineTo(towerX, towerY - towerH);
+      ctx.strokeStyle = gold;
+      ctx.lineWidth = 5;
+      ctx.stroke();
+    }
+
+    // Tower cross beams
+    if(progress > 0.2){
+      for(var b=0;b<3;b++){
+        var by = towerY - (b+1)*30;
+        if(by > towerY - towerH){
+          ctx.beginPath();
+          ctx.moveTo(towerX-10, by);
+          ctx.lineTo(towerX+10, by);
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = goldL;
+          ctx.stroke();
+        }
+      }
+    }
+
+    // Crane arm (extends right)
+    if(progress > 0.35){
+      var armLen = 140 * Math.min((progress-0.35)*3, 1);
+      ctx.beginPath();
+      ctx.moveTo(towerX, towerY - towerH);
+      ctx.lineTo(towerX + armLen, towerY - towerH);
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = gold;
+      ctx.stroke();
+    }
+
+    // Cable hanging down
+    if(progress > 0.55){
+      var cableP = Math.min((progress-0.55)*4, 1);
+      var cableX = towerX + 100;
+      var cableLen = 60 * cableP;
+      ctx.beginPath();
+      ctx.moveTo(cableX, towerY - towerH);
+      ctx.lineTo(cableX, towerY - towerH + cableLen);
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = steel;
+      ctx.stroke();
+    }
+
+    // Hook
+    if(progress > 0.7){
+      var hookP = Math.min((progress-0.7)*5, 1);
+      ctx.globalAlpha = hookP;
+      ctx.beginPath();
+      ctx.arc(towerX + 100, towerY - towerH + 60, 6, 0, Math.PI*2);
+      ctx.strokeStyle = steel;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    ctx.restore();
+  }
+
+  // Draw KD logo being built letter by letter
+  function drawLogo(progress){
+    ctx.save();
+    
+    // Background hexagon outline
+    if(progress > 0.4){
+      var hexP = Math.min((progress-0.4)*3, 1);
+      ctx.globalAlpha = hexP;
+      ctx.strokeStyle = gold;
+      ctx.lineWidth = 2;
+      ctx.shadowColor = gold;
+      ctx.shadowBlur = 10*hexP;
+      ctx.beginPath();
+      for(var i=0;i<6;i++){
+        var angle = Math.PI/180*(60*i-30);
+        var hx = cx+20 + 55*Math.cos(angle);
+        var hy = cy - 10 + 55*Math.sin(angle);
+        if(i===0) ctx.moveTo(hx,hy);
+        else ctx.lineTo(hx,hy);
+      }
+      ctx.closePath();
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    // K letter
+    if(progress > 0.6){
+      var kP = Math.min((progress-0.6)*5, 1);
+      ctx.globalAlpha = kP;
+      ctx.fillStyle = goldL;
+      ctx.font = 'bold 52px system-ui';
+      ctx.textAlign = 'center';
+      ctx.shadowColor = gold;
+      ctx.shadowBlur = 15;
+      ctx.fillText('K', cx+20 - 16, cy - 10 + 18);
+      ctx.globalAlpha = 1;
+    }
+
+    // D letter
+    if(progress > 0.75){
+      var dP = Math.min((progress-0.75)*6, 1);
+      ctx.globalAlpha = dP;
+      ctx.fillStyle = goldL;
+      ctx.font = 'bold 52px system-ui';
+      ctx.textAlign = 'center';
+      ctx.shadowColor = gold;
+      ctx.shadowBlur = 15;
+      ctx.fillText('D', cx+20 + 16, cy - 10 + 18);
+      ctx.globalAlpha = 1;
+    }
+
+    // SITESYNC text
+    if(progress > 0.85){
+      var tP = Math.min((progress-0.85)*7, 1);
+      ctx.globalAlpha = tP;
+      ctx.fillStyle = gold;
+      ctx.font = 'bold 18px system-ui';
+      ctx.shadowBlur = 8;
+      ctx.letterSpacing = '4px';
+      ctx.fillText('SITESYNC', cx+20, cy + 65);
+      ctx.font = '10px system-ui';
+      ctx.fillStyle = 'rgba(212,168,67,0.6)';
+      ctx.fillText('CONSTRUCTION INTELLIGENCE', cx+20, cy + 82);
+      ctx.globalAlpha = 1;
+    }
+
+    ctx.restore();
+  }
+
+  // Sparks from crane
+  var sparks = [];
+  function addSparks(){
+    if(t > 60 && t < 120 && Math.random()>0.5){
+      sparks.push({
+        x: cx-60+100, y: cy+60-120,
+        vx: (Math.random()-0.5)*4,
+        vy: -Math.random()*3,
+        life: 1,
+        color: Math.random()>0.5?gold:'#fff'
+      });
+    }
+  }
+
+  function drawSparks(){
+    for(var i=sparks.length-1;i>=0;i--){
+      var s=sparks[i];
+      s.x+=s.vx; s.y+=s.vy; s.vy+=0.2; s.life-=0.05;
+      if(s.life<=0){sparks.splice(i,1);continue;}
+      ctx.globalAlpha=s.life;
+      ctx.fillStyle=s.color;
+      ctx.fillRect(s.x,s.y,2,2);
+      ctx.globalAlpha=1;
+    }
+  }
+
+  var fadeAlpha = 0;
+  var fading = false;
+
+  function animate(){
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle=dark;
+    ctx.fillRect(0,0,W,H);
+
+    // Stars
+    for(var i=0;i<stars.length;i++){
+      var s=stars[i];
+      s.a+=0.02;
+      ctx.globalAlpha=(Math.sin(s.a)+1)/2*0.5;
+      ctx.fillStyle='#fff';
+      ctx.beginPath();
+      ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      ctx.fill();
+    }
+    ctx.globalAlpha=1;
+
+    var progress = Math.min(t/250, 1);
+
+    addSparks();
+    drawSparks();
+    drawCrane(progress);
+    drawLogo(progress);
+
+    // Fade out
+    if(fading){
+      fadeAlpha+=0.02;
+      ctx.fillStyle='rgba(0,0,0,'+fadeAlpha+')';
+      ctx.fillRect(0,0,W,H);
+      if(fadeAlpha>=1){
+        cancelAnimationFrame(animFrame);
+        splash.style.display='none';
+        return;
+      }
+    }
+
+    t++;
+    if(t>300 && !fading) fading=true;
+    animFrame=requestAnimationFrame(animate);
+  }
+
+  animate();
+
+  // Safety timeout
+  setTimeout(function(){
+    cancelAnimationFrame(animFrame);
+    splash.style.display='none';
+  }, 8000);
+})();
+</script>
+
 <div id="ticker"><div id="ticker-inner"></div></div>
 <!-- Welcome / Splash screen -->
 <div id="welcome-screen" style="display:flex;flex-direction:column;position:fixed;inset:0;z-index:9999;
@@ -1759,7 +2018,7 @@ body{display:flex;flex-direction:column;}
       <div id="cld"></div>
       <div class="hdr-btns">
         <div id="sync-dot"></div>
-        <span id="last-sync-lbl" style="font-size:9px;color:var(--dimL);display:none;"></span><button class="btn-sm" onclick="fbForceSync();" ondblclick="fbShowDebug();" title="Double-tap for debug" onlongpress="fbShowDebug();" ondblclick="fbShowDebug();">⚙ Sync</button>
+        <button onclick="showGpsMenu();" style="background:rgba(88,166,255,0.1);border:1px solid rgba(88,166,255,0.3);color:#58A6FF;border-radius:8px;padding:5px 9px;font-size:14px;cursor:pointer;margin-right:4px;">📡</button><span id="last-sync-lbl" style="font-size:9px;color:var(--dimL);display:none;"></span><button class="btn-sm" onclick="fbForceSync();" ondblclick="fbShowDebug();" title="Double-tap for debug" onlongpress="fbShowDebug();" ondblclick="fbShowDebug();">⚙ Sync</button>
         <button class="btn-sm btn-gold" id="install-btn" onclick="installApp()" style="display:none;">⬇ Install</button>
       </div>
     </div>
@@ -1790,7 +2049,7 @@ body{display:flex;flex-direction:column;}
     <button class="nb"     id="tab-mp" onclick="nav('mp')"><svg width="16" height="14" viewBox="0 0 22 18" fill="none" style="vertical-align:-3px;margin-right:4px"><line x1="1" y1="9" x2="21" y2="9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" opacity="0.75"/><line x1="8" y1="1" x2="8" y2="17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/><line x1="16" y1="1" x2="16" y2="17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/><path d="M3 9 Q7 4 11 4 Q15 4 19 9" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="11" cy="9" r="2.8" fill="currentColor" opacity="0.9"/><circle cx="11" cy="9" r="1.2" fill="#07090d"/></svg>Map</button>
     <button class="nb" id="tab-ch" onclick="nav('ch')">💬 Chat</button>
     <button class="nb" id="tab-ad" onclick="nav('ad')" style="border:1px solid rgba(231,76,60,0.4);">🛡 Admin</button>
-    <button class="nb" id="tab-ws" onclick="nav('ws')" style="border-color:var(--gold);color:var(--gold);">🔐 Setup</button>
+
   </div>
 </div>
 
@@ -2679,15 +2938,26 @@ function rTr(){
     h+='style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:4px;';
     h+='padding:10px 14px;border-radius:12px;cursor:pointer;font-family:inherit;';
     h+='min-width:64px;transition:all 0.15s;';
+    var brColors=[
+      {bg:'rgba(88,130,255,0.18)',bdr:'rgba(88,130,255,0.5)',tx:'#7AA8FF'},
+      {bg:'rgba(6,214,160,0.15)',bdr:'rgba(6,214,160,0.4)',tx:'#06D6A0'},
+      {bg:'rgba(206,147,216,0.18)',bdr:'rgba(206,147,216,0.5)',tx:'#CE93D8'},
+      {bg:'rgba(255,159,28,0.15)',bdr:'rgba(255,159,28,0.4)',tx:'#FF9F1C'},
+      {bg:'rgba(249,115,22,0.15)',bdr:'rgba(249,115,22,0.4)',tx:'#FB923C'},
+      {bg:'rgba(52,211,153,0.15)',bdr:'rgba(52,211,153,0.4)',tx:'#34D399'},
+      {bg:'rgba(244,114,182,0.15)',bdr:'rgba(244,114,182,0.4)',tx:'#F472B6'},
+      {bg:'rgba(167,139,250,0.15)',bdr:'rgba(167,139,250,0.4)',tx:'#A78BFA'}
+    ];
+    var bc=brColors[bi%brColors.length];
     if(isSelected){
       h+='background:linear-gradient(135deg,#1a3a6e,#0d2444);';
       h+='border:2px solid #D4A843;';
       h+='box-shadow:0 4px 16px rgba(212,168,67,0.25);';
     } else {
-      h+='background:var(--card);border:1px solid var(--border);';
+      h+='background:'+bc.bg+';border:1px solid '+bc.bdr+';';
     }
     h+='">';
-    h+='<div style="font-size:13px;font-weight:800;color:'+(isSelected?'#D4A843':'var(--fg)')+';">BR-'+br.id+'</div>';
+    h+='<div style="font-size:13px;font-weight:800;color:'+(isSelected?'#D4A843':bc.tx)+';">BR-'+br.id+'</div>';
     // Mini progress bar
     h+='<div style="width:100%;height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden;">';
     h+='<div style="width:'+Math.min(100,bp2)+'%;height:4px;background:'+pctColor+';border-radius:2px;"></div>';
@@ -4521,6 +4791,14 @@ function rAd(){
   }
   h+='</div>';
 
+  h+='<div style="height:10px;"></div>';
+
+  // ── Project Configuration ───────────────────────────────────
+  h+='<div style="background:var(--card);border:1px solid rgba(212,168,67,0.3);border-radius:12px;padding:14px;margin-bottom:14px;">';
+  h+='<div style="font-size:12px;font-weight:800;color:#D4A843;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">⚙️ Project Configuration</div>';
+  h+='<button onclick="nav(\'ws\');" style="width:100%;padding:12px;border-radius:10px;background:rgba(212,168,67,0.08);border:1px solid rgba(212,168,67,0.3);color:#D4A843;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;text-align:left;">📊 Project Weights &amp; Stage Config</button>';
+  h+='</div>';
+
   h+='<div style="height:20px;"></div>';
   document.getElementById('pg-ad').innerHTML=h;
 }
@@ -4775,6 +5053,37 @@ function rWs(){
   h+='cursor:pointer;font-family:inherit;margin-bottom:4px;">✕ Exit App</button>';
   h+='<div style="font-size:10px;color:var(--dimL);line-height:1.5;">Closes the app window. Does not delete any project data.</div>';
   h+='</div>';
+
+  // Add GPS settings at the bottom
+  h += '<div style="margin-top:16px;">';
+  h += '<div style="font-size:11px;color:rgba(88,166,255,0.8);font-weight:700;letter-spacing:2px;margin-bottom:10px;text-transform:uppercase;">📡 GPS Accuracy Mode</div>';
+  
+  var _modes = [
+    {id:'highest',label:'🔴 Highest',desc:'Every 5s · Full accuracy · High battery',col:'#E63946'},
+    {id:'high',   label:'🟡 High',   desc:'Every 15s · Balanced · Default',        col:'#D4A843'},
+    {id:'normal', label:'🟢 Normal', desc:'Every 30s · Battery saver',             col:'#06D6A0'}
+  ];
+  var _cur = localStorage.getItem('ic1_gps_mode')||'high';
+  
+  for(var _gi=0;_gi<_modes.length;_gi++){
+    var _m=_modes[_gi];
+    var _active=_cur===_m.id;
+    h += '<div onclick="localStorage.setItem(\'ic1_gps_mode\',\''+_m.id+'\');GPS_MODE=\''+_m.id+'\';flash(\'GPS: '+_m.label+' ✅\');rWs();" style="'+
+      'background:'+(_active?'rgba(255,255,255,0.06)':'var(--card)')+';'+
+      'border:2px solid '+(_active?_m.col:'var(--border)')+';'+
+      'border-radius:12px;padding:12px 14px;margin-bottom:8px;cursor:pointer;'+
+      'display:flex;align-items:center;justify-content:space-between;">';
+    h += '<div><div style="font-size:14px;font-weight:700;color:'+(_active?_m.col:'var(--text)')+';">'+_m.label+'</div>';
+    h += '<div style="font-size:11px;color:var(--dimL);margin-top:2px;">'+_m.desc+'</div></div>';
+    if(_active) h += '<div style="color:'+_m.col+';font-size:18px;">✓</div>';
+    h += '</div>';
+  }
+  
+  h += '<div style="background:rgba(6,214,160,0.07);border:1px solid rgba(6,214,160,0.2);border-radius:10px;padding:10px 12px;margin-top:4px;">';
+  h += '<div style="font-size:11px;font-weight:700;color:#06D6A0;margin-bottom:4px;">✅ Works Fully Offline</div>';
+  h += '<div style="font-size:11px;color:var(--dimL);">All 88 piers, 75 BM points loaded locally. GPS works without internet.</div>';
+  h += '</div>';
+  h += '</div>';
 
   document.getElementById("pg-ws").innerHTML=h;
 
@@ -11613,7 +11922,7 @@ function rPw(){
     h+='<div style="font-size:12px;font-weight:700;color:var(--text);">'+p.by+'</div>';
     h+='<div style="font-size:10px;color:var(--dimL);">'+timeAgo+'</div>';
     h+='</div></div>';
-    if(isMe) h+='<button onclick="pwDelete(\''+p.id+'\');" style="padding:4px 10px;border-radius:7px;background:rgba(230,57,70,0.1);border:1px solid rgba(230,57,70,0.3);color:#E63946;font-size:11px;cursor:pointer;font-family:inherit;">🗑</button>';
+    h+='<button onclick="pwDelete(\''+p.id+'\');" style="padding:4px 10px;border-radius:7px;background:rgba(230,57,70,0.1);border:1px solid rgba(230,57,70,0.3);color:#E63946;font-size:11px;cursor:pointer;font-family:inherit;">🗑</button>';
     h+='</div>';
 
     // Caption
@@ -12758,6 +13067,7 @@ function wcEnter(){
     setTimeout(function(){try{pwLoad();podCheckAndRun();}catch(e){}},2000);
     setTimeout(function(){try{milestoneCheck();}catch(e){}},3000);
     setTimeout(function(){try{bmProxStart();}catch(e){}},4000);
+    setTimeout(function(){try{nearestStart();nearestAddButton();}catch(e){}},4500);
   }, 400);
 }
 
@@ -13547,10 +13857,10 @@ function rdReset(rdKey){
 // ── Service Worker (inline) ──────────────────────────────────
 if('serviceWorker' in navigator){
   var swCode=[
-    'var C="ss-v5";',
+    'var C="ss-v6";',
     'self.addEventListener("install",function(e){',
     '  e.waitUntil(caches.open(C).then(function(c){',
-    '    return c.add("sitesync.html");',
+    '    return c.add("guardsync.html");',
     '  }));',
     '  self.skipWaiting();',
     '});',
@@ -14861,6 +15171,193 @@ function wsUpdateTotal(){
 
 loadData();
 
+// ── GPS MODE (HOISTED) ──
+var GPS_MODE = localStorage.getItem('ic1_gps_mode')||'high';
+var GPS_MODES = {
+  highest:{label:'🔴 Highest',desc:'Every 5s — Full accuracy',interval:5000,enableHighAccuracy:true},
+  high:   {label:'🟡 High',   desc:'Every 15s — Balanced',  interval:15000,enableHighAccuracy:true},
+  normal: {label:'🟢 Normal', desc:'Every 30s — Saves battery',interval:30000,enableHighAccuracy:false}
+};
+
+function gpsSetMode(mode){
+  GPS_MODE = mode;
+  localStorage.setItem('ic1_gps_mode', mode);
+  // Restart timers with new interval
+  if(NEAREST_TIMER){ clearInterval(NEAREST_TIMER); NEAREST_TIMER=null; }
+  if(BM_PROX_TIMER){ clearInterval(BM_PROX_TIMER); BM_PROX_TIMER=null; }
+  var cfg = GPS_MODES[mode];
+  NEAREST_TIMER = setInterval(nearestCheck, cfg.interval);
+  BM_PROX_DIST = mode==='normal'? 15 : 10;
+  flash('GPS mode: '+cfg.label+' ✅');
+  rGpsSettings();
+}
+
+function rGpsSettings(){
+  var cfg = GPS_MODES[GPS_MODE];
+  var h = '';
+  h += '<div style="background:linear-gradient(135deg,#0a1628,#0d2030);border:1px solid rgba(88,166,255,0.2);border-radius:14px;padding:16px;margin-bottom:14px;">';
+  h += '<div style="font-size:11px;color:rgba(88,166,255,0.8);font-weight:700;letter-spacing:2px;margin-bottom:4px;">LOCATION SETTINGS</div>';
+  h += '<div style="font-size:18px;font-weight:900;color:#f1f5f9;">📡 GPS Accuracy</div>';
+  h += '<div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:3px;">Active: <b style="color:#58A6FF;">'+cfg.label+'</b> — '+cfg.desc+'</div>';
+  h += '</div>';
+
+  // Mode cards
+  var modes = ['highest','high','normal'];
+  for(var i=0;i<modes.length;i++){
+    var m = modes[i];
+    var mc = GPS_MODES[m];
+    var isActive = GPS_MODE === m;
+    var cols = {highest:'#E63946', high:'#D4A843', normal:'#06D6A0'};
+    var col = cols[m];
+    h += '<div onclick="gpsSetMode(&quot;'+m+'&quot;)" style="'+
+      'background:'+(isActive?'rgba('+( m==='highest'?'230,57,70':m==='high'?'212,168,67':'6,214,160')+',0.12)':'var(--card)')+';'+
+      'border:2px solid '+(isActive?col:'var(--border)')+';'+
+      'border-radius:12px;padding:14px;margin-bottom:10px;cursor:pointer;'+
+      'box-shadow:'+(isActive?'0 0 12px '+col+'44':'none')+';">';
+    h += '<div style="display:flex;align-items:center;justify-content:space-between;">';
+    h += '<div>';
+    h += '<div style="font-size:15px;font-weight:800;color:'+(isActive?col:'var(--text)')+';">'+mc.label+'</div>';
+    h += '<div style="font-size:11px;color:var(--dimL);margin-top:2px;">'+mc.desc+'</div>';
+    // Battery indicator
+    var bars = m==='highest'?3:m==='high'?2:1;
+    h += '<div style="display:flex;gap:3px;margin-top:6px;">';
+    for(var b=0;b<3;b++){
+      h += '<div style="width:20px;height:8px;border-radius:3px;background:'+(b<bars?col:'rgba(255,255,255,0.1)')+';">  </div>';
+    }
+    h += '<span style="font-size:10px;color:var(--dimL);margin-left:4px;">'+(m==='highest'?'High drain':m==='high'?'Balanced':'Battery saver')+'</span>';
+    h += '</div></div>';
+    // Active indicator
+    if(isActive){
+      h += '<div style="width:24px;height:24px;border-radius:50%;background:'+col+';display:flex;align-items:center;justify-content:center;font-size:14px;">✓</div>';
+    }
+    h += '</div></div>';
+  }
+
+  // Offline info
+  h += '<div style="background:rgba(6,214,160,0.07);border:1px solid rgba(6,214,160,0.2);border-radius:12px;padding:12px;margin-top:6px;">';
+  h += '<div style="font-size:12px;font-weight:700;color:#06D6A0;margin-bottom:4px;">✅ Works Fully Offline</div>';
+  h += '<div style="font-size:11px;color:var(--dimL);line-height:1.6;">';
+  h += '• All 88 pier & abutment coordinates loaded locally<br>';
+  h += '• All 75 BM points available without internet<br>';
+  h += '• GPS location works without mobile data<br>';
+  h += '• Perfect for site areas with poor signal';
+  h += '</div></div>';
+
+  var pg = document.getElementById('pg-ws');
+  if(pg){
+    var existing = document.getElementById('gps-settings-block');
+    if(existing) existing.innerHTML = h;
+  }
+}
+
+
+// ── NEAREST FEATURE (HOISTED) ──
+var PIER_COORDS=[];
+var NEAREST_TIMER=null;
+
+function nearestStart(){
+  if(localStorage.getItem('ic1_gps_mode')==='off') return;
+  if(NEAREST_TIMER) clearInterval(NEAREST_TIMER);
+  if(!navigator.geolocation) return;
+  var interval = GPS_MODES && GPS_MODES[GPS_MODE] ? GPS_MODES[GPS_MODE].interval : 15000;
+  NEAREST_TIMER = setInterval(nearestCheck, interval);
+  nearestCheck();
+}
+
+function nearestCheck(){
+  if(!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(function(pos){
+    var lat = pos.coords.latitude;
+    var lng = pos.coords.longitude;
+    var utmUser = bmLatLngToUtm(lat, lng);
+    if(!utmUser) return;
+
+    // Find nearest pier
+    var nearestPier = null, nearestPierDist = Infinity;
+    for(var i=0;i<PIER_COORDS.length;i++){
+      var p = PIER_COORDS[i];
+      var d = Math.sqrt(Math.pow(p.n-utmUser.N,2)+Math.pow(p.e-utmUser.E,2));
+      if(d < nearestPierDist){ nearestPierDist=d; nearestPier=p; }
+    }
+
+    // Find nearest 3 BMs (primary+secondary+sheets)
+    var allBMs = (BM_DATA.primary||[]).concat(BM_DATA.secondary||[]).concat(BM_DATA.sheets||[]);
+    var bmDists = allBMs.map(function(bm){
+      var d = Math.sqrt(Math.pow(parseFloat(bm.n)-utmUser.N,2)+Math.pow(parseFloat(bm.e)-utmUser.E,2));
+      return {name:bm.name, dist:Math.round(d), accClass:bm.accClass};
+    }).sort(function(a,b){return a.dist-b.dist;}).slice(0,3);
+
+    // Show result in a banner
+    nearestShowBanner(nearestPier, Math.round(nearestPierDist), bmDists);
+
+  }, function(e){}, {enableHighAccuracy:true, timeout:6000});
+}
+
+function nearestShowBanner(pier, pierDist, bms){
+  // Remove old banner
+  var old = document.getElementById('nearest-banner');
+  if(old && old.parentNode) old.parentNode.removeChild(old);
+
+  var banner = document.createElement('div');
+  banner.id = 'nearest-banner';
+  banner.style.cssText = 'position:fixed;bottom:70px;left:50%;transform:translateX(-50%);'+
+    'width:calc(100% - 24px);max-width:366px;'+
+    'background:linear-gradient(135deg,#0a1628,#0d2444);'+
+    'border:1px solid rgba(212,168,67,0.4);border-radius:14px;'+
+    'padding:12px 14px;z-index:500;'+
+    'box-shadow:0 4px 20px rgba(0,0,0,0.5);';
+
+  var h = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">';
+  h += '<div style="font-size:11px;font-weight:700;color:#D4A843;text-transform:uppercase;letter-spacing:1px;">📍 You Are Near</div>';
+  h += '<button onclick="nearestHideBanner();" style="background:none;border:none;color:rgba(255,255,255,0.4);font-size:16px;cursor:pointer;padding:0;">✕</button>';
+  h += '</div>';
+
+  // Nearest pier
+  if(pier){
+    h += '<div style="background:rgba(212,168,67,0.1);border:1px solid rgba(212,168,67,0.3);border-radius:8px;padding:8px 12px;margin-bottom:8px;">';
+    h += '<div style="font-size:10px;color:rgba(212,168,67,0.7);margin-bottom:2px;">NEAREST PIER/ABUTMENT</div>';
+    h += '<div style="font-size:16px;font-weight:900;color:#D4A843;">'+pier.name+'</div>';
+    h += '<div style="font-size:11px;color:rgba(255,255,255,0.5);">'+pierDist+'m away</div>';
+    h += '</div>';
+  }
+
+  // Nearest 3 BMs
+  if(bms.length){
+    h += '<div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;">Nearest Control Points</div>';
+    h += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">';
+    for(var i=0;i<bms.length;i++){
+      var col = bms[i].accClass==='Primary BM'?'#E63946':bms[i].accClass==='Secondary BM'?'#D4A843':'#06D6A0';
+      h += '<div style="background:rgba(255,255,255,0.04);border:1px solid '+col+'44;border-radius:8px;padding:6px;text-align:center;">';
+      h += '<div style="font-size:12px;font-weight:900;color:'+col+';">'+bms[i].name+'</div>';
+      h += '<div style="font-size:10px;color:rgba(255,255,255,0.4);">'+bms[i].dist+'m</div>';
+      h += '</div>';
+    }
+    h += '</div>';
+  }
+
+  banner.innerHTML = h;
+  document.body.appendChild(banner);
+}
+
+function nearestHideBanner(){
+  var b = document.getElementById('nearest-banner');
+  if(b && b.parentNode) b.parentNode.removeChild(b);
+}
+
+function nearestAddButton(){
+  var hdr = document.getElementById('hdr');
+  if(!hdr || document.getElementById('nearest-btn')) return;
+  var btn = document.createElement('button');
+  btn.id = 'nearest-btn';
+  btn.innerHTML = '📍';
+  btn.title = 'Where Am I?';
+  btn.style.cssText = 'background:rgba(212,168,67,0.1);border:1px solid rgba(212,168,67,0.3);'+
+    'color:#D4A843;border-radius:8px;padding:6px 10px;font-size:16px;cursor:pointer;margin-left:6px;';
+  btn.onclick = function(){ nearestCheck(); };
+  hdr.appendChild(btn);
+}
+
+
 // ── BM PROXIMITY (HOISTED) ──
 var BM_PROX_TIMER=null,BM_PROX_ACTIVE=false,BM_PROX_DIST=10,BM_LAST_ALERT=null,BM_BLINK_TIMER=null;
 
@@ -15060,7 +15557,7 @@ var BT_ALL = [
   {id:'mp',icon:'🗺',label:'Map',fn:'nav'},
   {id:'ch',icon:'💬',label:'Chat',fn:'nav'},
   {id:'ad',icon:'🛡',label:'Admin',fn:'nav'},
-  {id:'ws',icon:'⚙️',label:'Setup',fn:'nav'},
+  
 ];
 
 
@@ -16202,7 +16699,7 @@ var BT_ALL = [
   {id:'mp',    icon:'🗺', label:'Map',        fn:'nav'},
   {id:'ch',    icon:'💬', label:'Chat',       fn:'nav'},
   {id:'ad',    icon:'🛡', label:'Admin',      fn:'nav'},
-  {id:'ws',    icon:'⚙️', label:'Setup',      fn:'nav'},
+
 ];
 
 
@@ -16462,6 +16959,336 @@ function bmLatLngToUtm(lat, lng){
   style.textContent='@keyframes bmBlink{from{opacity:1;}to{opacity:0.3;}}';
   document.head.appendChild(style);
 })();
+
+
+// ── NEAREST PIER & BM ──
+// ═══════════════════════════════════════════════════════════════
+// NEAREST PIER & BM FEATURE
+// ═══════════════════════════════════════════════════════════════
+
+// All pier & abutment coordinates (Northing, Easting)
+var PIER_COORDS = [
+  {name:'AB-1A',n:2737185.9720,e:660444.2752},
+  {name:'1A',n:2737204.7299,e:660471.5877},
+  {name:'2A',n:2737213.8972,e:660521.3825},
+  {name:'3A',n:2737191.5376,e:660574.1979},
+  {name:'4A',n:2737161.3024,e:660598.8434},
+  {name:'5A',n:2737127.3477,e:660625.6603},
+  {name:'6A-1',n:2737100.0047,e:660645.8505},
+  {name:'6A-2',n:2737105.5944,e:660651.5791},
+  {name:'AB-2A',n:2737075.6027,e:660683.5978},
+  {name:'1B',n:2737069.5224,e:660678.5367},
+  {name:'2B',n:2737042.9262,e:660714.4156},
+  {name:'3B',n:2737022.1628,e:660751.8719},
+  {name:'4B',n:2737011.1022,e:660779.5232},
+  {name:'5B',n:2737000.2168,e:660815.4015},
+  {name:'6B',n:2736990.0140,e:660843.6198},
+  {name:'7B-1',n:2736983.8938,e:660879.5832},
+  {name:'7B-2',n:2736966.0754,e:660876.1573},
+  {name:'8B',n:2736958.8246,e:660906.7281},
+  {name:'9B-1',n:2736949.5075,e:660941.9984},
+  {name:'9B-2',n:2736927.7457,e:660925.5743},
+  {name:'10B-1',n:2736925.7156,e:660959.1019},
+  {name:'10B-2',n:2736913.5495,e:660950.4273},
+  {name:'AB-1B',n:2736904.3994,e:660977.6725},
+  {name:'AB-1G',n:2736870.5475,e:661010.5840},
+  {name:'1G',n:2736849.9195,e:661025.0353},
+  {name:'2G',n:2736828.8318,e:661036.4845},
+  {name:'AB-2G',n:2736802.2026,e:661047.0260},
+  {name:'AB-1C',n:2736979.9869,e:660569.1470},
+  {name:'1C',n:2736935.7147,e:660582.1032},
+  {name:'2C',n:2736891.3318,e:660591.1353},
+  {name:'3C',n:2736846.5928,e:660596.7266},
+  {name:'4C',n:2736801.8693,e:660599.9305},
+  {name:'5C-1',n:2736753.2177,e:660595.7986},
+  {name:'5C-2',n:2736775.3027,e:660620.5823},
+  {name:'6C',n:2736710.3956,e:660600.3086},
+  {name:'7C',n:2736669.9406,e:660606.0240},
+  {name:'8C',n:2736625.2759,e:660622.3162},
+  {name:'9C',n:2736596.7003,e:660639.2439},
+  {name:'10C',n:2736566.9395,e:660664.3679},
+  {name:'11C',n:2736548.0434,e:660682.7567},
+  {name:'12C',n:2736525.6013,e:660702.2590},
+  {name:'13C',n:2736507.2218,e:660719.6067},
+  {name:'14C',n:2736490.0562,e:660737.4458},
+  {name:'15C',n:2736464.2946,e:660768.9613},
+  {name:'16C',n:2736442.7731,e:660802.5917},
+  {name:'17C',n:2736428.6605,e:660822.8808},
+  {name:'1E',n:2736741.3485,e:660616.6389},
+  {name:'2E',n:2736703.4476,e:660638.3559},
+  {name:'3E',n:2736671.3347,e:660668.5147},
+  {name:'4E',n:2736650.1205,e:660699.5720},
+  {name:'5E',n:2736636.9382,e:660729.7846},
+  {name:'6E',n:2736628.0925,e:660770.9960},
+  {name:'7E',n:2736628.5854,e:660812.6710},
+  {name:'8E',n:2736634.4823,e:660841.5689},
+  {name:'9E',n:2736643.5714,e:660866.4509},
+  {name:'10E',n:2736664.1426,e:660906.4712},
+  {name:'11E',n:2736684.8298,e:660946.4174},
+  {name:'12E',n:2736695.4491,e:660971.1828},
+  {name:'13E',n:2736708.2326,e:660997.2059},
+  {name:'14E',n:2736722.6826,e:661022.2467},
+  {name:'15E',n:2736739.0824,e:661046.3327},
+  {name:'16E',n:2736757.2208,e:661068.6535},
+  {name:'17E',n:2736775.7025,e:661090.1930},
+  {name:'AB-1D',n:2736691.3282,e:660615.9522},
+  {name:'1D',n:2736725.7599,e:660620.6827},
+  {name:'2D',n:2736765.3774,e:660625.6323},
+  {name:'3D-1',n:2736796.8019,e:660645.2520},
+  {name:'3D-2',n:2736804.8904,e:660627.5062},
+  {name:'4D',n:2736834.4474,e:660646.9733},
+  {name:'5D',n:2736864.2447,e:660665.4540},
+  {name:'6D',n:2736894.1183,e:660692.1201},
+  {name:'7D',n:2736913.0458,e:660715.5274},
+  {name:'8D',n:2736928.0161,e:660740.3002},
+  {name:'9D',n:2736940.4186,e:660769.3245},
+  {name:'10D',n:2736950.5439,e:660813.2206},
+  {name:'11D-1',n:2736939.9283,e:660857.0908},
+  {name:'11D-2',n:2736959.5375,e:660859.1154},
+  {name:'12D',n:2736944.4903,e:660896.8660},
+  {name:'AB-1N-1',n:2736507.4831,e:660906.4830},
+  {name:'AB-1N-2',n:2736537.0378,e:660946.7839},
+  {name:'AB-2N-1',n:2736490.1310,e:660914.9109},
+  {name:'AB-2N-2',n:2736518.7727,e:660956.4607},
+  {name:'AB-1M-1',n:2736699.7995,e:660812.2940},
+  {name:'AB-2M-1',n:2736649.7304,e:660837.8139},
+  {name:'AB-1M-2',n:2736730.6694,e:660851.8540},
+  {name:'AB-2M-2',n:2736679.9156,e:660878.4497},
+  {name:'AM-1',n:2736673.7735,e:660825.1824},
+  {name:'AM-2',n:2736705.7440,e:660865.3065}
+];
+
+var NEAREST_TIMER = null;
+var NEAREST_ACTIVE = false;
+
+function nearestStart(){
+  if(localStorage.getItem('ic1_gps_mode')==='off') return;
+  if(NEAREST_TIMER) clearInterval(NEAREST_TIMER);
+  if(!navigator.geolocation) return;
+  var interval = GPS_MODES && GPS_MODES[GPS_MODE] ? GPS_MODES[GPS_MODE].interval : 15000;
+  NEAREST_TIMER = setInterval(nearestCheck, interval);
+  nearestCheck();
+}
+
+function nearestCheck(){
+  if(!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(function(pos){
+    var lat = pos.coords.latitude;
+    var lng = pos.coords.longitude;
+    var utmUser = bmLatLngToUtm(lat, lng);
+    if(!utmUser) return;
+
+    // Find nearest pier
+    var nearestPier = null, nearestPierDist = Infinity;
+    for(var i=0;i<PIER_COORDS.length;i++){
+      var p = PIER_COORDS[i];
+      var d = Math.sqrt(Math.pow(p.n-utmUser.N,2)+Math.pow(p.e-utmUser.E,2));
+      if(d < nearestPierDist){ nearestPierDist=d; nearestPier=p; }
+    }
+
+    // Find nearest 3 BMs (primary+secondary+sheets)
+    var allBMs = (BM_DATA.primary||[]).concat(BM_DATA.secondary||[]).concat(BM_DATA.sheets||[]);
+    var bmDists = allBMs.map(function(bm){
+      var d = Math.sqrt(Math.pow(parseFloat(bm.n)-utmUser.N,2)+Math.pow(parseFloat(bm.e)-utmUser.E,2));
+      return {name:bm.name, dist:Math.round(d), accClass:bm.accClass};
+    }).sort(function(a,b){return a.dist-b.dist;}).slice(0,3);
+
+    // Show result in a banner
+    nearestShowBanner(nearestPier, Math.round(nearestPierDist), bmDists);
+
+  }, function(e){}, {enableHighAccuracy:true, timeout:6000});
+}
+
+function nearestShowBanner(pier, pierDist, bms){
+  // Remove old banner
+  var old = document.getElementById('nearest-banner');
+  if(old && old.parentNode) old.parentNode.removeChild(old);
+
+  var banner = document.createElement('div');
+  banner.id = 'nearest-banner';
+  banner.style.cssText = 'position:fixed;bottom:70px;left:50%;transform:translateX(-50%);'+
+    'width:calc(100% - 24px);max-width:366px;'+
+    'background:linear-gradient(135deg,#0a1628,#0d2444);'+
+    'border:1px solid rgba(212,168,67,0.4);border-radius:14px;'+
+    'padding:12px 14px;z-index:500;'+
+    'box-shadow:0 4px 20px rgba(0,0,0,0.5);';
+
+  var h = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">';
+  h += '<div style="font-size:11px;font-weight:700;color:#D4A843;text-transform:uppercase;letter-spacing:1px;">📍 You Are Near</div>';
+  h += '<button onclick="nearestHideBanner();" style="background:none;border:none;color:rgba(255,255,255,0.4);font-size:16px;cursor:pointer;padding:0;">✕</button>';
+  h += '</div>';
+
+  // Nearest pier
+  if(pier){
+    h += '<div style="background:rgba(212,168,67,0.1);border:1px solid rgba(212,168,67,0.3);border-radius:8px;padding:8px 12px;margin-bottom:8px;">';
+    h += '<div style="font-size:10px;color:rgba(212,168,67,0.7);margin-bottom:2px;">NEAREST PIER/ABUTMENT</div>';
+    h += '<div style="font-size:16px;font-weight:900;color:#D4A843;">'+pier.name+'</div>';
+    h += '<div style="font-size:11px;color:rgba(255,255,255,0.5);">'+pierDist+'m away</div>';
+    h += '</div>';
+  }
+
+  // Nearest 3 BMs
+  if(bms.length){
+    h += '<div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;">Nearest Control Points</div>';
+    h += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">';
+    for(var i=0;i<bms.length;i++){
+      var col = bms[i].accClass==='Primary BM'?'#E63946':bms[i].accClass==='Secondary BM'?'#D4A843':'#06D6A0';
+      h += '<div style="background:rgba(255,255,255,0.04);border:1px solid '+col+'44;border-radius:8px;padding:6px;text-align:center;">';
+      h += '<div style="font-size:12px;font-weight:900;color:'+col+';">'+bms[i].name+'</div>';
+      h += '<div style="font-size:10px;color:rgba(255,255,255,0.4);">'+bms[i].dist+'m</div>';
+      h += '</div>';
+    }
+    h += '</div>';
+  }
+
+  banner.innerHTML = h;
+  document.body.appendChild(banner);
+}
+
+function nearestHideBanner(){
+  var b = document.getElementById('nearest-banner');
+  if(b && b.parentNode) b.parentNode.removeChild(b);
+}
+
+// Add "📍 Where Am I?" button to header
+function nearestAddButton(){
+  var hdr = document.getElementById('hdr');
+  if(!hdr || document.getElementById('nearest-btn')) return;
+  var btn = document.createElement('button');
+  btn.id = 'nearest-btn';
+  btn.innerHTML = '📍';
+  btn.title = 'Where Am I?';
+  btn.style.cssText = 'background:rgba(212,168,67,0.1);border:1px solid rgba(212,168,67,0.3);'+
+    'color:#D4A843;border-radius:8px;padding:6px 10px;font-size:16px;cursor:pointer;margin-left:6px;';
+  btn.onclick = function(){ nearestCheck(); };
+  hdr.appendChild(btn);
+}
+
+
+// ── GPS SETTINGS ──
+
+// ── GPS ACCURACY SETTINGS ──────────────────────────────────────
+var GPS_MODE = localStorage.getItem('ic1_gps_mode') || 'high';
+
+var GPS_MODES = {
+  highest: {label:'🔴 Highest',desc:'Every 5s — Full accuracy',interval:5000,  enableHighAccuracy:true},
+  high:    {label:'🟡 High',   desc:'Every 15s — Balanced',  interval:15000, enableHighAccuracy:true},
+  normal:  {label:'🟢 Normal', desc:'Every 30s — Saves battery',interval:30000,enableHighAccuracy:false}
+};
+
+function gpsSetMode(mode){
+  GPS_MODE = mode;
+  localStorage.setItem('ic1_gps_mode', mode);
+  // Restart timers with new interval
+  if(NEAREST_TIMER){ clearInterval(NEAREST_TIMER); NEAREST_TIMER=null; }
+  if(BM_PROX_TIMER){ clearInterval(BM_PROX_TIMER); BM_PROX_TIMER=null; }
+  var cfg = GPS_MODES[mode];
+  NEAREST_TIMER = setInterval(nearestCheck, cfg.interval);
+  BM_PROX_DIST = mode==='normal'? 15 : 10;
+  flash('GPS mode: '+cfg.label+' ✅');
+  rGpsSettings();
+}
+
+function rGpsSettings(){
+  var cfg = GPS_MODES[GPS_MODE];
+  var h = '';
+  h += '<div style="background:linear-gradient(135deg,#0a1628,#0d2030);border:1px solid rgba(88,166,255,0.2);border-radius:14px;padding:16px;margin-bottom:14px;">';
+  h += '<div style="font-size:11px;color:rgba(88,166,255,0.8);font-weight:700;letter-spacing:2px;margin-bottom:4px;">LOCATION SETTINGS</div>';
+  h += '<div style="font-size:18px;font-weight:900;color:#f1f5f9;">📡 GPS Accuracy</div>';
+  h += '<div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:3px;">Active: <b style="color:#58A6FF;">'+cfg.label+'</b> — '+cfg.desc+'</div>';
+  h += '</div>';
+
+  // Mode cards
+  var modes = ['highest','high','normal'];
+  for(var i=0;i<modes.length;i++){
+    var m = modes[i];
+    var mc = GPS_MODES[m];
+    var isActive = GPS_MODE === m;
+    var cols = {highest:'#E63946', high:'#D4A843', normal:'#06D6A0'};
+    var col = cols[m];
+    h += '<div onclick="gpsSetMode(&quot;'+m+'&quot;)" style="'+
+      'background:'+(isActive?'rgba('+( m==='highest'?'230,57,70':m==='high'?'212,168,67':'6,214,160')+',0.12)':'var(--card)')+';'+
+      'border:2px solid '+(isActive?col:'var(--border)')+';'+
+      'border-radius:12px;padding:14px;margin-bottom:10px;cursor:pointer;'+
+      'box-shadow:'+(isActive?'0 0 12px '+col+'44':'none')+';">';
+    h += '<div style="display:flex;align-items:center;justify-content:space-between;">';
+    h += '<div>';
+    h += '<div style="font-size:15px;font-weight:800;color:'+(isActive?col:'var(--text)')+';">'+mc.label+'</div>';
+    h += '<div style="font-size:11px;color:var(--dimL);margin-top:2px;">'+mc.desc+'</div>';
+    // Battery indicator
+    var bars = m==='highest'?3:m==='high'?2:1;
+    h += '<div style="display:flex;gap:3px;margin-top:6px;">';
+    for(var b=0;b<3;b++){
+      h += '<div style="width:20px;height:8px;border-radius:3px;background:'+(b<bars?col:'rgba(255,255,255,0.1)')+';">  </div>';
+    }
+    h += '<span style="font-size:10px;color:var(--dimL);margin-left:4px;">'+(m==='highest'?'High drain':m==='high'?'Balanced':'Battery saver')+'</span>';
+    h += '</div></div>';
+    // Active indicator
+    if(isActive){
+      h += '<div style="width:24px;height:24px;border-radius:50%;background:'+col+';display:flex;align-items:center;justify-content:center;font-size:14px;">✓</div>';
+    }
+    h += '</div></div>';
+  }
+
+  // Offline info
+  h += '<div style="background:rgba(6,214,160,0.07);border:1px solid rgba(6,214,160,0.2);border-radius:12px;padding:12px;margin-top:6px;">';
+  h += '<div style="font-size:12px;font-weight:700;color:#06D6A0;margin-bottom:4px;">✅ Works Fully Offline</div>';
+  h += '<div style="font-size:11px;color:var(--dimL);line-height:1.6;">';
+  h += '• All 88 pier & abutment coordinates loaded locally<br>';
+  h += '• All 75 BM points available without internet<br>';
+  h += '• GPS location works without mobile data<br>';
+  h += '• Perfect for site areas with poor signal';
+  h += '</div></div>';
+
+  var pg = document.getElementById('pg-ws');
+  if(pg){
+    var existing = document.getElementById('gps-settings-block');
+    if(existing) existing.innerHTML = h;
+  }
+}
+
+function showGpsMenu(){
+  var cur=localStorage.getItem('ic1_gps_mode')||'high';
+  var opts=[
+    {id:'highest',label:'🔴 Highest',desc:'Every 5s - Full accuracy'},
+    {id:'high',   label:'🟡 High',   desc:'Every 15s - Balanced'},
+    {id:'normal', label:'🟢 Normal', desc:'Every 30s - Battery saver'},
+    {id:'off',    label:'⚫ Off',    desc:'No location updates'}
+  ];
+  var h='<div style="font-size:14px;font-weight:900;color:#58A6FF;margin-bottom:12px;">📡 GPS Mode</div>';
+  for(var i=0;i<opts.length;i++){
+    var o=opts[i];
+    var active=cur===o.id;
+    h+='<div data-id="'+o.id+'" onclick="gpsSet(this.dataset.id);" style="padding:11px 14px;margin-bottom:8px;border-radius:10px;cursor:pointer;border:2px solid '+(active?'#58A6FF':'var(--border)')+';background:'+(active?'rgba(88,166,255,0.1)':'var(--card)')+';">';
+    h+='<div style="font-weight:700;color:'+(active?'#58A6FF':'var(--text)')+';">'+o.label+'</div>';
+    h+='<div style="font-size:11px;color:var(--dimL);">'+o.desc+'</div>';
+    h+='</div>';
+  }
+  h+='<button onclick="closeModal();" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--dimL);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Close</button>';
+  openModal(h);
+}
+
+function gpsSet(id){
+  localStorage.setItem('ic1_gps_mode',id);
+  // Stop ALL timers using window scope
+  if(window.NEAREST_TIMER){clearInterval(window.NEAREST_TIMER);window.NEAREST_TIMER=null;}
+  if(window.BM_PROX_TIMER){clearInterval(window.BM_PROX_TIMER);window.BM_PROX_TIMER=null;}
+  // Hide banner
+  var b=document.getElementById('nearest-banner');
+  if(b&&b.parentNode) b.parentNode.removeChild(b);
+  if(id==='off'){
+    closeModal();
+    flash('GPS Off ⚫ — no location updates');
+    return;
+  }
+  // Restart with new interval
+  var intervals={highest:5000,high:15000,normal:30000};
+  var iv=intervals[id]||15000;
+  window.NEAREST_TIMER=setInterval(nearestCheck,iv);
+  nearestCheck();
+  closeModal();
+  flash('GPS: '+id+' ✅');
+}
 
 </script>
 </body>
