@@ -313,30 +313,85 @@ function wcEnter(){
   var passEl = document.getElementById('wc-pass');
   var errEl  = document.getElementById('wc-pass-err');
   var name   = nameEl ? nameEl.value.trim() : '';
+  var pin    = passEl ? passEl.value.trim() : '';
 
-  // Only require a name - no password check
   if(!name){
     if(nameEl){ nameEl.style.border='1px solid #E74C3C'; nameEl.focus(); }
     if(errEl) errEl.textContent = 'Please enter your name';
     return;
   }
-  if(errEl) errEl.textContent='';
-  if(errEl) errEl.textContent='';
+  if(!pin){
+    if(passEl){ passEl.style.border='1px solid #E74C3C'; passEl.focus(); }
+    if(errEl) errEl.textContent = 'Please enter your PIN';
+    return;
+  }
 
-  // Save name persistently + mark session as authenticated
+  // Master PIN always works
+  var masterPin = localStorage.getItem('ic1_adminpw')||'Kamel@6072';
+  if(pin === masterPin){
+    if(errEl) errEl.textContent='';
+    wcDoLogin(name);
+    return;
+  }
+
+  if(errEl) errEl.textContent = 'Checking...';
+
+  // Get Firebase DB
+  var db = (typeof FB_DB!=='undefined' && FB_DB) ? FB_DB : null;
+  if(!db){
+    try{
+      if(typeof firebase!=='undefined' && firebase.apps && firebase.apps.length>0){
+        db = firebase.database();
+        FB_DB = db;
+      }
+    }catch(e){}
+  }
+
+  if(db){
+    db.ref('ic1_bridges/USER_PINS').once('value')
+      .then(function(snap){
+        var fbPins = snap.val()||{};
+        localStorage.setItem('ic1_user_pins', JSON.stringify(fbPins));
+        var matchedPin = null;
+        var keys = Object.keys(fbPins);
+        for(var i=0;i<keys.length;i++){
+          if(keys[i].toLowerCase()===name.toLowerCase()){
+            matchedPin = fbPins[keys[i]]; break;
+          }
+        }
+        if(matchedPin===null || String(pin)!==String(matchedPin)){
+          if(passEl){passEl.style.border='1px solid #E74C3C';passEl.value='';passEl.focus();}
+          if(errEl) errEl.textContent = 'Invalid username or PIN';
+          return;
+        }
+        if(errEl) errEl.textContent='';
+        wcDoLogin(name);
+      })
+      .catch(function(){
+        // Offline fallback
+        var lp = JSON.parse(localStorage.getItem('ic1_user_pins')||'{}');
+        var lPin = lp[name]||lp[name.toLowerCase()];
+        if(String(pin)===String(lPin)){ wcDoLogin(name); }
+        else { if(errEl) errEl.textContent='Invalid username or PIN'; }
+      });
+  } else {
+    // No Firebase - local only
+    var lp = JSON.parse(localStorage.getItem('ic1_user_pins')||'{}');
+    var lPin = lp[name]||lp[name.toLowerCase()];
+    if(String(pin)===String(lPin)){ wcDoLogin(name); }
+    else { if(errEl) errEl.textContent='Invalid username or PIN (offline)'; }
+  }
+}
+
+
+function wcDoLogin(name){
   try{ localStorage.setItem('ic1_username', name); }catch(e){}
   try{ sessionStorage.setItem('ic1_session_ok','1'); }catch(e){}
   if(typeof MY_NAME !== 'undefined') MY_NAME = name;
-  // Immediately apply the admin-assigned role for this user
   try{
     var _wa=JSON.parse(localStorage.getItem('ic1_role_assignments')||'{}');
-    if(_wa[name]){
-      MY_ROLE=_wa[name];
-      localStorage.setItem('ic1_my_role',MY_ROLE);
-    }
+    if(_wa[name]){MY_ROLE=_wa[name];localStorage.setItem('ic1_my_role',MY_ROLE);}
   }catch(e){}
-
-  // Slide out
   var ws = document.getElementById('welcome-screen');
   ws.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
   ws.style.opacity = '0';
@@ -345,7 +400,7 @@ function wcEnter(){
     ws.style.display = 'none';
     if(window._wcParticles) cancelAnimationFrame(window._wcParticles);
     acUpdateAvatar();
-    try{nav('ov');}catch(e){console.log("nav error:",e);}
+    try{nav('ov');}catch(e){}
     try{buildTicker();}catch(e){}
     setTimeout(function(){try{apCheckNotifications();}catch(e){}},800);
     setTimeout(function(){try{pulseCheckAndShow();}catch(e){}},1200);
@@ -487,6 +542,8 @@ function sendHeartbeat(){
 }
 
 function nav(id){
+  // Stop map animation when leaving map tab
+  if(id !== 'mp' && typeof mapStopAnim === 'function') try{mapStopAnim();}catch(e){}
   var ALL_TABS=["ov","tr","rd","fs","ut","rp","pl","fr","rd2","sv","bm","doc","lb","race","pw","mp","ch","ad","ws"];
   // Top loading bar flash
   var ldr=document.getElementById('tab-loader');
@@ -615,7 +672,7 @@ function loadData(){
   // Migrate: if stored pw is the old default, clear it so new default '0000' takes effect
   try{
     var _oldPw=localStorage.getItem('ic1_adminpw');
-    if(_oldPw==='Lina@6072'||_oldPw==='Lina#6072'){
+    if(_oldPw==='Kamel@6072'||_oldPw==='Lina#6072'){
       localStorage.removeItem('ic1_adminpw');
     }
   }catch(e){}
@@ -1907,7 +1964,7 @@ body{display:flex;flex-direction:column;}
         transition:border-color 0.2s;">
       <div style="font-size:10px;color:rgba(255,255,255,0.38);font-weight:700;
         letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;text-align:left;">Access Code</div>
-      <input id="wc-pass" type="password" placeholder="Enter access code..."
+      <input id="wc-pass" type="password" placeholder="Enter your PIN..."
         style="width:100%;padding:12px 16px;border-radius:10px;
         border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);
         color:#f1f5f9;font-size:14px;font-family:inherit;outline:none;
@@ -2049,7 +2106,7 @@ body{display:flex;flex-direction:column;}
     <button class="nb"     id="tab-mp" onclick="nav('mp')"><svg width="16" height="14" viewBox="0 0 22 18" fill="none" style="vertical-align:-3px;margin-right:4px"><line x1="1" y1="9" x2="21" y2="9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" opacity="0.75"/><line x1="8" y1="1" x2="8" y2="17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/><line x1="16" y1="1" x2="16" y2="17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/><path d="M3 9 Q7 4 11 4 Q15 4 19 9" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="11" cy="9" r="2.8" fill="currentColor" opacity="0.9"/><circle cx="11" cy="9" r="1.2" fill="#07090d"/></svg>Map</button>
     <button class="nb" id="tab-ch" onclick="nav('ch')">💬 Chat</button>
     <button class="nb" id="tab-ad" onclick="nav('ad')" style="border:1px solid rgba(231,76,60,0.4);">🛡 Admin</button>
-    <button class="nb" id="tab-ws" onclick="nav('ws')" style="border-color:var(--gold);color:var(--gold);">🔐 Setup</button>
+
   </div>
 </div>
 
@@ -2381,7 +2438,7 @@ var PLAN = {
     fillslope: []
   }
 };
-var ADMIN_HASH=localStorage.getItem('ic1_adminpw')||'0000';
+var ADMIN_HASH=localStorage.getItem('ic1_adminpw')||'Kamel@6072';
 // Custom weights storage
 var CUSTOM_WEIGHTS={
   project:{pre:7,roads:6,fs:0.7}, // bridges auto-calc
@@ -2422,7 +2479,7 @@ function loadData(){
   // Migrate: if stored pw is the old default, clear it so new default '0000' takes effect
   try{
     var _oldPw=localStorage.getItem('ic1_adminpw');
-    if(_oldPw==='Lina@6072'||_oldPw==='Lina#6072'){
+    if(_oldPw==='Kamel@6072'||_oldPw==='Lina#6072'){
       localStorage.removeItem('ic1_adminpw');
     }
   }catch(e){}
@@ -4401,283 +4458,7 @@ function rCh(){
   document.getElementById('pg-ch').innerHTML=h;
 }
 
-function rMp(){
-  var ibnPct   = Math.round((ROADS.ibn.pct||0)*10)/10;
-  var satPct   = Math.round((ROADS.sattam.pct||0)*10)/10;
-  var W=640, H=500;
-
-  // ── Compute bridge pct ────────────────────────────────────
-  function calcBrPct(brId){
-    var earned=0,total=0;
-    for(var b=0;b<BRIDGES.length;b++){
-      if(BRIDGES[b].id!==brId) continue;
-      for(var p=0;p<BRIDGES[b].piers.length;p++){
-        var pier=BRIDGES[b].piers[p];
-        var isDr=DIRECT.indexOf(pier)>-1;
-        for(var s=0;s<STAGES.length;s++){
-          if(STAGES[s].id==='PIL'&&isDr) continue;
-          var sw=STAGES[s].w; if(isDr) sw=Math.round(sw*(100/82)*10)/10;
-          total+=sw;
-          var sv=gps(pier,STAGES[s].id);
-          if(sv==='Complete'||sv==='Inspected') earned+=sw;
-          else if(sv==='In Progress') earned+=sw*0.3;
-        }
-      }
-      break;
-    }
-    return total>0?Math.round(earned/total*100):0;
-  }
-  function brColor(pct){
-    if(pct>=100) return '#06D6A0';
-    if(pct>=30)  return '#D4A843';
-    if(pct>0)    return '#58A6FF';
-    return '#2a3f58';
-  }
-
-  // ── Bridge positions — circular arrangement ───────────────
-  // 10 bridges in a circle, center of SVG
-  var cx=320, cy=248, circR=148;
-  var bridgeIds=['A','B','C','D','E','G','K','L','M','N'];
-  var BCIRC=[];
-  for(var i=0;i<bridgeIds.length;i++){
-    // Start from top (-90°), go clockwise
-    var angle=-90 + i*(360/bridgeIds.length);
-    var rad=angle*Math.PI/180;
-    BCIRC.push({
-      id: bridgeIds[i],
-      x: Math.round(cx + circR*Math.cos(rad)),
-      y: Math.round(cy + circR*Math.sin(rad))
-    });
-  }
-
-  var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block;" xmlns="http://www.w3.org/2000/svg">';
-
-  // ── Defs ──────────────────────────────────────────────────
-  svg+='<defs>';
-  svg+='<radialGradient id="bgRad" cx="50%" cy="50%" r="60%">';
-  svg+='<stop offset="0%" stop-color="#0d1e3a"/>';
-  svg+='<stop offset="100%" stop-color="#070e1a"/>';
-  svg+='</radialGradient>';
-  svg+='<style>';
-  // Wide red blink — outer ring pulses red
-  svg+='.blink-outer{animation:red-pulse 1.2s ease-in-out infinite;}';
-  svg+='@keyframes red-pulse{0%,100%{opacity:0;r:26}50%{opacity:0.9;r:38}}';
-  svg+='.blink-mid{animation:red-mid 1.2s ease-in-out infinite;}';
-  svg+='@keyframes red-mid{0%,100%{opacity:0.1}50%{opacity:0.55}}';
-  svg+='.blink-arc{animation:arc-flash 1.2s ease-in-out infinite;}';
-  svg+='@keyframes arc-flash{0%,100%{opacity:0.4}50%{opacity:1}}';
-  svg+='</style>';
-  svg+='</defs>';
-
-  // Background
-  svg+='<rect width="'+W+'" height="'+H+'" fill="url(#bgRad)"/>';
-  // Subtle grid
-  for(var gx=0;gx<=W;gx+=44) svg+='<line x1="'+gx+'" y1="0" x2="'+gx+'" y2="'+H+'" stroke="#ffffff06" stroke-width="0.5"/>';
-  for(var gy=0;gy<=H;gy+=44) svg+='<line x1="0" y1="'+gy+'" x2="'+W+'" y2="'+gy+'" stroke="#ffffff06" stroke-width="0.5"/>';
-
-  // ── Circular track (road ring) ────────────────────────────
-  svg+='<circle cx="'+cx+'" cy="'+cy+'" r="'+circR+'" fill="none" stroke="#1e2d44" stroke-width="38"/>';
-  svg+='<circle cx="'+cx+'" cy="'+cy+'" r="'+circR+'" fill="none" stroke="#D4A843" stroke-width="1.5" stroke-dasharray="22,10" opacity="0.4"/>';
-  svg+='<circle cx="'+cx+'" cy="'+cy+'" r="'+(circR-19)+'" fill="none" stroke="#D4A843" stroke-width="1" opacity="0.25"/>';
-  svg+='<circle cx="'+cx+'" cy="'+cy+'" r="'+(circR+19)+'" fill="none" stroke="#D4A843" stroke-width="1" opacity="0.25"/>';
-
-  // ── Center hub (overall progress) ────────────────────────
-  var ov=calcOverallPct();
-  // Outer hub ring
-  svg+='<circle cx="'+cx+'" cy="'+cy+'" r="72" fill="#0a1422" stroke="#D4A843" stroke-width="1.5" opacity="0.4"/>';
-  svg+='<circle cx="'+cx+'" cy="'+cy+'" r="58" fill="#0d1a2e" stroke="#D4A843" stroke-width="2"/>';
-  // Progress arc on hub
-  if(ov>0){
-    var hubR=58, hubAngle=(ov/100*360-0.01)*Math.PI/180;
-    var hx2=cx+hubR*Math.sin(hubAngle), hy2=cy-hubR*Math.cos(hubAngle);
-    var hlg=ov>50?1:0;
-    svg+='<path d="M '+cx+' '+(cy-hubR)+' A '+hubR+' '+hubR+' 0 '+hlg+' 1 '+Math.round(hx2*10)/10+' '+Math.round(hy2*10)/10+'" fill="none" stroke="#D4A843" stroke-width="5" stroke-linecap="round" opacity="0.9"/>';
-  }
-  svg+='<text x="'+cx+'" y="'+(cy-8)+'" text-anchor="middle" font-size="26" font-weight="900" fill="#D4A843" font-family="Segoe UI,Arial">'+ov+'%</text>';
-  svg+='<text x="'+cx+'" y="'+(cy+10)+'" text-anchor="middle" font-size="10" font-weight="700" fill="rgba(255,255,255,0.5)" font-family="Segoe UI,Arial">OVERALL</text>';
-  svg+='<text x="'+cx+'" y="'+(cy+24)+'" text-anchor="middle" font-size="9" fill="rgba(255,255,255,0.3)" font-family="Segoe UI,Arial">IC1 BRIDGES</text>';
-
-  // ── Spoke lines from center to bridges ───────────────────
-  for(var i=0;i<BCIRC.length;i++){
-    var b=BCIRC[i];
-    var bpct=calcBrPct(b.id);
-    var bcol=brColor(bpct);
-    // Spoke from hub edge to bridge
-    var spokeStartR=72;
-    var angle2=Math.atan2(b.y-cy,b.x-cx);
-    var sx=cx+spokeStartR*Math.cos(angle2);
-    var sy=cy+spokeStartR*Math.sin(angle2);
-    svg+='<line x1="'+Math.round(sx)+'" y1="'+Math.round(sy)+'" x2="'+b.x+'" y2="'+b.y+'" stroke="'+bcol+'" stroke-width="1" opacity="0.2"/>';
-  }
-
-  // ── Bridge nodes ─────────────────────────────────────────
-  var brR=18;
-  for(var i=0;i<BCIRC.length;i++){
-    var b=BCIRC[i];
-    var bpct=calcBrPct(b.id);
-    var bcol=brColor(bpct);
-    var isActive=(bpct>0&&bpct<100)||(_mpSelBr===b.id);
-    var isComplete=bpct>=100;
-
-    // Wide red blinking rings for active bridges
-    if(isActive){
-      // Outermost wide red pulse
-      svg+='<circle class="blink-outer" cx="'+b.x+'" cy="'+b.y+'" r="36" fill="#FFD700" opacity="0"/>';
-      // Mid red ring
-      svg+='<circle class="blink-mid" cx="'+b.x+'" cy="'+b.y+'" r="28" fill="none" stroke="#FFD700" stroke-width="4" opacity="0.1"/>';
-    }
-
-    // Bridge circle base
-    svg+='<circle onclick="mpToggleBr(\''+b.id+'\')" style="cursor:pointer;" cx="'+b.x+'" cy="'+b.y+'" r="'+brR+'" fill="#0d1a2e" stroke="'+bcol+'" stroke-width="'+(isActive?3:isComplete?2.5:1.5)+'"/>';
-
-    // Progress arc
-    if(bpct>0&&bpct<100){
-      var angle3=(bpct/100*360-0.01)*Math.PI/180;
-      var ax2=b.x+brR*Math.sin(angle3);
-      var ay2=b.y-brR*Math.cos(angle3);
-      var alg=bpct>50?1:0;
-      var arcClass=' class="blink-arc"';
-      svg+='<path'+arcClass+' d="M '+b.x+' '+(b.y-brR)+' A '+brR+' '+brR+' 0 '+alg+' 1 '+Math.round(ax2*10)/10+' '+Math.round(ay2*10)/10+'" fill="none" stroke="#FFD700" stroke-width="5" stroke-linecap="round"/>';
-    } else if(isComplete){
-      svg+='<circle cx="'+b.x+'" cy="'+b.y+'" r="'+brR+'" fill="'+bcol+'" opacity="0.2"/>';
-    }
-
-    // Bridge ID
-    svg+='<text x="'+b.x+'" y="'+(b.y-2)+'" text-anchor="middle" font-size="14" font-weight="900" fill="'+bcol+'" font-family="Segoe UI,Arial">'+b.id+'</text>';
-    // Bridge %
-    svg+='<text x="'+b.x+'" y="'+(b.y+13)+'" text-anchor="middle" font-size="10" font-weight="700" fill="'+bcol+'" font-family="Segoe UI,Arial">'+bpct+'%</text>';
-  }
-
-  // ── Roads as straight lines crossing the circle ───────────
-  // Sattam: horizontal line across top
-  var satY=50, roadH=22;
-  svg+='<rect x="0" y="'+(satY-roadH/2)+'" width="'+W+'" height="'+roadH+'" fill="#1a2240" rx="2"/>';
-  var satW2=Math.round(W*satPct/100);
-  if(satW2>0){
-    svg+='<rect x="0" y="'+(satY-roadH/2)+'" width="'+satW2+'" height="'+roadH+'" fill="#A78BFA" opacity="0.3" rx="2"/>';
-    svg+='<rect x="0" y="'+(satY-3)+'" width="'+satW2+'" height="5" fill="#A78BFA" opacity="0.95"/>';
-  }
-  svg+='<line x1="0" y1="'+satY+'" x2="'+W+'" y2="'+satY+'" stroke="#A78BFA" stroke-width="1.5" stroke-dasharray="16,8" opacity="0.5"/>';
-  svg+='<rect x="6" y="'+(satY-13)+'" width="196" height="26" rx="5" fill="#070e1a" opacity="0.9"/>';
-  svg+='<text x="14" y="'+(satY+5)+'" font-size="13" font-weight="900" fill="#A78BFA" font-family="Segoe UI,Arial">PRINCE SATTAM ROAD</text>';
-  var sBadge=satPct>=75?'#06D6A0':satPct>0?'#A78BFA':'#2a3f58';
-  svg+='<rect x="'+(W-58)+'" y="'+(satY-13)+'" width="52" height="26" rx="13" fill="'+sBadge+'"/>';
-  svg+='<text x="'+(W-32)+'" y="'+(satY+5)+'" text-anchor="middle" font-size="13" font-weight="900" fill="#000" font-family="Segoe UI,Arial">'+satPct+'%</text>';
-
-  // Ibn Saud: vertical on right
-  var ibnX2=600, ibnRW=22;
-  svg+='<rect x="'+(ibnX2-ibnRW/2)+'" y="'+(satY+roadH/2)+'" width="'+ibnRW+'" height="'+(H-satY-roadH/2)+'" fill="#1a2240" rx="2"/>';
-  var ibnFill2=Math.round((H-satY-roadH/2)*ibnPct/100);
-  if(ibnFill2>0){
-    svg+='<rect x="'+(ibnX2-ibnRW/2)+'" y="'+(satY+roadH/2)+'" width="'+ibnRW+'" height="'+ibnFill2+'" fill="#58A6FF" opacity="0.3" rx="2"/>';
-    svg+='<rect x="'+(ibnX2-3)+'" y="'+(satY+roadH/2)+'" width="5" height="'+ibnFill2+'" fill="#58A6FF" opacity="0.95"/>';
-  }
-  svg+='<line x1="'+ibnX2+'" y1="'+(satY+roadH/2)+'" x2="'+ibnX2+'" y2="'+H+'" stroke="#58A6FF" stroke-width="1.5" stroke-dasharray="16,8" opacity="0.5"/>';
-  svg+='<g transform="translate('+(ibnX2+ibnRW/2+16)+','+(H/2+30)+') rotate(90)">';
-  svg+='<rect x="-68" y="-14" width="136" height="26" rx="5" fill="#070e1a" opacity="0.92"/>';
-  svg+='<text x="0" y="5" text-anchor="middle" font-size="13" font-weight="900" fill="#58A6FF" font-family="Segoe UI,Arial">IBN SAUD ROAD</text>';
-  svg+='</g>';
-  var iBadge2=ibnPct>=75?'#06D6A0':ibnPct>0?'#58A6FF':'#2a3f58';
-  svg+='<rect x="'+(ibnX2-26)+'" y="'+(satY+roadH/2+8)+'" width="52" height="26" rx="13" fill="'+iBadge2+'"/>';
-  svg+='<text x="'+ibnX2+'" y="'+(satY+roadH/2+26)+'" text-anchor="middle" font-size="13" font-weight="900" fill="#000" font-family="Segoe UI,Arial">'+ibnPct+'%</text>';
-
-  // ── Overall bar top ───────────────────────────────────────
-  svg+='<rect x="0" y="0" width="'+W+'" height="6" fill="#070e1a"/>';
-  svg+='<rect x="0" y="0" width="'+Math.round(W*ov/100)+'" height="6" fill="#D4A843"/>';
-
-  // ── Legend ────────────────────────────────────────────────
-  svg+='<rect x="6" y="'+(H-44)+'" width="240" height="38" rx="6" fill="#070e1a" opacity="0.92" stroke="#1e2d44" stroke-width="1"/>';
-  svg+='<text x="14" y="'+(H-30)+'" font-size="9" font-weight="800" fill="#6b90b8" font-family="Segoe UI,Arial" letter-spacing="1">LEGEND</text>';
-  var lgI=[{c:'#D4A843',l:'In Progress'},{c:'#06D6A0',l:'Complete'},{c:'#2a3f58',l:'Not Started'}];
-  for(var li=0;li<lgI.length;li++){
-    svg+='<circle cx="'+(14+li*80)+'" cy="'+(H-14)+'" r="5" fill="'+lgI[li].c+'"/>';
-    svg+='<text x="'+(22+li*80)+'" y="'+(H-10)+'" font-size="9" fill="#ccd" font-family="Segoe UI,Arial">'+lgI[li].l+'</text>';
-  }
-  // Active = gold blink note
-  svg+='<circle cx="14" cy="'+(H-14)+'" r="8" fill="#FFD700" opacity="0.35"/>';
-
-  // N arrow
-  svg+='<g transform="translate('+(W-28)+','+(H-28)+')">';
-  svg+='<circle r="18" fill="#070e1a" stroke="#1e2d44" stroke-width="1.5"/>';
-  svg+='<text x="0" y="-2" text-anchor="middle" font-size="14" fill="#6b90b8" font-family="Arial">&#8593;</text>';
-  svg+='<text x="0" y="10" text-anchor="middle" font-size="9" font-weight="800" fill="#6b90b8" font-family="Segoe UI,Arial">N</text>';
-  svg+='</g>';
-
-  svg+='</svg>';
-
-  // ── Page HTML ─────────────────────────────────────────────
-  var h='';
-  h+='<div style="background:linear-gradient(135deg,#0a1628,#0d2444 60%,#0a1628);border-radius:14px;padding:14px 16px;margin-bottom:12px;border:1px solid rgba(212,168,67,0.2);">';
-  h+='<div style="display:flex;align-items:center;justify-content:space-between;">';
-  h+='<div><div style="font-size:11px;color:rgba(212,168,67,0.8);font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:3px;">IC1 Road Improvements</div>';
-  h+='<div style="font-size:20px;font-weight:900;color:#f1f5f9;">Project Site Map</div>';
-  h+='<div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px;">Bridges · Roads · Live Progress</div></div>';
-  h+='<div style="text-align:right;"><div style="font-size:28px;font-weight:900;color:#D4A843;line-height:1;">'+ov+'%</div>';
-  h+='<div style="font-size:9px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px;margin-top:2px;">Overall</div></div>';
-  h+='</div></div>';
-  h+='<div style="background:#070e1a;border-radius:14px;overflow:hidden;border:1px solid rgba(212,168,67,0.15);margin-bottom:12px;">'+svg+'</div>';
-
-  // Bridge cards 5x2
-  h+='<div style="font-size:10px;color:var(--dimL);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;">Bridge Status</div>';
-  h+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:12px;">';
-  for(var i=0;i<BCIRC.length;i++){
-    var bpct=calcBrPct(BCIRC[i].id);
-    var bcol=brColor(bpct);
-    var isAct=bpct>0&&bpct<100;
-    h+='<div style="background:var(--card);border:1px solid '+bcol+'44;border-radius:10px;padding:9px 6px;text-align:center;border-top:3px solid '+(isAct?'#FFD700':bcol)+';">';
-    h+='<div style="font-size:14px;font-weight:900;color:#f1f5f9;">'+BCIRC[i].id+'</div>';
-    h+='<div style="font-size:11px;font-weight:800;color:'+bcol+';">'+bpct+'%</div>';
-    h+='<div style="height:4px;background:rgba(255,255,255,0.08);border-radius:2px;margin-top:5px;overflow:hidden;">';
-    h+='<div style="width:'+bpct+'%;height:4px;background:'+(isAct?'#FFD700':bcol)+';border-radius:2px;"></div>';
-    h+='</div></div>';
-  }
-  h+='</div>';
-
-  // Road cards
-  h+='<div style="display:flex;gap:8px;margin-bottom:10px;">';
-  var mpRds=[{lbl:'Ibn Saud Road',icon:'🛣',col:'#58A6FF',pct:ibnPct},{lbl:'Prince Sattam Road',icon:'🛤',col:'#A78BFA',pct:satPct}];
-  for(var ri=0;ri<mpRds.length;ri++){
-    var rrd=mpRds[ri];
-    var rCol=rrd.pct>=75?'#06D6A0':rrd.pct>0?rrd.col:'#4a5568';
-    h+='<div style="flex:1;background:var(--card);border:1px solid '+rrd.col+'33;border-radius:10px;padding:10px;border-left:3px solid '+rrd.col+';">';
-    h+='<div style="font-size:12px;font-weight:800;color:var(--text);">'+rrd.icon+' '+rrd.lbl+'</div>';
-    h+='<div style="font-size:18px;font-weight:900;color:'+rCol+';margin-top:4px;">'+rrd.pct+'%</div>';
-    h+='<div style="height:4px;background:rgba(255,255,255,0.08);border-radius:2px;margin-top:6px;overflow:hidden;">';
-    h+='<div style="width:'+rrd.pct+'%;height:4px;background:'+rrd.col+';border-radius:2px;"></div>';
-    h+='</div></div>';
-  }
-  h+='</div>';
-
-  // Team online
-  var onlineUsers=[];
-  if(typeof TEAM_LOCS!=='undefined'){
-    var tlKeys=Object.keys(TEAM_LOCS);
-    for(var ti=0;ti<tlKeys.length;ti++){
-      var tm=TEAM_LOCS[tlKeys[ti]];
-      if(tm&&tm.ts&&(Date.now()-tm.ts)<300000) onlineUsers.push(tm);
-    }
-  }
-  if(onlineUsers.length>0){
-    h+='<div style="background:var(--card);border:1px solid rgba(6,214,160,0.25);border-radius:10px;padding:10px 12px;">';
-    h+='<div style="font-size:10px;color:#06D6A0;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">👥 Team Online ('+onlineUsers.length+')</div>';
-    for(var ti=0;ti<onlineUsers.length;ti++){
-      var tm2=onlineUsers[ti];
-      h+='<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.06);">';
-      h+='<div style="width:8px;height:8px;border-radius:50%;background:#06D6A0;flex-shrink:0;"></div>';
-      h+='<span style="font-size:12px;font-weight:700;color:var(--fg);">'+(tm2.name||'Team Member')+'</span>';
-      h+='</div>';
-    }
-    h+='</div>';
-  }
-
-  document.getElementById('pg-mp').innerHTML=h;
-  if(!document.getElementById('map-blink-css')){
-    var st=document.createElement('style');
-    st.id='map-blink-css';
-    st.textContent='@keyframes red-pulse{0%,100%{opacity:0}50%{opacity:0.9}}@keyframes red-mid{0%,100%{opacity:0.1}50%{opacity:0.55}}@keyframes arc-flash{0%,100%{opacity:0.4}50%{opacity:1}}';
-    document.head.appendChild(st);
-  }
-}
+// rMp moved to offline map module
 
 function rAd(){
   var h='';
@@ -4790,6 +4571,17 @@ function rAd(){
     h+='<div style="display:flex;gap:7px;padding:3px 0;"><div style="color:#E74C3C;font-size:10px;flex-shrink:0;margin-top:1px;">•</div><div style="font-size:11px;color:var(--dimL);line-height:1.5;">'+infos[ii]+'</div></div>';
   }
   h+='</div>';
+
+  h+='<div style="height:10px;"></div>';
+
+  // ── Project Configuration ───────────────────────────────────
+  h+='<div style="background:var(--card);border:1px solid rgba(212,168,67,0.3);border-radius:12px;padding:14px;margin-bottom:14px;">';
+  h+='<div style="font-size:12px;font-weight:800;color:#D4A843;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">⚙️ Project Configuration</div>';
+  h+='<button onclick="nav(\'ws\');" style="width:100%;padding:12px;border-radius:10px;background:rgba(212,168,67,0.08);border:1px solid rgba(212,168,67,0.3);color:#D4A843;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;text-align:left;margin-bottom:8px;">📊 Project Weights &amp; Stage Config</button>';
+  h+='<button onclick="adShowPins();" style="width:100%;padding:12px;border-radius:10px;background:rgba(88,166,255,0.08);border:1px solid rgba(88,166,255,0.3);color:#58A6FF;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;text-align:left;">🔑 Manage User PINs</button>';
+  h+='</div>';
+  // PIN management section
+  h+='<div id="ad-pins-section"></div>';
 
   h+='<div style="height:20px;"></div>';
   document.getElementById('pg-ad').innerHTML=h;
@@ -5552,7 +5344,7 @@ function adUnlock(){
   var pw=document.getElementById('ad-pw');
   var err=document.getElementById('ad-pw-err');
   if(!pw) return;
-  var correctPw=(typeof ADMIN_HASH!=='undefined'?ADMIN_HASH:null)||localStorage.getItem('ic1_adminpw')||'0000';
+  var correctPw=(typeof ADMIN_HASH!=='undefined'?ADMIN_HASH:null)||localStorage.getItem('ic1_adminpw')||'Kamel@6072';
   if(pw.value===correctPw){
     _adUnlocked=true;
     rAd();
@@ -13020,30 +12812,85 @@ function wcEnter(){
   var passEl = document.getElementById('wc-pass');
   var errEl  = document.getElementById('wc-pass-err');
   var name   = nameEl ? nameEl.value.trim() : '';
+  var pin    = passEl ? passEl.value.trim() : '';
 
-  // Only require a name - no password check
   if(!name){
     if(nameEl){ nameEl.style.border='1px solid #E74C3C'; nameEl.focus(); }
     if(errEl) errEl.textContent = 'Please enter your name';
     return;
   }
-  if(errEl) errEl.textContent='';
-  if(errEl) errEl.textContent='';
+  if(!pin){
+    if(passEl){ passEl.style.border='1px solid #E74C3C'; passEl.focus(); }
+    if(errEl) errEl.textContent = 'Please enter your PIN';
+    return;
+  }
 
-  // Save name persistently + mark session as authenticated
+  // Master PIN always works
+  var masterPin = localStorage.getItem('ic1_adminpw')||'Kamel@6072';
+  if(pin === masterPin){
+    if(errEl) errEl.textContent='';
+    wcDoLogin(name);
+    return;
+  }
+
+  if(errEl) errEl.textContent = 'Checking...';
+
+  // Get Firebase DB
+  var db = (typeof FB_DB!=='undefined' && FB_DB) ? FB_DB : null;
+  if(!db){
+    try{
+      if(typeof firebase!=='undefined' && firebase.apps && firebase.apps.length>0){
+        db = firebase.database();
+        FB_DB = db;
+      }
+    }catch(e){}
+  }
+
+  if(db){
+    db.ref('ic1_bridges/USER_PINS').once('value')
+      .then(function(snap){
+        var fbPins = snap.val()||{};
+        localStorage.setItem('ic1_user_pins', JSON.stringify(fbPins));
+        var matchedPin = null;
+        var keys = Object.keys(fbPins);
+        for(var i=0;i<keys.length;i++){
+          if(keys[i].toLowerCase()===name.toLowerCase()){
+            matchedPin = fbPins[keys[i]]; break;
+          }
+        }
+        if(matchedPin===null || String(pin)!==String(matchedPin)){
+          if(passEl){passEl.style.border='1px solid #E74C3C';passEl.value='';passEl.focus();}
+          if(errEl) errEl.textContent = 'Invalid username or PIN';
+          return;
+        }
+        if(errEl) errEl.textContent='';
+        wcDoLogin(name);
+      })
+      .catch(function(){
+        // Offline fallback
+        var lp = JSON.parse(localStorage.getItem('ic1_user_pins')||'{}');
+        var lPin = lp[name]||lp[name.toLowerCase()];
+        if(String(pin)===String(lPin)){ wcDoLogin(name); }
+        else { if(errEl) errEl.textContent='Invalid username or PIN'; }
+      });
+  } else {
+    // No Firebase - local only
+    var lp = JSON.parse(localStorage.getItem('ic1_user_pins')||'{}');
+    var lPin = lp[name]||lp[name.toLowerCase()];
+    if(String(pin)===String(lPin)){ wcDoLogin(name); }
+    else { if(errEl) errEl.textContent='Invalid username or PIN (offline)'; }
+  }
+}
+
+
+function wcDoLogin(name){
   try{ localStorage.setItem('ic1_username', name); }catch(e){}
   try{ sessionStorage.setItem('ic1_session_ok','1'); }catch(e){}
   if(typeof MY_NAME !== 'undefined') MY_NAME = name;
-  // Immediately apply the admin-assigned role for this user
   try{
     var _wa=JSON.parse(localStorage.getItem('ic1_role_assignments')||'{}');
-    if(_wa[name]){
-      MY_ROLE=_wa[name];
-      localStorage.setItem('ic1_my_role',MY_ROLE);
-    }
+    if(_wa[name]){MY_ROLE=_wa[name];localStorage.setItem('ic1_my_role',MY_ROLE);}
   }catch(e){}
-
-  // Slide out
   var ws = document.getElementById('welcome-screen');
   ws.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
   ws.style.opacity = '0';
@@ -13052,7 +12899,7 @@ function wcEnter(){
     ws.style.display = 'none';
     if(window._wcParticles) cancelAnimationFrame(window._wcParticles);
     acUpdateAvatar();
-    try{nav('ov');}catch(e){console.log("nav error:",e);}
+    try{nav('ov');}catch(e){}
     try{buildTicker();}catch(e){}
     setTimeout(function(){try{apCheckNotifications();}catch(e){}},800);
     setTimeout(function(){try{pulseCheckAndShow();}catch(e){}},1200);
@@ -15549,7 +15396,7 @@ var BT_ALL = [
   {id:'mp',icon:'🗺',label:'Map',fn:'nav'},
   {id:'ch',icon:'💬',label:'Chat',fn:'nav'},
   {id:'ad',icon:'🛡',label:'Admin',fn:'nav'},
-  {id:'ws',icon:'⚙️',label:'Setup',fn:'nav'},
+  
 ];
 
 
@@ -16691,7 +16538,7 @@ var BT_ALL = [
   {id:'mp',    icon:'🗺', label:'Map',        fn:'nav'},
   {id:'ch',    icon:'💬', label:'Chat',       fn:'nav'},
   {id:'ad',    icon:'🛡', label:'Admin',      fn:'nav'},
-  {id:'ws',    icon:'⚙️', label:'Setup',      fn:'nav'},
+
 ];
 
 
@@ -17280,6 +17127,515 @@ function gpsSet(id){
   nearestCheck();
   closeModal();
   flash('GPS: '+id+' ✅');
+}
+
+// Global PIN storage object - updated as user types
+window._editPins = {};
+
+function adShowPins(){
+  var pins = JSON.parse(localStorage.getItem('ic1_user_pins')||'{}');
+  var roles = JSON.parse(localStorage.getItem('ic1_role_assignments')||'{}');
+  var users = Object.keys(roles);
+  
+  // Initialize global PIN storage
+  window._editPins = {};
+  users.forEach(function(u){ window._editPins[u] = pins[u]||''; });
+
+  var h = '<div style="background:var(--card);border:1px solid rgba(88,166,255,0.3);border-radius:12px;padding:14px;">';
+  h += '<div style="font-size:12px;font-weight:800;color:#58A6FF;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">🔑 User PINs</div>';
+  if(users.length===0){
+    h += '<div style="font-size:12px;color:var(--dimL);text-align:center;padding:10px;">No users assigned yet.</div>';
+  } else {
+    for(var i=0;i<users.length;i++){
+      var u=users[i];
+      var p=pins[u]||'';
+      h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">';
+      h += '<div style="flex:1;font-size:13px;font-weight:700;color:var(--text);">'+u+'</div>';
+      // Use onchange and oninput to store in window._editPins
+      h += '<input type="text" value="'+p+'" placeholder="Set PIN..." ';
+      h += 'data-uname="'+u+'" ';
+      h += 'oninput="pinInputChange(this);" ';
+      h += 'style="width:120px;padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font-size:13px;font-family:inherit;">';
+      h += '</div>';
+    }
+    h += '<button onclick="saveAllPins();" style="width:100%;margin-top:8px;padding:11px;border-radius:8px;background:#58A6FF;border:none;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">💾 Save All PINs</button>';
+  }
+  h += '</div>';
+  var sec = document.getElementById('ad-pins-section');
+  if(sec) sec.innerHTML = h;
+}
+
+function adSavePins(count){ saveAllPins(); }
+
+function saveAllPins(){
+  // Use the globally stored PIN object (updated via oninput)
+  var pins = window._editPins || {};
+  
+  // Filter - only save non-empty keys AND non-empty values
+  var toSave = {};
+  Object.keys(pins).forEach(function(u){
+    var cleanKey = u ? u.trim() : '';
+    var cleanVal = pins[u] ? String(pins[u]).trim() : '';
+    if(cleanKey && cleanKey.length > 0 && cleanVal && cleanVal.length > 0){
+      toSave[cleanKey] = cleanVal;
+    }
+  });
+
+  if(Object.keys(toSave).length === 0){
+    flash('Enter at least one PIN first!');
+    return;
+  }
+  
+  flash('Saving: '+JSON.stringify(toSave));
+
+  // Save locally
+  localStorage.setItem('ic1_user_pins', JSON.stringify(toSave));
+
+  // Save to Firebase directly
+  try{
+    firebase.database().ref('ic1_bridges/USER_PINS').set(toSave)
+      .then(function(){
+        flash('✅ PINs synced to Firebase! ('+Object.keys(toSave).length+' users)');
+      })
+      .catch(function(err){
+        flash('Firebase error: '+err.message);
+      });
+  }catch(e){
+    flash('Firebase error: '+e.message);
+  }
+}
+
+function pinInputChange(el){
+  var u = el.getAttribute('data-uname');
+  if(u) window._editPins[u] = el.value;
+}
+
+
+// ── OFFLINE SITE MAP ──
+// ═══════════════════════════════════════════════════════════════
+// SITESYNC OFFLINE SITE MAP
+// Shows all piers, BMs, and user position on a canvas map
+// ═══════════════════════════════════════════════════════════════
+
+var MAP_CANVAS = null;
+var MAP_CTX = null;
+var MAP_SCALE = 1.0;
+var MAP_OFFSET_X = 0;
+var MAP_OFFSET_Y = 0;
+var MAP_USER_POS = null;
+var MAP_DRAG = {active:false, startX:0, startY:0, startOX:0, startOY:0};
+var MAP_PINCH = {active:false, startDist:0, startScale:1};
+var MAP_BOUNDS = null;
+
+// All pier coordinates
+var MAP_PIERS = [
+  {name:'AB-1A',n:2737185.972,e:660444.275},
+  {name:'1A',n:2737204.730,e:660471.588},
+  {name:'2A',n:2737213.897,e:660521.383},
+  {name:'3A',n:2737191.538,e:660574.198},
+  {name:'4A',n:2737161.302,e:660598.843},
+  {name:'5A',n:2737127.348,e:660625.660},
+  {name:'6A-1',n:2737100.005,e:660645.851},
+  {name:'6A-2',n:2737105.594,e:660651.579},
+  {name:'AB-2A',n:2737075.603,e:660683.598},
+  {name:'1B',n:2737069.522,e:660678.537},
+  {name:'2B',n:2737042.926,e:660714.416},
+  {name:'3B',n:2737022.163,e:660751.872},
+  {name:'4B',n:2737011.102,e:660779.523},
+  {name:'5B',n:2737000.217,e:660815.402},
+  {name:'6B',n:2736990.014,e:660843.620},
+  {name:'7B-1',n:2736983.894,e:660879.583},
+  {name:'7B-2',n:2736966.075,e:660876.157},
+  {name:'8B',n:2736958.825,e:660906.728},
+  {name:'9B-1',n:2736949.508,e:660941.998},
+  {name:'9B-2',n:2736927.746,e:660925.574},
+  {name:'10B-1',n:2736925.716,e:660959.102},
+  {name:'10B-2',n:2736913.550,e:660950.427},
+  {name:'AB-1B',n:2736904.399,e:660977.673},
+  {name:'AB-1G',n:2736870.548,e:661010.584},
+  {name:'1G',n:2736849.920,e:661025.035},
+  {name:'2G',n:2736828.832,e:661036.485},
+  {name:'AB-2G',n:2736802.203,e:661047.026},
+  {name:'AB-1C',n:2736979.987,e:660569.147},
+  {name:'1C',n:2736935.715,e:660582.103},
+  {name:'2C',n:2736891.332,e:660591.135},
+  {name:'3C',n:2736846.593,e:660596.727},
+  {name:'4C',n:2736801.869,e:660599.931},
+  {name:'5C-1',n:2736753.218,e:660595.799},
+  {name:'5C-2',n:2736775.303,e:660620.582},
+  {name:'6C',n:2736710.396,e:660600.309},
+  {name:'7C',n:2736669.941,e:660606.024},
+  {name:'8C',n:2736625.276,e:660622.316},
+  {name:'9C',n:2736596.700,e:660639.244},
+  {name:'10C',n:2736566.940,e:660664.368},
+  {name:'11C',n:2736548.043,e:660682.757},
+  {name:'12C',n:2736525.601,e:660702.259},
+  {name:'13C',n:2736507.222,e:660719.607},
+  {name:'14C',n:2736490.056,e:660737.446},
+  {name:'15C',n:2736464.295,e:660768.961},
+  {name:'16C',n:2736442.773,e:660802.592},
+  {name:'17C',n:2736428.661,e:660822.881},
+  {name:'1E',n:2736741.349,e:660616.639},
+  {name:'2E',n:2736703.448,e:660638.356},
+  {name:'3E',n:2736671.335,e:660668.515},
+  {name:'4E',n:2736650.121,e:660699.572},
+  {name:'5E',n:2736636.938,e:660729.785},
+  {name:'6E',n:2736628.093,e:660770.996},
+  {name:'7E',n:2736628.585,e:660812.671},
+  {name:'8E',n:2736634.482,e:660841.569},
+  {name:'9E',n:2736643.571,e:660866.451},
+  {name:'10E',n:2736664.143,e:660906.471},
+  {name:'11E',n:2736684.830,e:660946.417},
+  {name:'12E',n:2736695.449,e:660971.183},
+  {name:'13E',n:2736708.233,e:660997.206},
+  {name:'14E',n:2736722.683,e:661022.247},
+  {name:'15E',n:2736739.082,e:661046.333},
+  {name:'16E',n:2736757.221,e:661068.654},
+  {name:'17E',n:2736775.703,e:661090.193},
+  {name:'AB-1D',n:2736691.328,e:660615.952},
+  {name:'1D',n:2736725.760,e:660620.683},
+  {name:'2D',n:2736765.377,e:660625.632},
+  {name:'3D-1',n:2736796.802,e:660645.252},
+  {name:'3D-2',n:2736804.890,e:660627.506},
+  {name:'4D',n:2736834.447,e:660646.973},
+  {name:'5D',n:2736864.245,e:660665.454},
+  {name:'6D',n:2736894.118,e:660692.120},
+  {name:'7D',n:2736913.046,e:660715.527},
+  {name:'8D',n:2736928.016,e:660740.300},
+  {name:'9D',n:2736940.419,e:660769.325},
+  {name:'10D',n:2736950.544,e:660813.221},
+  {name:'11D-1',n:2736939.928,e:660857.091},
+  {name:'11D-2',n:2736959.538,e:660859.115},
+  {name:'12D',n:2736944.490,e:660896.866},
+  {name:'AB-1N-1',n:2736507.483,e:660906.483},
+  {name:'AB-1N-2',n:2736537.038,e:660946.784},
+  {name:'AB-2N-1',n:2736490.131,e:660914.911},
+  {name:'AB-2N-2',n:2736518.773,e:660956.461},
+  {name:'AB-1M-1',n:2736699.800,e:660812.294},
+  {name:'AB-2M-1',n:2736649.730,e:660837.814},
+  {name:'AB-1M-2',n:2736730.669,e:660851.854},
+  {name:'AB-2M-2',n:2736679.916,e:660878.450},
+  {name:'AM-1',n:2736673.774,e:660825.182},
+  {name:'AM-2',n:2736705.744,e:660865.307}
+];
+
+// Bridge color mapping
+var MAP_BR_COLORS = {
+  'A':'#58A6FF','B':'#06D6A0','C':'#CE93D8',
+  'D':'#FF9F1C','E':'#FB923C','G':'#34D399'
+};
+
+function mapGetBrId(pierName){
+  if(pierName.endsWith('A')&&!pierName.includes('B')&&!pierName.includes('M')) return 'A';
+  if(pierName.includes('B')&&!pierName.includes('AB')) return 'B';
+  if(pierName.includes('C')) return 'C';
+  if(pierName.includes('D')&&!pierName.includes('AB')) return 'D';
+  if(pierName.includes('E')) return 'E';
+  if(pierName.includes('G')) return 'G';
+  return 'A';
+}
+
+function mapGetPierColor(pier){
+  // Color by stage progress
+  if(!PS[pier.name]) return '#334155'; // Not started - dark
+  var stages = Object.values(PS[pier.name]);
+  var hasComplete = stages.some(function(s){return s==='Complete'||s==='Inspected';});
+  var hasWip = stages.some(function(s){return s==='In Progress';});
+  var hasHold = stages.some(function(s){return s==='On Hold';});
+  if(hasComplete && !hasWip) return '#06D6A0'; // Green - complete
+  if(hasWip) return '#D4A843'; // Gold - in progress
+  if(hasHold) return '#E63946'; // Red - on hold
+  return '#334155'; // Not started
+}
+
+function mapCalcBounds(){
+  var minN=Infinity,maxN=-Infinity,minE=Infinity,maxE=-Infinity;
+  MAP_PIERS.forEach(function(p){
+    minN=Math.min(minN,p.n); maxN=Math.max(maxN,p.n);
+    minE=Math.min(minE,p.e); maxE=Math.max(maxE,p.e);
+  });
+  // Add padding
+  var padN=(maxN-minN)*0.1, padE=(maxE-minE)*0.1;
+  MAP_BOUNDS = {minN:minN-padN,maxN:maxN+padN,minE:minE-padE,maxE:maxE+padE};
+}
+
+function mapToCanvas(n, e){
+  var W = MAP_CANVAS.width, H = MAP_CANVAS.height;
+  var x = ((e - MAP_BOUNDS.minE)/(MAP_BOUNDS.maxE - MAP_BOUNDS.minE)) * W;
+  var y = H - ((n - MAP_BOUNDS.minN)/(MAP_BOUNDS.maxN - MAP_BOUNDS.minN)) * H;
+  // Apply scale and offset
+  x = (x * MAP_SCALE) + MAP_OFFSET_X;
+  y = (y * MAP_SCALE) + MAP_OFFSET_Y;
+  return {x:x, y:y};
+}
+
+function mapDraw(){
+  if(!MAP_CANVAS||!MAP_CTX||!MAP_BOUNDS) return;
+  var ctx = MAP_CTX;
+  var W = MAP_CANVAS.width, H = MAP_CANVAS.height;
+
+  // Background
+  ctx.fillStyle = '#07090d';
+  ctx.fillRect(0,0,W,H);
+
+  // Grid lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+  ctx.lineWidth = 1;
+  for(var g=0;g<10;g++){
+    var x = (W/10)*g;
+    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke();
+    var y = (H/10)*g;
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
+  }
+
+  // Draw bridge lines connecting piers of same bridge
+  var bridges = {'A':[],'B':[],'C':[],'D':[],'E':[],'G':[]};
+  MAP_PIERS.forEach(function(p){
+    var br = mapGetBrId(p.name);
+    if(bridges[br]) bridges[br].push(p);
+  });
+
+  Object.keys(bridges).forEach(function(brId){
+    var pts = bridges[brId];
+    if(pts.length < 2) return;
+    var col = MAP_BR_COLORS[brId]||'#58A6FF';
+    ctx.strokeStyle = col+'44';
+    ctx.lineWidth = 1.5/MAP_SCALE;
+    ctx.setLineDash([4,4]);
+    ctx.beginPath();
+    pts.forEach(function(p,i){
+      var pos = mapToCanvas(p.n, p.e);
+      if(i===0) ctx.moveTo(pos.x,pos.y);
+      else ctx.lineTo(pos.x,pos.y);
+    });
+    ctx.stroke();
+    ctx.setLineDash([]);
+  });
+
+  // BMs hidden per user preference
+
+  // Draw piers with blinking effect for active ones
+  var _blink = Math.sin(Date.now()/300) * 0.5 + 0.5; // 0 to 1 pulse
+  MAP_PIERS.forEach(function(p){
+    var pos = mapToCanvas(p.n, p.e);
+    var col = mapGetPierColor(p);
+    var brId = mapGetBrId(p.name);
+    var brCol = MAP_BR_COLORS[brId]||'#58A6FF';
+    var isActive = col !== '#334155';
+    var r = isActive ? 9 : 6; // Bigger circles
+
+    // Blinking outer ring for active piers
+    if(isActive){
+      ctx.globalAlpha = _blink * 0.5;
+      ctx.strokeStyle = col;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, r+5, 0, Math.PI*2);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.shadowColor = col;
+      ctx.shadowBlur = 12;
+    }
+
+    ctx.fillStyle = col;
+    ctx.strokeStyle = brCol;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, r, 0, Math.PI*2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Bridge letter inside circle
+    var brLetter = brId;
+    ctx.fillStyle = '#000';
+    ctx.font = 'bold '+Math.max(7,r*0.9)+'px system-ui';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(brLetter, pos.x, pos.y);
+
+    // Pier name below circle - always visible
+    ctx.fillStyle = '#f1f5f9';
+    ctx.font = 'bold 8px system-ui';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(p.name, pos.x, pos.y + r + 9);
+  });
+
+  // Draw user position
+  if(MAP_USER_POS){
+    var pos = mapToCanvas(MAP_USER_POS.n, MAP_USER_POS.e);
+    // Pulsing circle
+    ctx.strokeStyle = '#58A6FF';
+    ctx.lineWidth = 2;
+    ctx.globalAlpha = 0.3;
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, 16/MAP_SCALE, 0, Math.PI*2);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    // Center dot
+    ctx.fillStyle = '#58A6FF';
+    ctx.shadowColor = '#58A6FF';
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, 6/MAP_SCALE, 0, Math.PI*2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    // YOU label
+    ctx.fillStyle = '#58A6FF';
+    ctx.font = 'bold 11px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('YOU', pos.x, pos.y - 12/MAP_SCALE);
+  }
+}
+
+// Animation loop for blinking
+var MAP_ANIM = null;
+function mapStartAnim(){
+  if(MAP_ANIM) cancelAnimationFrame(MAP_ANIM);
+  function loop(){
+    mapDraw();
+    MAP_ANIM = requestAnimationFrame(loop);
+  }
+  loop();
+}
+function mapStopAnim(){
+  if(MAP_ANIM){ cancelAnimationFrame(MAP_ANIM); MAP_ANIM=null; }
+}
+
+function mapFitAll(){
+  if(!MAP_CANVAS||!MAP_BOUNDS) return;
+  MAP_SCALE = 1.0;
+  MAP_OFFSET_X = 0;
+  MAP_OFFSET_Y = 0;
+  mapDraw();
+}
+
+function mapUpdateUserPos(){
+  if(!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(function(pos){
+    var utm = bmLatLngToUtm(pos.coords.latitude, pos.coords.longitude);
+    if(utm){ MAP_USER_POS = {n:utm.N, e:utm.E}; mapDraw(); }
+  },{enableHighAccuracy:true,timeout:5000});
+}
+
+function rMp(){
+  var pg = document.getElementById('pg-mp');
+  if(!pg) return;
+
+  pg.innerHTML = '<div style="display:flex;flex-direction:column;height:100vh;background:#07090d;padding:0;">'
+  // Header
+  +'<div style="padding:12px 14px;background:linear-gradient(135deg,#0a1628,#0d2444);border-bottom:1px solid rgba(212,168,67,0.2);display:flex;align-items:center;justify-content:space-between;">'
+  +'<div>'
+  +'<div style="font-size:11px;color:rgba(212,168,67,0.7);font-weight:700;letter-spacing:2px;">IC1 ROAD IMPROVEMENTS</div>'
+  +'<div style="font-size:17px;font-weight:900;color:#f1f5f9;">Site Map</div>'
+  +'</div>'
+  +'<div style="display:flex;gap:8px;">'
+  +'<button onclick="mapUpdateUserPos();" style="background:rgba(88,166,255,0.1);border:1px solid rgba(88,166,255,0.3);color:#58A6FF;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;font-family:inherit;">📍 My Location</button>'
+  +'<button onclick="mapFitAll();" style="background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;font-family:inherit;">⊞ Fit All</button>'
+  +'</div>'
+  +'</div>'
+  // Canvas
+  +'<canvas id="map-canvas" style="flex:1;width:100%;touch-action:none;"></canvas>'
+  // Legend
+  +'<div style="padding:10px 14px;background:#0a1628;border-top:1px solid rgba(255,255,255,0.06);display:flex;gap:12px;flex-wrap:wrap;">'
+  +'<div style="display:flex;align-items:center;gap:5px;"><div style="width:10px;height:10px;border-radius:50%;background:#06D6A0;"></div><span style="font-size:10px;color:var(--dimL);">Complete</span></div>'
+  +'<div style="display:flex;align-items:center;gap:5px;"><div style="width:10px;height:10px;border-radius:50%;background:#D4A843;"></div><span style="font-size:10px;color:var(--dimL);">In Progress</span></div>'
+  +'<div style="display:flex;align-items:center;gap:5px;"><div style="width:10px;height:10px;border-radius:50%;background:#E63946;"></div><span style="font-size:10px;color:var(--dimL);">On Hold</span></div>'
+  +'<div style="display:flex;align-items:center;gap:5px;"><div style="width:10px;height:10px;border-radius:50%;background:#334155;"></div><span style="font-size:10px;color:var(--dimL);">Not Started</span></div>'
+
+  +'</div>'
+  +'</div>';
+
+  // Setup canvas
+  setTimeout(function(){
+    MAP_CANVAS = document.getElementById('map-canvas');
+    if(!MAP_CANVAS) return;
+    MAP_CTX = MAP_CANVAS.getContext('2d');
+    MAP_CANVAS.width = MAP_CANVAS.offsetWidth;
+    MAP_CANVAS.height = MAP_CANVAS.offsetHeight;
+    mapCalcBounds();
+    mapFitAll();
+    mapSetupTouch();
+    mapUpdateUserPos();
+    mapStartAnim();
+  },100);
+}
+
+function mapSetupTouch(){
+  if(!MAP_CANVAS) return;
+
+  // Touch drag
+  MAP_CANVAS.addEventListener('touchstart', function(e){
+    e.preventDefault();
+    if(e.touches.length===1){
+      MAP_DRAG = {active:true, startX:e.touches[0].clientX, startY:e.touches[0].clientY, startOX:MAP_OFFSET_X, startOY:MAP_OFFSET_Y};
+    } else if(e.touches.length===2){
+      var dx=e.touches[0].clientX-e.touches[1].clientX;
+      var dy=e.touches[0].clientY-e.touches[1].clientY;
+      MAP_PINCH = {active:true, startDist:Math.sqrt(dx*dx+dy*dy), startScale:MAP_SCALE};
+      MAP_DRAG.active = false;
+    }
+  },{passive:false});
+
+  MAP_CANVAS.addEventListener('touchmove', function(e){
+    e.preventDefault();
+    if(MAP_DRAG.active && e.touches.length===1){
+      MAP_OFFSET_X = MAP_DRAG.startOX + (e.touches[0].clientX - MAP_DRAG.startX);
+      MAP_OFFSET_Y = MAP_DRAG.startOY + (e.touches[0].clientY - MAP_DRAG.startY);
+      mapDraw();
+    } else if(MAP_PINCH.active && e.touches.length===2){
+      var dx=e.touches[0].clientX-e.touches[1].clientX;
+      var dy=e.touches[0].clientY-e.touches[1].clientY;
+      var dist=Math.sqrt(dx*dx+dy*dy);
+      MAP_SCALE = Math.max(0.5, Math.min(8, MAP_PINCH.startScale*(dist/MAP_PINCH.startDist)));
+      mapDraw();
+    }
+  },{passive:false});
+
+  MAP_CANVAS.addEventListener('touchend', function(){
+    MAP_DRAG.active = false;
+    MAP_PINCH.active = false;
+  });
+
+  // Tap to identify pier
+  MAP_CANVAS.addEventListener('click', function(e){
+    var rect = MAP_CANVAS.getBoundingClientRect();
+    var cx = e.clientX - rect.left;
+    var cy = e.clientY - rect.top;
+    // Find nearest pier to tap
+    var nearest=null, nearestDist=Infinity;
+    MAP_PIERS.forEach(function(p){
+      var pos = mapToCanvas(p.n, p.e);
+      var d = Math.sqrt(Math.pow(pos.x-cx,2)+Math.pow(pos.y-cy,2));
+      if(d<nearestDist){nearestDist=d;nearest=p;}
+    });
+    if(nearest && nearestDist < 20){
+      mapShowPierInfo(nearest);
+    }
+  });
+}
+
+function mapShowPierInfo(pier){
+  var col = mapGetPierColor(pier);
+  var stages = PS[pier.name]||{};
+  var stageList = STAGES||[];
+  var h = '<div style="font-size:16px;font-weight:900;color:#f1f5f9;margin-bottom:4px;">'+pier.name+'</div>';
+  h += '<div style="font-size:11px;color:var(--dimL);margin-bottom:12px;">Easting: '+pier.e.toFixed(3)+' | Northing: '+pier.n.toFixed(3)+'</div>';
+  if(stageList.length){
+    stageList.forEach(function(s){
+      var st = stages[s.id]||'Not Started';
+      var stCol = st==='Complete'||st==='Inspected'?'#06D6A0':st==='In Progress'?'#D4A843':st==='On Hold'?'#E63946':'#64748B';
+      h += '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05);">';
+      h += '<span style="font-size:12px;color:var(--text);">'+s.name+'</span>';
+      h += '<span style="font-size:11px;font-weight:700;color:'+stCol+';">'+st+'</span>';
+      h += '</div>';
+    });
+  } else {
+    h += '<div style="color:var(--dimL);font-size:12px;">No stage data</div>';
+  }
+  h += '<button onclick="closeModal();" style="width:100%;margin-top:12px;padding:10px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--dimL);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Close</button>';
+  openModal(h);
 }
 
 </script>
