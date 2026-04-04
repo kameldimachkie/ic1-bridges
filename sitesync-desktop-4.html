@@ -1,0 +1,1796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SiteSync Desktop — IC1 Road Improvements</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+  :root {
+    --gold: #D4A843;
+    --gold-dim: rgba(212,168,67,0.15);
+    --blue: #38BDF8;
+    --orange: #FB923C;
+    --green: #06D6A0;
+    --red: #E63946;
+    --bg: #07090d;
+    --bg2: #0a1628;
+    --bg3: #0d1f3c;
+    --panel: #111827;
+    --border: rgba(255,255,255,0.08);
+    --border-gold: rgba(212,168,67,0.25);
+    --text: #f1f5f9;
+    --dim: rgba(255,255,255,0.5);
+    --dimL: rgba(255,255,255,0.35);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── TOP BAR ─────────────────────────────────────── */
+  #topbar {
+    height: 54px;
+    background: linear-gradient(135deg, #0a1628, #0d2444);
+    border-bottom: 1px solid var(--border-gold);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    gap: 20px;
+    flex-shrink: 0;
+    position: relative;
+  }
+
+  #topbar .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  #topbar .logo-hex {
+    width: 36px;
+    height: 36px;
+  }
+
+  #topbar .logo-text {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--gold);
+    letter-spacing: 3px;
+  }
+
+  #topbar .logo-sub {
+    font-size: 9px;
+    color: var(--dimL);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-top: -4px;
+  }
+
+  #topbar .divider {
+    width: 1px;
+    height: 28px;
+    background: var(--border-gold);
+  }
+
+  #topbar .project-info {
+    flex: 1;
+  }
+
+  #topbar .project-name {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: 1px;
+  }
+
+  #topbar .project-sub {
+    font-size: 10px;
+    color: var(--dimL);
+    letter-spacing: 1px;
+  }
+
+  #topbar .nav-tabs {
+    display: flex;
+    gap: 4px;
+  }
+
+  .nav-tab {
+    padding: 6px 16px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--dimL);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+
+  .nav-tab:hover {
+    color: var(--text);
+    background: rgba(255,255,255,0.05);
+  }
+
+  .nav-tab.active {
+    color: var(--gold);
+    border-color: var(--border-gold);
+    background: var(--gold-dim);
+  }
+
+  #topbar .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .progress-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(6,214,160,0.1);
+    border: 1px solid rgba(6,214,160,0.3);
+    border-radius: 20px;
+    padding: 4px 12px;
+  }
+
+  .progress-pill .pct {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--green);
+  }
+
+  .progress-pill .label {
+    font-size: 10px;
+    color: var(--dimL);
+  }
+
+  #clock {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--dimL);
+    letter-spacing: 1px;
+  }
+
+  /* ── MAIN LAYOUT ─────────────────────────────────── */
+  #main {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+
+  /* ── LEFT SIDEBAR ────────────────────────────────── */
+  #sidebar {
+    width: 280px;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .sidebar-section {
+    border-bottom: 1px solid var(--border);
+    padding: 14px 16px;
+  }
+
+  .sidebar-title {
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--gold);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  /* KPI cards */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .kpi-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+  }
+
+  .kpi-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--gold);
+  }
+
+  .kpi-label {
+    font-size: 9px;
+    color: var(--dimL);
+    margin-top: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* Bridge list */
+  .bridge-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px 16px;
+  }
+
+  .bridge-item {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .bridge-item:hover {
+    border-color: rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.04);
+  }
+
+  .bridge-item.active {
+    border-color: var(--gold);
+    background: var(--gold-dim);
+  }
+
+  .bridge-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .bridge-name {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    flex: 1;
+  }
+
+  .bridge-pct {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+
+  .bridge-bar-wrap {
+    height: 3px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 2px;
+    margin-top: 6px;
+    overflow: hidden;
+  }
+
+  .bridge-bar {
+    height: 100%;
+    border-radius: 2px;
+  }
+
+  /* ── MAP AREA ────────────────────────────────────── */
+  #map-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #map-toolbar {
+    height: 40px;
+    background: rgba(10,22,40,0.9);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .map-tool-btn {
+    padding: 4px 12px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--dimL);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.15s;
+    letter-spacing: 0.5px;
+  }
+
+  .map-tool-btn:hover {
+    color: var(--text);
+    border-color: rgba(255,255,255,0.2);
+  }
+
+  .map-tool-btn.active {
+    color: var(--gold);
+    border-color: var(--border-gold);
+    background: var(--gold-dim);
+  }
+
+  .tool-sep {
+    width: 1px;
+    height: 20px;
+    background: var(--border);
+    margin: 0 4px;
+  }
+
+  #map-canvas-wrap {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #map-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    cursor: grab;
+  }
+
+  #map-canvas:active { cursor: grabbing; }
+
+  /* ── MAP OVERLAY ELEMENTS ────────────────────────── */
+  #map-coords {
+    position: absolute;
+    bottom: 10px;
+    left: 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: rgba(255,255,255,0.4);
+    pointer-events: none;
+  }
+
+  #map-scale-bar {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    pointer-events: none;
+  }
+
+  #map-zoom-level {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--dimL);
+    background: rgba(7,9,13,0.7);
+    padding: 4px 8px;
+    border-radius: 4px;
+    pointer-events: none;
+  }
+
+  /* ── RIGHT PANEL ─────────────────────────────────── */
+  #right-panel {
+    width: 300px;
+    background: var(--bg2);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex-shrink: 0;
+    transition: width 0.3s;
+  }
+
+  #right-panel.collapsed {
+    width: 0;
+    border-left: none;
+  }
+
+  .panel-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .panel-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: 1px;
+  }
+
+  .panel-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px 16px;
+  }
+
+  .panel-content::-webkit-scrollbar { width: 4px; }
+  .panel-content::-webkit-scrollbar-track { background: transparent; }
+  .panel-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+  /* Stage items */
+  .stage-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+
+  .stage-name {
+    font-size: 12px;
+    color: var(--text);
+  }
+
+  .stage-status {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+  }
+
+  /* Legend */
+  #map-legend {
+    position: absolute;
+    bottom: 40px;
+    left: 14px;
+    background: rgba(7,9,13,0.88);
+    border: 1px solid var(--border-gold);
+    border-radius: 8px;
+    padding: 10px 12px;
+    pointer-events: none;
+  }
+
+  .legend-title {
+    font-size: 8px;
+    font-weight: 800;
+    color: var(--gold);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 7px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+
+  .legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .legend-line {
+    width: 18px;
+    height: 2px;
+    border-radius: 1px;
+    flex-shrink: 0;
+  }
+
+  .legend-label {
+    font-size: 10px;
+    color: var(--dim);
+  }
+
+  /* Scrollbar */
+  * { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.1) transparent; }
+
+  /* Ticker */
+  #ticker-bar {
+    height: 28px;
+    background: rgba(0,0,0,0.4);
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    flex-shrink: 0;
+    gap: 0;
+  }
+
+  #ticker-label {
+    font-size: 9px;
+    font-weight: 800;
+    color: var(--gold);
+    letter-spacing: 2px;
+    padding: 0 12px;
+    white-space: nowrap;
+    border-right: 1px solid var(--border-gold);
+    height: 100%;
+    display: flex;
+    align-items: center;
+  }
+
+  #ticker-content {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+  }
+
+  #ticker-scroll {
+    display: flex;
+    gap: 40px;
+    animation: ticker 30s linear infinite;
+    white-space: nowrap;
+  }
+
+  @keyframes ticker {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+
+  .ticker-item {
+    font-size: 11px;
+    color: var(--dimL);
+    white-space: nowrap;
+  }
+
+  .ticker-item span {
+    color: var(--gold);
+    font-weight: 600;
+  }
+
+  /* Pier info popup */
+  #pier-popup {
+    position: absolute;
+    top: 50px;
+    right: 20px;
+    width: 260px;
+    background: linear-gradient(135deg, #0a1628, #0d1f3c);
+    border: 1px solid var(--border-gold);
+    border-radius: 12px;
+    padding: 16px;
+    display: none;
+    z-index: 100;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  }
+
+  #pier-popup .close-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    color: var(--dimL);
+    font-size: 16px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div class="logo">
+    <svg class="logo-hex" viewBox="0 0 40 40">
+      <polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="none" stroke="#D4A843" stroke-width="1.5"/>
+      <text x="20" y="25" text-anchor="middle" font-family="Rajdhani" font-weight="700" font-size="13" fill="#D4A843">KD</text>
+    </svg>
+    <div>
+      <div class="logo-text">SITESYNC</div>
+      <div class="logo-sub">Construction Intelligence</div>
+    </div>
+  </div>
+  <div class="divider"></div>
+  <div class="project-info">
+    <div class="project-name">IC1 Road Improvements — Interchange 1</div>
+    <div class="project-sub">Diriyah, Riyadh · Khatib & Alami</div>
+  </div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="switchTab('map')">🗺 Map</button>
+    <button class="nav-tab" onclick="switchTab('progress')">📊 Progress</button>
+    <button class="nav-tab" onclick="switchTab('plan')">📐 Plan</button>
+    <button class="nav-tab" onclick="switchTab('docs')">📋 Docs</button>
+    <button class="nav-tab" onclick="switchTab('admin')" style="border-color:rgba(231,76,60,0.4);color:#E74C3C;">🛡 Admin</button>
+  </div>
+  <div class="divider"></div>
+  <div class="topbar-right">
+    <div style="display:flex;align-items:center;gap:6px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:20px;padding:4px 10px;">
+      <div id="sync-dot" style="width:7px;height:7px;border-radius:50%;background:#D4A843;transition:all 0.3s;"></div>
+      <span id="sync-label" style="font-size:10px;color:var(--dimL);">Connecting...</span>
+    </div>
+    <div class="progress-pill">
+      <div class="pct" id="overall-pct">—</div>
+      <div class="label">Overall</div>
+    </div>
+    <div id="clock"></div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+
+  <!-- SIDEBAR -->
+  <div id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">Project KPIs</div>
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-value" style="color:#06D6A0" id="kpi-piers-done">0</div>
+          <div class="kpi-label">Piers Active</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value" id="kpi-piers-total">88</div>
+          <div class="kpi-label">Total Piers</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value" style="color:#D4A843" id="kpi-bridges">6</div>
+          <div class="kpi-label">Bridges</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value" style="color:#38BDF8" id="kpi-bms">75</div>
+          <div class="kpi-label">Control Pts</div>
+        </div>
+        <div class="kpi-card" style="grid-column:1/-1;">
+          <div class="kpi-value" style="color:#CE93D8;font-size:16px;" id="kpi-photos">—</div>
+          <div class="kpi-label">Photos Synced</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-title">Bridges</div>
+    </div>
+    <div class="bridge-list" id="bridge-list"></div>
+  </div>
+
+  <!-- MAP AREA -->
+  <div id="map-area">
+    <div id="map-toolbar">
+      <button class="map-tool-btn active" onclick="mapFitAll()">⊞ Fit All</button>
+      <div class="tool-sep"></div>
+      <button class="map-tool-btn" id="btn-layer-roads" onclick="toggleLayer('roads')">🛣 Roads</button>
+      <button class="map-tool-btn" id="btn-layer-culverts" onclick="toggleLayer('culverts')">💧 Culverts</button>
+      <button class="map-tool-btn" id="btn-layer-bms" onclick="toggleLayer('bms')">📍 BMs</button>
+      <button class="map-tool-btn" id="btn-layer-offset" onclick="toggleLayer('offset')">↔ 17m Offset</button>
+      <div class="tool-sep"></div>
+      <button class="map-tool-btn" onclick="mapZoom(1.3)">＋</button>
+      <button class="map-tool-btn" onclick="mapZoom(0.77)">－</button>
+      <div class="tool-sep"></div>
+      <button class="map-tool-btn active" id="btn-panoramic" onclick="togglePanoramic();">🌐 Panoramic</button>
+      <div class="tool-sep"></div>
+      <span style="font-size:10px;color:var(--dimL);margin-left:4px;">Click pier for details · Scroll to zoom · Drag to pan</span>
+    </div>
+
+    <div id="map-canvas-wrap">
+      <canvas id="map-canvas"></canvas>
+
+      <!-- Legend -->
+      <div id="map-legend">
+        <div class="legend-title">Legend</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#06D6A0;box-shadow:0 0 4px #06D6A0;"></div><span class="legend-label">Complete</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:#D4A843;box-shadow:0 0 4px #D4A843;"></div><span class="legend-label">In Progress</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:#E63946;box-shadow:0 0 4px #E63946;"></div><span class="legend-label">On Hold</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:#334155;"></div><span class="legend-label">Not Started</span></div>
+        <div style="height:6px;border-top:1px solid rgba(255,255,255,0.06);margin:6px 0;"></div>
+        <div class="legend-item"><div class="legend-line" style="background:#38BDF8;box-shadow:0 0 4px #38BDF8;"></div><span class="legend-label">King Khalid Rd</span></div>
+        <div class="legend-item"><div class="legend-line" style="background:#FB923C;box-shadow:0 0 4px #FB923C;"></div><span class="legend-label">Western Ring Rd</span></div>
+        <div class="legend-item"><div class="legend-line" style="background:#A78BFA;box-shadow:0 0 4px #A78BFA;"></div><span class="legend-label">Prince Sattam Rd</span></div>
+        <div class="legend-item"><div class="legend-line" style="background:#34D399;box-shadow:0 0 4px #34D399;"></div><span class="legend-label">Ibn Saud Rd</span></div>
+        <div class="legend-item"><div class="legend-line" style="background:#7DD3FC;"></div><span class="legend-label">Culvert Flow</span></div>
+      </div>
+
+      <!-- Coordinates display -->
+      <div id="map-coords">N: — · E: —</div>
+      <div id="map-zoom-level">100%</div>
+
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL - Pier Details -->
+  <div id="right-panel" class="collapsed">
+    <div class="panel-header">
+      <div class="panel-title" id="panel-pier-name">Pier Details</div>
+      <button onclick="closePanel();" style="background:none;border:none;color:var(--dimL);font-size:16px;cursor:pointer;">✕</button>
+    </div>
+    <div class="panel-content" id="panel-content"></div>
+  </div>
+
+</div>
+
+<!-- TICKER BAR -->
+<div id="ticker-bar">
+  <div id="ticker-label">LIVE</div>
+  <div id="ticker-content">
+    <div id="ticker-scroll">
+      <span class="ticker-item">IC1 Road Improvements · Interchange 1 · Diriyah, Riyadh · Khatib & Alami</span>
+      <span class="ticker-item">🌉 <span>6 Bridges</span> · 88 Piers & Abutments · UTM Zone 38N</span>
+      <span class="ticker-item">🛣 King Khalid Road · Western Ring Road · 3 Pipe Culverts</span>
+      <span class="ticker-item">📐 Head of Surveying: <span>K. Dimachkie</span> · SiteSync v3.2</span>
+      <!-- duplicated for seamless loop -->
+      <span class="ticker-item">IC1 Road Improvements · Interchange 1 · Diriyah, Riyadh · Khatib & Alami</span>
+      <span class="ticker-item">🌉 <span>6 Bridges</span> · 88 Piers & Abutments · UTM Zone 38N</span>
+      <span class="ticker-item">🛣 King Khalid Road · Western Ring Road · 3 Pipe Culverts</span>
+      <span class="ticker-item">📐 Head of Surveying: <span>K. Dimachkie</span> · SiteSync v3.2</span>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN MODAL -->
+<div id="admin-modal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.8);backdrop-filter:blur(4px);overflow-y:auto;">
+  <div style="max-width:600px;margin:40px auto;background:#0a1628;border:1px solid rgba(231,76,60,0.3);border-radius:16px;padding:24px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <div>
+        <div style="font-family:Rajdhani,sans-serif;font-size:22px;font-weight:700;color:#f1f5f9;">🛡 Admin Panel</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.4);">Restricted Access — Desktop</div>
+      </div>
+      <button onclick="closeAdmin();" style="background:rgba(255,255,255,0.08);border:none;color:rgba(255,255,255,0.5);font-size:20px;width:36px;height:36px;border-radius:50%;cursor:pointer;">✕</button>
+    </div>
+    <div id="admin-content"></div>
+  </div>
+</div>
+
+<script>
+var _adminUnlocked = false;
+var _adminWeights = {
+  pre: 7, bridges: 83.4, roads: 6, fillSlope: 0.7, utilities: 2.9
+};
+
+function openAdmin(){
+  document.getElementById('admin-modal').style.display='block';
+  renderAdminContent();
+}
+
+function closeAdmin(){
+  document.getElementById('admin-modal').style.display='none';
+}
+
+function renderAdminContent(){
+  var el = document.getElementById('admin-content');
+  if(!_adminUnlocked){
+    el.innerHTML = `
+      <div style="text-align:center;padding:20px;">
+        <div style="font-size:40px;margin-bottom:12px;">🔒</div>
+        <div style="font-size:14px;color:rgba(255,255,255,0.7);margin-bottom:16px;">Enter admin password</div>
+        <input type="password" id="admin-pw-input" placeholder="Password"
+          style="width:100%;padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:#f1f5f9;font-size:14px;text-align:center;outline:none;margin-bottom:8px;">
+        <div id="admin-pw-err" style="font-size:11px;color:#E63946;min-height:16px;margin-bottom:8px;"></div>
+        <button onclick="adminUnlock();" style="width:100%;padding:12px;background:#E74C3C;border:none;border-radius:8px;color:#fff;font-weight:700;font-size:14px;cursor:pointer;font-family:Inter,sans-serif;">Unlock Admin</button>
+      </div>`;
+    setTimeout(function(){
+      var inp = document.getElementById('admin-pw-input');
+      if(inp){ inp.focus(); inp.addEventListener('keydown',function(e){ if(e.key==='Enter') adminUnlock(); }); }
+    },100);
+    return;
+  }
+
+  // Unlocked content
+  el.innerHTML = `
+    <div style="display:flex;gap:8px;margin-bottom:16px;">
+      <div style="background:rgba(231,76,60,0.1);border:1px solid rgba(231,76,60,0.2);border-radius:8px;padding:6px 12px;flex:1;text-align:center;font-size:11px;color:#E74C3C;">Admin session active</div>
+      <button onclick="_adminUnlocked=false;renderAdminContent();" style="padding:6px 14px;border-radius:8px;border:1px solid rgba(231,76,60,0.3);background:transparent;color:#E74C3C;font-size:11px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;">🔒 Lock</button>
+    </div>
+
+    <!-- Project weights section -->
+    <div style="background:rgba(212,168,67,0.06);border:1px solid rgba(212,168,67,0.2);border-radius:10px;padding:14px;margin-bottom:14px;">
+      <div style="font-size:11px;font-weight:700;color:#D4A843;letter-spacing:1px;text-transform:uppercase;margin-bottom:12px;">⚖️ Project Component Weights</div>
+      <div id="weights-form"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.06);">
+        <div style="font-size:12px;color:rgba(255,255,255,0.5);">Total: <span id="weights-total" style="font-weight:700;color:#06D6A0;">100%</span></div>
+        <button onclick="saveWeights();" style="padding:8px 16px;border-radius:8px;background:#D4A843;border:none;color:#000;font-weight:700;font-size:12px;cursor:pointer;font-family:Inter,sans-serif;">💾 Save Weights</button>
+      </div>
+    </div>
+
+    <!-- Bridge Stage weights section -->
+    <div style="background:rgba(88,166,255,0.04);border:1px solid rgba(88,166,255,0.15);border-radius:10px;padding:14px;margin-bottom:14px;">
+      <div style="font-size:11px;font-weight:700;color:#58A6FF;letter-spacing:1px;text-transform:uppercase;margin-bottom:12px;">🏗️ Bridge Stage Weights</div>
+      <div id="stage-weights-form"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.06);">
+        <div style="font-size:12px;color:rgba(255,255,255,0.5);">Total: <span id="stage-weights-total" style="font-weight:700;color:#06D6A0;">100%</span></div>
+        <button onclick="saveStageWeights();" style="padding:8px 16px;border-radius:8px;background:#58A6FF;border:none;color:#000;font-weight:700;font-size:12px;cursor:pointer;font-family:Inter,sans-serif;">💾 Save Stage Weights</button>
+      </div>
+    </div>
+
+    <!-- Road Activities weights section -->
+    <div style="background:rgba(167,139,250,0.04);border:1px solid rgba(167,139,250,0.15);border-radius:10px;padding:14px;margin-bottom:14px;">
+      <div style="font-size:11px;font-weight:700;color:#A78BFA;letter-spacing:1px;text-transform:uppercase;margin-bottom:12px;">🛣️ Road Activity Weights</div>
+      <div id="road-weights-form"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.06);">
+        <div style="font-size:12px;color:rgba(255,255,255,0.5);">Total: <span id="road-weights-total" style="font-weight:700;color:#06D6A0;">100%</span></div>
+        <button onclick="saveRoadWeights();" style="padding:8px 16px;border-radius:8px;background:#A78BFA;border:none;color:#000;font-weight:700;font-size:12px;cursor:pointer;font-family:Inter,sans-serif;">💾 Save Road Weights</button>
+      </div>
+    </div>
+
+    <!-- User PINs section -->
+    <div style="background:rgba(88,166,255,0.06);border:1px solid rgba(88,166,255,0.2);border-radius:10px;padding:14px;">
+      <div style="font-size:11px;font-weight:700;color:#58A6FF;letter-spacing:1px;text-transform:uppercase;margin-bottom:12px;">🔑 User PINs</div>
+      <div id="pins-form"></div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <input type="text" id="new-user-name" placeholder="New username..."
+          style="flex:1;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:#f1f5f9;font-size:12px;outline:none;font-family:Inter,sans-serif;">
+        <input type="text" id="new-user-pin" placeholder="PIN"
+          style="width:90px;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:#f1f5f9;font-size:12px;outline:none;font-family:Inter,sans-serif;">
+        <button onclick="addUser();" style="padding:8px 14px;border-radius:8px;background:#58A6FF;border:none;color:#000;font-weight:700;font-size:12px;cursor:pointer;font-family:Inter,sans-serif;">+ Add</button>
+      </div>
+      <button onclick="savePins();" style="width:100%;margin-top:8px;padding:10px;border-radius:8px;background:rgba(88,166,255,0.1);border:1px solid rgba(88,166,255,0.3);color:#58A6FF;font-weight:700;font-size:12px;cursor:pointer;font-family:Inter,sans-serif;">💾 Save All PINs to Firebase</button>
+    </div>`;
+
+  renderWeightsForm();
+  renderStageWeightsForm();
+  renderRoadWeightsForm();
+  renderPinsForm();
+}
+
+function adminUnlock(){
+  var inp = document.getElementById('admin-pw-input');
+  var err = document.getElementById('admin-pw-err');
+  var pw = inp ? inp.value : '';
+  var correct = localStorage.getItem('ic1_adminpw')||'IC1@Setup';
+  if(pw === correct){
+    _adminUnlocked = true;
+    renderAdminContent();
+  } else {
+    if(err) err.textContent = '❌ Incorrect password';
+    if(inp){ inp.value=''; inp.focus(); }
+  }
+}
+
+// Stage weights
+var _stageWeights = [
+  {id:'PRB',name:'Probing',w:2},
+  {id:'PIL',name:'Piling',w:18},
+  {id:'EXC',name:'Excavation',w:5},
+  {id:'BLD',name:'Blinding',w:3},
+  {id:'FRB',name:'Foundation Rebar',w:8},
+  {id:'FRC',name:'Foundation Concrete',w:10},
+  {id:'STR',name:'Pier Structure',w:22},
+  {id:'BRG',name:'Bearings',w:5},
+  {id:'GRD',name:'Girder Supply',w:14},
+  {id:'ERE',name:'Girder Erection',w:9}
+];
+
+// Road activity weights
+var _roadWeights = [
+  {id:'DEM',name:'Demolition & Clearing',w:3},
+  {id:'EAR',name:'Earthworks',w:7},
+  {id:'SUB',name:'Sub-base',w:8},
+  {id:'BAS',name:'Base Course',w:12.8},
+  {id:'ASB',name:'Asphalt Binder Course',w:11},
+  {id:'ASW',name:'Asphalt Wearing Course',w:12},
+  {id:'CUR',name:'Curb & Kerb',w:14.8},
+  {id:'SID',name:'Sidewalk Concrete',w:18.7},
+  {id:'DRN',name:'Drainage',w:4},
+  {id:'MRK',name:'Road Markings & Lighting',w:8},
+  {id:'FIL',name:'Fill Slope Between Abutments',w:0.7}
+];
+
+function renderRoadWeightsForm(){
+  var el = document.getElementById('road-weights-form');
+  if(!el) return;
+  try{
+    var stored = JSON.parse(localStorage.getItem('ic1_road_weights')||'null');
+    if(stored) _roadWeights = stored;
+  }catch(e){}
+  var h = '';
+  _roadWeights.forEach(function(s){
+    h += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">';
+    h += '<div style="flex:1;font-size:12px;color:rgba(255,255,255,0.7);">'+s.name+'</div>';
+    h += '<input type="number" id="rw-'+s.id+'" value="'+s.w+'" min="0" max="100" step="0.1" ';
+    h += 'oninput="updateRoadWeightsTotal();" ';
+    h += 'style="width:70px;padding:6px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:#A78BFA;font-size:13px;font-weight:700;text-align:center;outline:none;font-family:JetBrains Mono,monospace;">';
+    h += '<span style="font-size:12px;color:rgba(255,255,255,0.4);">%</span>';
+    h += '</div>';
+  });
+  el.innerHTML = h;
+  updateRoadWeightsTotal();
+}
+
+function updateRoadWeightsTotal(){
+  var total = 0;
+  _roadWeights.forEach(function(s){
+    var el = document.getElementById('rw-'+s.id);
+    if(el) total += parseFloat(el.value)||0;
+  });
+  total = Math.round(total*10)/10;
+  var el = document.getElementById('road-weights-total');
+  if(el){
+    el.textContent = total+'%';
+    el.style.color = Math.abs(total-100)<0.1 ? '#06D6A0' : '#E63946';
+  }
+}
+
+function saveRoadWeights(){
+  _roadWeights.forEach(function(s){
+    var el = document.getElementById('rw-'+s.id);
+    if(el) s.w = parseFloat(el.value)||0;
+  });
+  localStorage.setItem('ic1_road_weights', JSON.stringify(_roadWeights));
+  if(FB_DB){
+    FB_DB.ref('ic1_bridges/ROAD_WEIGHTS').set(_roadWeights)
+      .then(function(){ showToast('✅ Road weights saved & synced!'); })
+      .catch(function(){ showToast('✅ Road weights saved locally'); });
+  } else {
+    showToast('✅ Road weights saved locally');
+  }
+}
+
+function renderStageWeightsForm(){
+  var el = document.getElementById('stage-weights-form');
+  if(!el) return;
+  // Load from localStorage if saved
+  try{
+    var stored = JSON.parse(localStorage.getItem('ic1_stage_weights')||'null');
+    if(stored) _stageWeights = stored;
+  }catch(e){}
+  var h = '';
+  _stageWeights.forEach(function(s){
+    h += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">';
+    h += '<div style="flex:1;font-size:12px;color:rgba(255,255,255,0.7);">'+s.name+'</div>';
+    h += '<input type="number" id="sw-'+s.id+'" value="'+s.w+'" min="0" max="100" step="1" ';
+    h += 'oninput="updateStageWeightsTotal();" ';
+    h += 'style="width:70px;padding:6px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:#58A6FF;font-size:13px;font-weight:700;text-align:center;outline:none;font-family:JetBrains Mono,monospace;">';
+    h += '<span style="font-size:12px;color:rgba(255,255,255,0.4);">%</span>';
+    h += '</div>';
+  });
+  el.innerHTML = h;
+  updateStageWeightsTotal();
+}
+
+function updateStageWeightsTotal(){
+  var total = 0;
+  _stageWeights.forEach(function(s){
+    var el = document.getElementById('sw-'+s.id);
+    if(el) total += parseFloat(el.value)||0;
+  });
+  total = Math.round(total*10)/10;
+  var el = document.getElementById('stage-weights-total');
+  if(el){
+    el.textContent = total+'%';
+    el.style.color = Math.abs(total-100)<0.1 ? '#06D6A0' : '#E63946';
+  }
+}
+
+function saveStageWeights(){
+  _stageWeights.forEach(function(s){
+    var el = document.getElementById('sw-'+s.id);
+    if(el) s.w = parseFloat(el.value)||0;
+  });
+  localStorage.setItem('ic1_stage_weights', JSON.stringify(_stageWeights));
+  if(FB_DB){
+    FB_DB.ref('ic1_bridges/STAGE_WEIGHTS').set(_stageWeights)
+      .then(function(){ showToast('✅ Stage weights saved & synced!'); })
+      .catch(function(){ showToast('✅ Stage weights saved locally'); });
+  } else {
+    showToast('✅ Stage weights saved locally');
+  }
+}
+
+function renderWeightsForm(){
+  var el = document.getElementById('weights-form');
+  if(!el) return;
+  // Load from localStorage
+  try{
+    var stored = JSON.parse(localStorage.getItem('ic1_ws_weights')||'null');
+    if(stored) _adminWeights = stored;
+  }catch(e){}
+
+  var labels = {
+    pre:'Preliminary Works', bridges:'Bridge Works',
+    roads:'Roads (Total)', fillSlope:'Fill Slope', utilities:'Utilities'
+  };
+  var h = '';
+  Object.keys(_adminWeights).forEach(function(k){
+    h += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">';
+    h += '<div style="flex:1;font-size:12px;color:rgba(255,255,255,0.7);">'+labels[k]+'</div>';
+    h += '<input type="number" id="w-'+k+'" value="'+_adminWeights[k]+'" min="0" max="100" step="0.1" ';
+    h += 'oninput="updateWeightsTotal();" ';
+    h += 'style="width:80px;padding:6px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:#D4A843;font-size:13px;font-weight:700;text-align:center;outline:none;font-family:JetBrains Mono,monospace;">';
+    h += '<span style="font-size:12px;color:rgba(255,255,255,0.4);">%</span>';
+    h += '</div>';
+  });
+  el.innerHTML = h;
+  updateWeightsTotal();
+}
+
+function updateWeightsTotal(){
+  var total = 0;
+  Object.keys(_adminWeights).forEach(function(k){
+    var el = document.getElementById('w-'+k);
+    if(el) total += parseFloat(el.value)||0;
+  });
+  total = Math.round(total*10)/10;
+  var el = document.getElementById('weights-total');
+  if(el){
+    el.textContent = total+'%';
+    el.style.color = Math.abs(total-100)<0.1 ? '#06D6A0' : '#E63946';
+  }
+}
+
+function saveWeights(){
+  Object.keys(_adminWeights).forEach(function(k){
+    var el = document.getElementById('w-'+k);
+    if(el) _adminWeights[k] = parseFloat(el.value)||0;
+  });
+  localStorage.setItem('ic1_ws_weights', JSON.stringify(_adminWeights));
+  // Push to Firebase
+  if(FB_DB){
+    FB_DB.ref('ic1_bridges/WEIGHTS').set(_adminWeights)
+      .then(function(){ showToast('✅ Weights saved & synced!'); })
+      .catch(function(){ showToast('✅ Weights saved locally'); });
+  } else {
+    showToast('✅ Weights saved locally');
+  }
+}
+
+function renderPinsForm(){
+  var el = document.getElementById('pins-form');
+  if(!el) return;
+  var pins = {};
+  try{ pins = JSON.parse(localStorage.getItem('ic1_user_pins')||'{}'); }catch(e){}
+  if(FB_DB){
+    FB_DB.ref('ic1_bridges/USER_PINS').once('value').then(function(snap){
+      var fbPins = snap.val()||{};
+      Object.assign(pins, fbPins);
+      localStorage.setItem('ic1_user_pins', JSON.stringify(pins));
+      _renderPinsList(pins);
+    });
+  } else {
+    _renderPinsList(pins);
+  }
+}
+
+function _renderPinsList(pins){
+  var el = document.getElementById('pins-form');
+  if(!el) return;
+  var keys = Object.keys(pins);
+  if(keys.length===0){
+    el.innerHTML='<div style="font-size:12px;color:rgba(255,255,255,0.3);text-align:center;padding:8px;">No users yet</div>';
+    return;
+  }
+  var h = '';
+  keys.forEach(function(u){
+    var safeId = u.replace(/[^a-zA-Z0-9]/g,'_');
+    h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">';
+    h += '<div style="flex:1;font-size:12px;color:#f1f5f9;font-weight:600;">'+u+'</div>';
+    h += '<input type="text" id="pin-'+safeId+'" data-user="'+u+'" value="'+pins[u]+'" ';
+    h += 'style="width:100px;padding:6px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:#58A6FF;font-size:13px;font-weight:700;text-align:center;outline:none;font-family:JetBrains Mono,monospace;">';
+    h += '<button data-del="'+u+'" onclick="deleteUser(this.dataset.del);" style="padding:4px 8px;border-radius:6px;border:1px solid rgba(231,76,60,0.3);background:transparent;color:#E63946;font-size:11px;cursor:pointer;">✕</button>';
+    h += '</div>';
+  });
+  el.innerHTML = h;
+}
+
+function addUser(){
+  var nameEl = document.getElementById('new-user-name');
+  var pinEl = document.getElementById('new-user-pin');
+  var name = nameEl ? nameEl.value.trim() : '';
+  var pin = pinEl ? pinEl.value.trim() : '';
+  if(!name||!pin){ showToast('Enter name and PIN'); return; }
+  var pins = {};
+  try{ pins = JSON.parse(localStorage.getItem('ic1_user_pins')||'{}'); }catch(e){}
+  var safeKey = name.replace(/[.#$\[\]/]/g,'_');
+  pins[safeKey] = pin;
+  localStorage.setItem('ic1_user_pins', JSON.stringify(pins));
+  nameEl.value=''; pinEl.value='';
+  _renderPinsList(pins);
+  showToast('User added — tap Save to sync');
+}
+
+function deleteUser(name){
+  var pins = {};
+  try{ pins = JSON.parse(localStorage.getItem('ic1_user_pins')||'{}'); }catch(e){}
+  delete pins[name];
+  localStorage.setItem('ic1_user_pins', JSON.stringify(pins));
+  _renderPinsList(pins);
+}
+
+function savePins(){
+  var pins = {};
+  try{ pins = JSON.parse(localStorage.getItem('ic1_user_pins')||'{}'); }catch(e){}
+  // Also collect any edited values from inputs
+  document.querySelectorAll('#pins-form input[data-user]').forEach(function(el){
+    var u = el.getAttribute('data-user');
+    var safeKey = u.replace(/[.#$\[\]/]/g,'_');
+    if(el.value.trim()) pins[safeKey] = el.value.trim();
+  });
+  localStorage.setItem('ic1_user_pins', JSON.stringify(pins));
+  if(FB_DB){
+    firebase.database().ref('ic1_bridges/USER_PINS').set(pins)
+      .then(function(){ showToast('✅ PINs saved & synced to all devices!'); })
+      .catch(function(e){ showToast('Error: '+e.message); });
+  }
+}
+
+function showToast(msg){
+  var t = document.createElement('div');
+  t.style.cssText='position:fixed;bottom:60px;left:50%;transform:translateX(-50%);background:#1e293b;border:1px solid rgba(212,168,67,0.4);border-radius:8px;padding:10px 18px;font-size:13px;color:#f1f5f9;z-index:9999;white-space:nowrap;';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(function(){ if(t.parentNode) t.parentNode.removeChild(t); }, 3000);
+}
+
+</script>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════════
+var BRIDGES = [
+  {id:'A',col:'#58A6FF',piers:['AB-1A','1A','2A','3A','4A','5A','6A-1','6A-2','AB-2A']},
+  {id:'B',col:'#06D6A0',piers:['1B','2B','3B','4B','5B','6B','7B-1','7B-2','8B','9B-1','9B-2','10B-1','10B-2','AB-1B']},
+  {id:'C',col:'#CE93D8',piers:['AB-1C','1C','2C','3C','4C','5C-1','5C-2','6C','7C','8C','9C','10C','11C','12C','13C','14C','15C','16C','17C']},
+  {id:'D',col:'#FF9F1C',piers:['AB-1D','1D','2D','3D-1','3D-2','4D','5D','6D','7D','8D','9D','10D','11D-1','11D-2','12D']},
+  {id:'E',col:'#FB923C',piers:['1E','2E','3E','4E','5E','6E','7E','8E','9E','10E','11E','12E','13E','14E','15E','16E','17E']},
+  {id:'G',col:'#34D399',piers:['AB-1G','1G','2G','AB-2G','AB-1B']}
+];
+
+var PIERS = [
+  {name:'AB-1A',n:2737185.972,e:660444.275},{name:'1A',n:2737204.730,e:660471.588},
+  {name:'2A',n:2737213.897,e:660521.383},{name:'3A',n:2737191.538,e:660574.198},
+  {name:'4A',n:2737161.302,e:660598.843},{name:'5A',n:2737127.348,e:660625.660},
+  {name:'6A-1',n:2737100.005,e:660645.851},{name:'6A-2',n:2737105.594,e:660651.579},
+  {name:'AB-2A',n:2737075.603,e:660683.598},{name:'1B',n:2737069.522,e:660678.537},
+  {name:'2B',n:2737042.926,e:660714.416},{name:'3B',n:2737022.163,e:660751.872},
+  {name:'4B',n:2737011.102,e:660779.523},{name:'5B',n:2737000.217,e:660815.402},
+  {name:'6B',n:2736990.014,e:660843.620},{name:'7B-1',n:2736983.894,e:660879.583},
+  {name:'7B-2',n:2736966.075,e:660876.157},{name:'8B',n:2736958.825,e:660906.728},
+  {name:'9B-1',n:2736949.508,e:660941.998},{name:'9B-2',n:2736927.746,e:660925.574},
+  {name:'10B-1',n:2736925.716,e:660959.102},{name:'10B-2',n:2736913.550,e:660950.427},
+  {name:'AB-1B',n:2736904.399,e:660977.673},{name:'AB-1G',n:2736870.548,e:661010.584},
+  {name:'1G',n:2736849.920,e:661025.035},{name:'2G',n:2736828.832,e:661036.485},
+  {name:'AB-2G',n:2736802.203,e:661047.026},{name:'AB-1C',n:2736979.987,e:660569.147},
+  {name:'1C',n:2736935.715,e:660582.103},{name:'2C',n:2736891.332,e:660591.135},
+  {name:'3C',n:2736846.593,e:660596.727},{name:'4C',n:2736801.869,e:660599.931},
+  {name:'5C-1',n:2736753.218,e:660595.799},{name:'5C-2',n:2736775.303,e:660620.582},
+  {name:'6C',n:2736710.396,e:660600.309},{name:'7C',n:2736669.941,e:660606.024},
+  {name:'8C',n:2736625.276,e:660622.316},{name:'9C',n:2736596.700,e:660639.244},
+  {name:'10C',n:2736566.940,e:660664.368},{name:'11C',n:2736548.043,e:660682.757},
+  {name:'12C',n:2736525.601,e:660702.259},{name:'13C',n:2736507.222,e:660719.607},
+  {name:'14C',n:2736490.056,e:660737.446},{name:'15C',n:2736464.295,e:660768.961},
+  {name:'16C',n:2736442.773,e:660802.592},{name:'17C',n:2736428.661,e:660822.881},
+  {name:'1E',n:2736741.349,e:660616.639},{name:'2E',n:2736703.448,e:660638.356},
+  {name:'3E',n:2736671.335,e:660668.515},{name:'4E',n:2736650.121,e:660699.572},
+  {name:'5E',n:2736636.938,e:660729.785},{name:'6E',n:2736628.093,e:660770.996},
+  {name:'7E',n:2736628.585,e:660812.671},{name:'8E',n:2736634.482,e:660841.569},
+  {name:'9E',n:2736643.571,e:660866.451},{name:'10E',n:2736664.143,e:660906.471},
+  {name:'11E',n:2736684.830,e:660946.417},{name:'12E',n:2736695.449,e:660971.183},
+  {name:'13E',n:2736708.233,e:660997.206},{name:'14E',n:2736722.683,e:661022.247},
+  {name:'15E',n:2736739.082,e:661046.333},{name:'16E',n:2736757.221,e:661068.654},
+  {name:'17E',n:2736775.703,e:661090.193},{name:'AB-1D',n:2736691.328,e:660615.952},
+  {name:'1D',n:2736725.760,e:660620.683},{name:'2D',n:2736765.377,e:660625.632},
+  {name:'3D-1',n:2736796.802,e:660645.252},{name:'3D-2',n:2736804.890,e:660627.506},
+  {name:'4D',n:2736834.447,e:660646.973},{name:'5D',n:2736864.245,e:660665.454},
+  {name:'6D',n:2736894.118,e:660692.120},{name:'7D',n:2736913.046,e:660715.527},
+  {name:'8D',n:2736928.016,e:660740.300},{name:'9D',n:2736940.419,e:660769.325},
+  {name:'10D',n:2736950.544,e:660813.221},{name:'11D-1',n:2736939.928,e:660857.091},
+  {name:'11D-2',n:2736959.538,e:660859.115},{name:'12D',n:2736944.490,e:660896.866},
+  {name:'AB-1N-1',n:2736507.483,e:660906.483},{name:'AB-1N-2',n:2736537.038,e:660946.784},
+  {name:'AB-2N-1',n:2736490.131,e:660914.911},{name:'AB-2N-2',n:2736518.773,e:660956.461},
+  {name:'AB-1M-1',n:2736699.800,e:660812.294},{name:'AB-2M-1',n:2736649.730,e:660837.814},
+  {name:'AB-1M-2',n:2736730.669,e:660851.854},{name:'AB-2M-2',n:2736679.916,e:660878.450},
+  {name:'AM-1',n:2736673.774,e:660825.182},{name:'AM-2',n:2736705.744,e:660865.307}
+];
+
+var ROADS = [
+  {name:'KKR',col:'#38BDF8',pts:[
+    {n:2737267,e:660491},{n:2736905,e:660721},{n:2736784,e:660784},
+    {n:2736600,e:660888},{n:2736597,e:660890},{n:2736450,e:660962},{n:2736401,e:660988}
+  ]},
+  {name:'WRR',col:'#FB923C',pts:[
+    {n:2736234,e:660401},{n:2736594,e:660732},{n:2736655,e:660803},
+    {n:2736724,e:660889},{n:2736813,e:661012},{n:2736913,e:661173}
+  ]},
+  {name:'Sattam',col:'#A78BFA',pts:[
+    {n:2737057,e:660134},{n:2736804,e:660212},{n:2736649,e:660274},
+    {n:2736557,e:660321},{n:2736449,e:660388},{n:2736377,e:660443}
+  ]},
+  {name:'Ibn Saud',col:'#34D399',pts:[
+    {n:2736958,e:659826},{n:2737001,e:659966},{n:2737050,e:660137},{n:2737175,e:660490}
+  ]}
+];
+
+var CULVERTS = [
+  {inlet:{n:2737019,e:660816},outlet:{n:2736984,e:660756}},
+  {inlet:{n:2736996,e:660705},outlet:{n:2736956,e:660645}},
+  {inlet:{n:2736956,e:660632},outlet:{n:2736940,e:660574}}
+];
+
+var STAGES = [
+  {id:'PRB',name:'Probing',col:'#CE93D8',w:2},
+  {id:'PIL',name:'Piling',col:'#58A6FF',w:18},
+  {id:'EXC',name:'Excavation',col:'#FF9F1C',w:5},
+  {id:'BLD',name:'Blinding',col:'#FFD166',w:3},
+  {id:'FRB',name:'Foundation Rebar',col:'#4CC9F0',w:8},
+  {id:'FRC',name:'Foundation Concrete',col:'#7EE8FA',w:10},
+  {id:'STR',name:'Pier Structure',col:'#2979FF',w:22},
+  {id:'BRG',name:'Bearings',col:'#9B5DE5',w:5},
+  {id:'GRD',name:'Girder Supply',col:'#D4A843',w:14},
+  {id:'ERE',name:'Girder Erection',col:'#06D6A0',w:9}
+];
+
+// Progress data - loaded from localStorage
+var PS = {};
+try { PS = JSON.parse(localStorage.getItem('ic1_ps')||'{}'); } catch(e){}
+
+// ═══════════════════════════════════════════════════════
+// MAP ENGINE
+// ═══════════════════════════════════════════════════════
+var canvas, ctx, W, H;
+var scale = 1, offsetX = 0, offsetY = 0;
+var bounds = null;
+var animFrame = null;
+var selectedPier = null;
+var layers = {roads:true, culverts:true, bms:false, offset:true};
+var isDragging = false, dragStartX, dragStartY, dragStartOX, dragStartOY;
+
+function getBrId(name){
+  for(var i=0;i<BRIDGES.length;i++)
+    if(BRIDGES[i].piers.indexOf(name)>-1) return BRIDGES[i].id;
+  if(name.endsWith('A')) return 'A';
+  if(name.indexOf('B')>-1) return 'B';
+  if(name.indexOf('C')>-1) return 'C';
+  if(name.indexOf('D')>-1) return 'D';
+  if(name.indexOf('E')>-1) return 'E';
+  return 'G';
+}
+
+function getBrColor(brId){
+  for(var i=0;i<BRIDGES.length;i++) if(BRIDGES[i].id===brId) return BRIDGES[i].col;
+  return '#58A6FF';
+}
+
+function getPierColor(name){
+  var s = PS[name];
+  if(!s) return '#1e293b';
+  var vals = Object.values(s);
+  if(vals.some(function(v){return v==='In Progress';})) return '#D4A843';
+  if(vals.some(function(v){return v==='On Hold';})) return '#E63946';
+  if(vals.some(function(v){return v==='Complete'||v==='Inspected';})) return '#06D6A0';
+  return '#1e293b';
+}
+
+var PANORAMIC = true;
+
+function calcBounds(){
+  var minN=Infinity,maxN=-Infinity,minE=Infinity,maxE=-Infinity;
+  PIERS.forEach(function(p){
+    minN=Math.min(minN,p.n);maxN=Math.max(maxN,p.n);
+    minE=Math.min(minE,p.e);maxE=Math.max(maxE,p.e);
+  });
+  var pad = PANORAMIC ? 0.35 : 0.12;
+  var pN=(maxN-minN)*pad, pE=(maxE-minE)*pad;
+  bounds={minN:minN-pN,maxN:maxN+pN,minE:minE-pE,maxE:maxE+pE};
+}
+
+function togglePanoramic(){
+  PANORAMIC=!PANORAMIC;
+  var btn=document.getElementById('btn-panoramic');
+  if(btn) btn.classList.toggle('active',PANORAMIC);
+  calcBounds(); mapFitAll();
+}
+
+function toCanvas(n,e){
+  var x=((e-bounds.minE)/(bounds.maxE-bounds.minE))*W;
+  var y=H-((n-bounds.minN)/(bounds.maxN-bounds.minN))*H;
+  return {x:x*scale+offsetX, y:y*scale+offsetY};
+}
+
+function fromCanvas(cx,cy){
+  var x=(cx-offsetX)/scale;
+  var y=(cy-offsetY)/scale;
+  var e=bounds.minE+(x/W)*(bounds.maxE-bounds.minE);
+  var n=bounds.maxN-((y/H)*(bounds.maxN-bounds.minN));
+  return {n:n,e:e};
+}
+
+function mapFitAll(){
+  scale=1; offsetX=0; offsetY=0;
+  document.getElementById('map-zoom-level').textContent='100%';
+}
+
+function mapZoom(factor){
+  var cx=W/2, cy=H/2;
+  var newScale=Math.max(0.3,Math.min(20,scale*factor));
+  var ratio=newScale/scale;
+  offsetX=cx-ratio*(cx-offsetX);
+  offsetY=cy-ratio*(cy-offsetY);
+  scale=newScale;
+  document.getElementById('map-zoom-level').textContent=Math.round(scale*100)+'%';
+}
+
+function toggleLayer(name){
+  layers[name]=!layers[name];
+  var btn=document.getElementById('btn-layer-'+name);
+  if(btn) btn.classList.toggle('active', layers[name]);
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+
+  // Background
+  ctx.fillStyle='#07090d';
+  ctx.fillRect(0,0,W,H);
+
+  // Grid
+  ctx.strokeStyle='rgba(255,255,255,0.03)';
+  ctx.lineWidth=1;
+  for(var g=0;g<20;g++){
+    ctx.beginPath();ctx.moveTo(g*W/20,0);ctx.lineTo(g*W/20,H);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(0,g*H/20);ctx.lineTo(W,g*H/20);ctx.stroke();
+  }
+
+  // Roads
+  if(layers.roads){
+    ROADS.forEach(function(road){
+      var positions=road.pts.map(function(p){return toCanvas(p.n,p.e);});
+
+      // 17m offset lines
+      if(layers.offset){
+        var scaleM=W/(bounds.maxE-bounds.minE)*scale;
+        var off17=17*scaleM;
+        [-1,1].forEach(function(side){
+          ctx.strokeStyle=road.col;
+          ctx.globalAlpha=0.2;
+          ctx.lineWidth=1;
+          ctx.setLineDash([8,5]);
+          ctx.beginPath();
+          positions.forEach(function(p,oi){
+            var dx,dy;
+            if(oi<positions.length-1){dx=positions[oi+1].x-p.x;dy=positions[oi+1].y-p.y;}
+            else{dx=p.x-positions[oi-1].x;dy=p.y-positions[oi-1].y;}
+            var len=Math.sqrt(dx*dx+dy*dy);
+            if(len===0)return;
+            var nx=-dy/len*off17*side, ny=dx/len*off17*side;
+            if(oi===0)ctx.moveTo(p.x+nx,p.y+ny);
+            else ctx.lineTo(p.x+nx,p.y+ny);
+          });
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.globalAlpha=1;
+        });
+      }
+
+      // Centerline
+      ctx.shadowColor=road.col; ctx.shadowBlur=8;
+      ctx.strokeStyle=road.col; ctx.lineWidth=2.5;
+      ctx.globalAlpha=0.9; ctx.lineJoin='round'; ctx.lineCap='round';
+      ctx.beginPath();
+      positions.forEach(function(p,i){i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y);});
+      ctx.stroke();
+      ctx.shadowBlur=0; ctx.globalAlpha=1;
+
+      // Label at end
+      var last=positions[positions.length-1];
+      var prev=positions[positions.length-2];
+      var ang=Math.atan2(last.y-prev.y,last.x-prev.x);
+      ctx.save();ctx.translate(last.x,last.y);ctx.rotate(ang);
+      ctx.shadowColor=road.col;ctx.shadowBlur=12;
+      ctx.fillStyle=road.col;
+      ctx.beginPath();
+      var tw=42,th=20,tr=7;
+      ctx.moveTo(-tw/2+tr,-th/2);ctx.lineTo(tw/2-tr,-th/2);
+      ctx.quadraticCurveTo(tw/2,-th/2,tw/2,-th/2+tr);
+      ctx.lineTo(tw/2,th/2-tr);ctx.quadraticCurveTo(tw/2,th/2,tw/2-tr,th/2);
+      ctx.lineTo(-tw/2+tr,th/2);ctx.quadraticCurveTo(-tw/2,th/2,-tw/2,th/2-tr);
+      ctx.lineTo(-tw/2,-th/2+tr);ctx.quadraticCurveTo(-tw/2,-th/2,-tw/2+tr,-th/2);
+      ctx.closePath();ctx.fill();ctx.shadowBlur=0;
+      ctx.fillStyle='#000';ctx.font='bold 11px Rajdhani';
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(road.name,0,0);ctx.restore();
+
+      // Dots
+      positions.forEach(function(p,i){
+        ctx.fillStyle=road.col;ctx.shadowColor=road.col;ctx.shadowBlur=i===0?8:4;
+        ctx.beginPath();ctx.arc(p.x,p.y,i===0?4:2.5,0,Math.PI*2);ctx.fill();
+        ctx.shadowBlur=0;
+      });
+    });
+  }
+
+  // Culverts
+  if(layers.culverts){
+    var t=Date.now()/1000;
+    CULVERTS.forEach(function(c,ci){
+      var p1=toCanvas(c.inlet.n,c.inlet.e);
+      var p2=toCanvas(c.outlet.n,c.outlet.e);
+
+      ctx.strokeStyle='rgba(100,180,255,0.35)';
+      ctx.lineWidth=2;ctx.setLineDash([5,4]);
+      ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(p2.x,p2.y);ctx.stroke();
+      ctx.setLineDash([]);
+
+      for(var pi=0;pi<6;pi++){
+        var off=((t*0.4+pi/6+ci*0.15)%1.0);
+        var px=p1.x+(p2.x-p1.x)*off;
+        var py=p1.y+(p2.y-p1.y)*off;
+        var alpha=Math.sin(off*Math.PI)*0.85;
+        ctx.globalAlpha=alpha;
+        ctx.fillStyle='#7DD3FC';ctx.shadowColor='#38BDF8';ctx.shadowBlur=5;
+        ctx.beginPath();ctx.arc(px,py,3,0,Math.PI*2);ctx.fill();
+      }
+      ctx.globalAlpha=1;ctx.shadowBlur=0;
+
+      var rp=(t*1.5+ci*0.3)%1.0;
+      ctx.globalAlpha=(1-rp)*0.5;ctx.strokeStyle='#38BDF8';ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.arc(p2.x,p2.y,4+rp*14,0,Math.PI*2);ctx.stroke();
+      ctx.globalAlpha=1;
+
+      ctx.fillStyle='#38BDF8';ctx.shadowColor='#38BDF8';ctx.shadowBlur=8;
+      ctx.beginPath();ctx.arc(p1.x,p1.y,4,0,Math.PI*2);ctx.fill();
+      ctx.shadowBlur=0;
+    });
+  }
+
+  // Bridge connection lines
+  BRIDGES.forEach(function(br){
+    var pts=[];
+    br.piers.forEach(function(pname){
+      var p=PIERS.find(function(x){return x.name===pname;});
+      if(p) pts.push(toCanvas(p.n,p.e));
+    });
+    if(pts.length<2)return;
+    ctx.strokeStyle=br.col+'33';ctx.lineWidth=1;ctx.setLineDash([3,4]);
+    ctx.beginPath();
+    pts.forEach(function(p,i){i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y);});
+    ctx.stroke();ctx.setLineDash([]);
+  });
+
+  // Piers
+  var blink=Math.sin(Date.now()/400)*0.5+0.5;
+  PIERS.forEach(function(p){
+    var pos=toCanvas(p.n,p.e);
+    var col=getPierColor(p.name);
+    var brId=getBrId(p.name);
+    var brCol=getBrColor(brId);
+    var isActive=col!=='#1e293b';
+    var isSel=selectedPier===p.name;
+    var r=PANORAMIC?(isActive?14:10):(isActive?10:7);
+
+    // Selection ring
+    if(isSel){
+      var sb=Math.sin(Date.now()/120)*0.5+0.5;
+      ctx.globalAlpha=0.4+sb*0.5;
+      ctx.strokeStyle='#D4A843';ctx.lineWidth=3;
+      ctx.shadowColor='#D4A843';ctx.shadowBlur=15;
+      ctx.beginPath();ctx.arc(pos.x,pos.y,r+10,0,Math.PI*2);ctx.stroke();
+      ctx.shadowBlur=0;ctx.globalAlpha=1;
+    }
+
+    // Blink ring for active
+    if(isActive&&!isSel){
+      ctx.globalAlpha=blink*0.4;
+      ctx.strokeStyle=col;ctx.lineWidth=2;
+      ctx.beginPath();ctx.arc(pos.x,pos.y,r+6,0,Math.PI*2);ctx.stroke();
+      ctx.globalAlpha=1;
+    }
+
+    // Shadow
+    if(isActive){ctx.shadowColor=col;ctx.shadowBlur=14;}
+
+    // Main circle
+    ctx.fillStyle=col;ctx.strokeStyle=brCol;ctx.lineWidth=2;
+    ctx.beginPath();ctx.arc(pos.x,pos.y,r,0,Math.PI*2);
+    ctx.fill();ctx.stroke();ctx.shadowBlur=0;
+
+    // Bridge letter
+    ctx.fillStyle='rgba(0,0,0,0.8)';
+    ctx.font='bold '+Math.max(8,r*0.9)+'px Rajdhani';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(brId,pos.x,pos.y);
+
+    // Pier name - always visible in panoramic, larger font
+    ctx.fillStyle=isSel?'#D4A843':isActive?'#f1f5f9':'rgba(255,255,255,0.5)';
+    ctx.font=(isSel?'bold ':'')+(PANORAMIC?'11':'9')+'px Inter';
+    ctx.textAlign='center';ctx.textBaseline='alphabetic';
+    ctx.fillText(p.name,pos.x,pos.y+r+(PANORAMIC?14:11));
+  });
+
+  // North Arrow
+  var nx=W-55,ny=65;
+  ctx.fillStyle='rgba(7,9,13,0.85)';
+  ctx.strokeStyle='rgba(212,168,67,0.6)';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.arc(nx,ny,24,0,Math.PI*2);ctx.fill();ctx.stroke();
+  ctx.fillStyle='#f1f5f9';ctx.shadowColor='#fff';ctx.shadowBlur=4;
+  ctx.beginPath();ctx.moveTo(nx,ny-16);ctx.lineTo(nx+6,ny+2);ctx.lineTo(nx,ny-1);ctx.closePath();ctx.fill();
+  ctx.shadowBlur=0;ctx.fillStyle='rgba(255,255,255,0.2)';
+  ctx.beginPath();ctx.moveTo(nx,ny-16);ctx.lineTo(nx-6,ny+2);ctx.lineTo(nx,ny-1);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#D4A843';ctx.font='bold 12px Rajdhani';
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText('N',nx,ny+15);
+
+  animFrame=requestAnimationFrame(draw);
+}
+
+// ═══════════════════════════════════════════════════════
+// INTERACTION
+// ═══════════════════════════════════════════════════════
+function initMap(){
+  canvas=document.getElementById('map-canvas');
+  var wrap=document.getElementById('map-canvas-wrap');
+  W=wrap.offsetWidth; H=wrap.offsetHeight;
+  canvas.width=W; canvas.height=H;
+  ctx=canvas.getContext('2d');
+  calcBounds();
+  mapFitAll();
+
+  // Mouse drag
+  canvas.addEventListener('mousedown',function(e){
+    isDragging=true;
+    dragStartX=e.clientX;dragStartY=e.clientY;
+    dragStartOX=offsetX;dragStartOY=offsetY;
+    canvas.style.cursor='grabbing';
+  });
+  document.addEventListener('mousemove',function(e){
+    if(!isDragging)return;
+    offsetX=dragStartOX+(e.clientX-dragStartX);
+    offsetY=dragStartOY+(e.clientY-dragStartY);
+  });
+  document.addEventListener('mouseup',function(e){
+    if(isDragging){
+      // Check if it was a click (no drag)
+      var moved=Math.sqrt(Math.pow(e.clientX-dragStartX,2)+Math.pow(e.clientY-dragStartY,2));
+      if(moved<5) handleClick(e.clientX,e.clientY);
+    }
+    isDragging=false;
+    canvas.style.cursor='grab';
+  });
+
+  // Wheel zoom
+  window.addEventListener('wheel',function(e){
+    var rect=canvas.getBoundingClientRect();
+    if(e.clientX<rect.left||e.clientX>rect.right||e.clientY<rect.top||e.clientY>rect.bottom)return;
+    e.preventDefault();
+    var mx=e.clientX-rect.left, my=e.clientY-rect.top;
+    var delta=e.deltaY>0?0.85:1.15;
+    var oldScale=scale;
+    scale=Math.max(0.3,Math.min(20,scale*delta));
+    var ratio=scale/oldScale;
+    offsetX=mx-ratio*(mx-offsetX);
+    offsetY=my-ratio*(my-offsetY);
+    document.getElementById('map-zoom-level').textContent=Math.round(scale*100)+'%';
+  },{passive:false});
+
+  // Mouse move - show coords
+  canvas.addEventListener('mousemove',function(e){
+    var rect=canvas.getBoundingClientRect();
+    var utm=fromCanvas(e.clientX-rect.left,e.clientY-rect.top);
+    document.getElementById('map-coords').textContent=
+      'N: '+Math.round(utm.n)+' · E: '+Math.round(utm.e);
+  });
+
+  // Resize
+  window.addEventListener('resize',function(){
+    W=wrap.offsetWidth;H=wrap.offsetHeight;
+    canvas.width=W;canvas.height=H;
+    calcBounds();
+  });
+
+  draw();
+}
+
+function handleClick(cx,cy){
+  var rect=canvas.getBoundingClientRect();
+  var px=cx-rect.left, py=cy-rect.top;
+  var nearest=null,nearestDist=Infinity;
+  PIERS.forEach(function(p){
+    var pos=toCanvas(p.n,p.e);
+    var d=Math.sqrt(Math.pow(pos.x-px,2)+Math.pow(pos.y-py,2));
+    if(d<nearestDist){nearestDist=d;nearest=p;}
+  });
+  if(nearest&&nearestDist<30){
+    if(selectedPier===nearest.name){
+      showPierPanel(nearest);
+    } else {
+      selectedPier=nearest.name;
+    }
+  } else {
+    selectedPier=null;
+    closePanel();
+  }
+}
+
+function showPierPanel(pier){
+  var panel=document.getElementById('right-panel');
+  var content=document.getElementById('panel-content');
+  var title=document.getElementById('panel-pier-name');
+  title.textContent=pier.name;
+  panel.classList.remove('collapsed');
+
+  var stages=PS[pier.name]||{};
+  var brId=getBrId(pier.name);
+  var brCol=getBrColor(brId);
+
+  var h='<div style="background:'+brCol+'22;border:1px solid '+brCol+'44;border-radius:8px;padding:10px;margin-bottom:12px;">';
+  h+='<div style="font-size:11px;color:'+brCol+';font-weight:700;margin-bottom:2px;">Bridge '+brId+'</div>';
+  h+='<div style="font-family:JetBrains Mono,monospace;font-size:10px;color:var(--dimL);">E: '+pier.e.toFixed(3)+'</div>';
+  h+='<div style="font-family:JetBrains Mono,monospace;font-size:10px;color:var(--dimL);">N: '+pier.n.toFixed(3)+'</div>';
+  h+='</div>';
+
+  h+='<div style="font-size:9px;font-weight:700;color:var(--gold);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;">Stage Progress</div>';
+
+  STAGES.forEach(function(s){
+    var st=stages[s.id]||'Not Started';
+    var stCol=st==='Complete'||st==='Inspected'?'#06D6A0':st==='In Progress'?'#D4A843':st==='On Hold'?'#E63946':'#475569';
+    var stBg=st==='Complete'||st==='Inspected'?'rgba(6,214,160,0.1)':st==='In Progress'?'rgba(212,168,67,0.1)':st==='On Hold'?'rgba(230,57,70,0.1)':'rgba(255,255,255,0.03)';
+    h+='<div class="stage-item">';
+    h+='<div><div style="font-size:11px;color:var(--text);">'+s.name+'</div>';
+    h+='<div style="font-size:9px;color:var(--dimL);">Weight: '+s.w+'%</div></div>';
+    h+='<span class="stage-status" style="color:'+stCol+';background:'+stBg+';border:1px solid '+stCol+'44;">'+st+'</span>';
+    h+='</div>';
+  });
+
+  content.innerHTML=h;
+}
+
+function closePanel(){
+  document.getElementById('right-panel').classList.add('collapsed');
+  selectedPier=null;
+}
+
+// ═══════════════════════════════════════════════════════
+// SIDEBAR
+// ═══════════════════════════════════════════════════════
+function buildSidebar(){
+  var list=document.getElementById('bridge-list');
+  list.innerHTML='';
+  var activePiers=0;
+  PIERS.forEach(function(p){ if(PS[p.name]&&Object.keys(PS[p.name]).length>0) activePiers++; });
+  document.getElementById('kpi-piers-done').textContent=activePiers;
+
+  BRIDGES.forEach(function(br){
+    var item=document.createElement('div');
+    item.className='bridge-item';
+    item.style.borderLeft='3px solid '+br.col;
+    var pct=0; // would calculate from PS data
+    item.innerHTML=
+      '<div class="bridge-dot" style="background:'+br.col+';box-shadow:0 0 6px '+br.col+';"></div>'+
+      '<div style="flex:1">'+
+        '<div class="bridge-name">Bridge '+br.id+'</div>'+
+        '<div class="bridge-bar-wrap"><div class="bridge-bar" style="width:'+pct+'%;background:'+br.col+';"></div></div>'+
+      '</div>'+
+      '<span class="bridge-pct" style="color:'+br.col+';">'+pct+'%</span>';
+    item.onclick=function(){
+      document.querySelectorAll('.bridge-item').forEach(function(el){el.classList.remove('active');});
+      item.classList.add('active');
+      // Center map on bridge piers
+      var brPiers=PIERS.filter(function(p){return br.piers.indexOf(p.name)>-1;});
+      if(brPiers.length){
+        var avgN=brPiers.reduce(function(s,p){return s+p.n;},0)/brPiers.length;
+        var avgE=brPiers.reduce(function(s,p){return s+p.e;},0)/brPiers.length;
+        var pos=toCanvas(avgN,avgE);
+        offsetX+=(W/2-pos.x); offsetY+=(H/2-pos.y);
+      }
+    };
+    list.appendChild(item);
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// CLOCK
+// ═══════════════════════════════════════════════════════
+function updateClock(){
+  var now=new Date();
+  var h=String(now.getHours()).padStart(2,'0');
+  var m=String(now.getMinutes()).padStart(2,'0');
+  var s=String(now.getSeconds()).padStart(2,'0');
+  document.getElementById('clock').textContent=h+':'+m+':'+s;
+}
+setInterval(updateClock,1000);
+updateClock();
+
+// ═══════════════════════════════════════════════════════
+// TAB SWITCHING
+// ═══════════════════════════════════════════════════════
+function switchTab(tab){
+  document.querySelectorAll('.nav-tab').forEach(function(t){t.classList.remove('active');});
+  event.target.classList.add('active');
+  if(tab==='admin'){ openAdmin(); }
+}
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
+// FIREBASE SYNC
+// ═══════════════════════════════════════════════════════
+var FB_CONFIG = {
+  apiKey: "AIzaSyCCxumZ9b1uGUHevQpjxZyuK5PWKd5muGk",
+  databaseURL: "https://valetsitetrack-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "valetisitetrack"
+};
+var FB_APP = null, FB_DB = null;
+var syncDot = null;
+
+function fbInit(){
+  try{
+    if(!FB_APP) FB_APP = firebase.initializeApp(FB_CONFIG);
+    FB_DB = firebase.database(FB_APP);
+    setSyncStatus('connecting');
+
+    // Listen to PS (pier progress) in real time
+    FB_DB.ref('ic1_bridges/PS').on('value', function(snap){
+      var data = snap.val();
+      if(data){
+        PS = data;
+        try{ localStorage.setItem('ic1_ps', JSON.stringify(PS)); }catch(e){}
+        buildSidebar();
+        updateOverallPct();
+        setSyncStatus('live');
+        console.log('[SiteSync Desktop] PS synced from Firebase');
+      }
+    }, function(err){
+      setSyncStatus('error');
+      console.log('[SiteSync Desktop] Firebase error:', err.message);
+    });
+
+    // Listen to photo wall count
+    FB_DB.ref('ic1_bridges/PHOTO_WALL').on('value', function(snap){
+      var photos = snap.val();
+      var count = photos ? Object.keys(photos).length : 0;
+      var el = document.getElementById('kpi-photos');
+      if(el) el.textContent = count;
+    });
+
+  }catch(e){
+    setSyncStatus('error');
+    console.log('[SiteSync Desktop] Init error:', e.message);
+  }
+}
+
+function setSyncStatus(status){
+  var dot = document.getElementById('sync-dot');
+  var label = document.getElementById('sync-label');
+  if(!dot || !label) return;
+  var colors = {connecting:'#D4A843', live:'#06D6A0', error:'#E63946'};
+  var labels = {connecting:'Connecting...', live:'Live', error:'Offline'};
+  dot.style.background = colors[status] || '#64748B';
+  dot.style.boxShadow = '0 0 6px ' + (colors[status]||'#64748B');
+  label.textContent = labels[status] || status;
+}
+
+function updateOverallPct(){
+  // Simple calculation based on active piers
+  var total = PIERS.length;
+  var active = 0;
+  PIERS.forEach(function(p){
+    if(PS[p.name] && Object.keys(PS[p.name]).length > 0) active++;
+  });
+  var pct = total > 0 ? Math.round(active/total*100*10)/10 : 0;
+  var el = document.getElementById('overall-pct');
+  if(el) el.textContent = pct + '%';
+}
+
+window.addEventListener('load',function(){
+  initMap();
+  buildSidebar();
+  fbInit();
+  // Mark active layer buttons
+  Object.keys(layers).forEach(function(k){
+    var btn=document.getElementById('btn-layer-'+k);
+    if(btn&&layers[k]) btn.classList.add('active');
+  });
+});
+</script>
+</body>
+</html>
