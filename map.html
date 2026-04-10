@@ -57,104 +57,180 @@
 
 <div id="mapContainer">
     <svg id="mapSVG" width="100%" height="100%" viewBox="2736300 660200 2000 2000">
-        <!-- كل شيء سيرسم بالـ JS -->
     </svg>
 </div>
 
-<!-- تحميل البيانات -->
-<script src="data.js"></script>
-
 <script>
+/* ============================
+   كل البيانات مدمجة هنا
+   ============================ */
+
+/* BRIDGES */
+const BRIDGES = [
+    /* ====== BRIDGES DATA ====== */
+{BRIDGES_DATA_START}
+{"id":"A","name":"Bridge A","col":"#e63946"},
+{"id":"B","name":"Bridge B","col":"#457b9d"},
+{"id":"C","name":"Bridge C","col":"#2a9d8f"},
+{"id":"D","name":"Bridge D","col":"#f4a261"},
+{"id":"E","name":"Bridge E","col":"#e76f51"},
+{"id":"F","name":"Bridge F","col":"#6d597a"},
+{"id":"G","name":"Bridge G","col":"#264653"},
+{"id":"H","name":"Bridge H","col":"#8d99ae"},
+{"id":"I","name":"Bridge I","col":"#118ab2"},
+{"id":"J","name":"Bridge J","col":"#06d6a0"},
+{"id":"K","name":"Bridge K","col":"#ef476f"},
+{"id":"L","name":"Bridge L","col":"#073b4c"},
+{"id":"M","name":"Bridge M","col":"#9b5de5"},
+{"id":"N","name":"Bridge N","col":"#f15bb5"}
+];
+/* END BRIDGES */
+
+
+/* ====== PRIMARY BM ====== */
+const PRIMARY_BMS = [
+{ "e": 2737000, "n": 660500 },
+{ "e": 2737100, "n": 660600 },
+{ "e": 2737200, "n": 660700 }
+];
+
+/* ====== SECONDARY BM ====== */
+const SECONDARY_BMS = [
+{ "e": 2737050, "n": 660550 },
+{ "e": 2737150, "n": 660650 }
+];
+
+
+/* ====== ROAD LINES ====== */
+const ROAD_LINES = [
+{
+    "name": "Main Road",
+    "col": "#999",
+    "pts": [
+        { "e": 2736300, "n": 660200 },
+        { "e": 2736500, "n": 660300 },
+        { "e": 2736700, "n": 660400 },
+        { "e": 2736900, "n": 660500 }
+    ]
+},
+{
+    "name": "Service Road",
+    "col": "#555",
+    "pts": [
+        { "e": 2736400, "n": 660250 },
+        { "e": 2736600, "n": 660350 },
+        { "e": 2736800, "n": 660450 }
+    ]
+}
+];
+
+
+/* ====== PIER COORDINATES ====== */
+const PIER_COORDS = [
+{ "name": "P1A", "bridge": "A", "e": 2736500, "n": 660300 },
+{ "name": "P2A", "bridge": "A", "e": 2736550, "n": 660320 },
+{ "name": "P3A", "bridge": "A", "e": 2736600, "n": 660340 },
+
+{ "name": "P1B", "bridge": "B", "e": 2736700, "n": 660360 },
+{ "name": "P2B", "bridge": "B", "e": 2736750, "n": 660380 },
+
+{ "name": "P1C", "bridge": "C", "e": 2736800, "n": 660400 },
+{ "name": "P2C", "bridge": "C", "e": 2736850, "n": 660420 },
+
+{ "name": "P1L", "bridge": "L", "e": 2736900, "n": 660450 },
+{ "name": "P2L", "bridge": "L", "e": 2736950, "n": 660470 },
+{ "name": "P3L", "bridge": "L", "e": 2737000, "n": 660490 },
+
+{ "name": "P1M", "bridge": "M", "e": 2737050, "n": 660510 },
+{ "name": "P2M", "bridge": "M", "e": 2737100, "n": 660530 },
+
+{ "name": "P1N", "bridge": "N", "e": 2737150, "n": 660550 },
+{ "name": "P2N", "bridge": "N", "e": 2737200, "n": 660570 }
+];
+ /* ============================
+   FUNCTIONS + DRAWING ENGINE
+   ============================ */
+
+function getBridgeColor(bridgeId) {
+    const b = BRIDGES.find(x => x.id === bridgeId);
+    return b ? b.col : "#999";
+}
+
+function getBridgeIdForPier(p) {
+    if (p.bridge) return p.bridge;
+    const m = p.name.match(/[A-Z]$/);
+    return m ? m[0] : "?";
+}
+
 const svg = document.getElementById("mapSVG");
 
-/* مساعد: تحديد لون الجسر من BRIDGES */
-function getBridgeColor(bridgeId) {
-    if (!window.BRIDGES) return '#999';
-    const b = BRIDGES.find(b => b.id === bridgeId);
-    return b ? b.col : '#999';
-}
+/* ====== DRAW ROADS ====== */
+ROAD_LINES.forEach(r => {
+    const poly = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+    const pts = r.pts.map(pt => `${pt.e},${pt.n}`).join(" ");
+    poly.setAttribute("points", pts);
+    poly.setAttribute("class", "road-line");
+    poly.setAttribute("stroke", r.col || "#888");
+    svg.appendChild(poly);
+});
 
-/* مساعد: استنتاج bridge من اسم الـ Pier أو خاصية bridge */
-function getBridgeIdForPier(p) {
-    if (p.bridge) return p.bridge; // مثل L / M / N
-    const name = p.name;
-    const m = name.match(/[A-Z]$/);
-    return m ? m[0] : '?';
-}
+/* ====== DRAW BM POINTS ====== */
+PRIMARY_BMS.forEach(p => {
+    const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    c.setAttribute("cx", p.e);
+    c.setAttribute("cy", p.n);
+    c.setAttribute("r", 5);
+    c.setAttribute("class", "bm-primary");
+    svg.appendChild(c);
+});
 
-/* رسم الطرق من ROAD_LINES */
-if (window.ROAD_LINES) {
-    ROAD_LINES.forEach(r => {
-        const poly = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
-        const pts = r.pts.map(pt => `${pt.e},${pt.n}`).join(' ');
-        poly.setAttribute("points", pts);
-        poly.setAttribute("class", "road-line");
-        poly.setAttribute("stroke", r.col || '#888');
-        svg.appendChild(poly);
-    });
-}
+SECONDARY_BMS.forEach(p => {
+    const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    c.setAttribute("cx", p.e);
+    c.setAttribute("cy", p.n);
+    c.setAttribute("r", 4);
+    c.setAttribute("class", "bm-secondary");
+    svg.appendChild(c);
+});
 
-/* رسم BM points */
-if (window.PRIMARY_BMS) {
-    PRIMARY_BMS.forEach(p => {
-        const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        c.setAttribute("cx", p.e);
-        c.setAttribute("cy", p.n);
-        c.setAttribute("r", 5);
-        c.setAttribute("class", "bm-primary");
-        svg.appendChild(c);
-    });
-}
+/* ====== DRAW PIERS ====== */
+PIER_COORDS.forEach(p => {
+    const bridgeId = getBridgeIdForPier(p);
+    const baseColor = getBridgeColor(bridgeId);
 
-if (window.SECONDARY_BMS) {
-    SECONDARY_BMS.forEach(p => {
-        const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        c.setAttribute("cx", p.e);
-        c.setAttribute("cy", p.n);
-        c.setAttribute("r", 4);
-        c.setAttribute("class", "bm-secondary");
-        svg.appendChild(c);
-    });
-}
+    const statusKey = `${bridgeId}_${p.name}_status`;
+    const status = localStorage.getItem(statusKey);
 
-/* رسم الأعمدة PIER_COORDS كنقطة + اسم + حالة */
-if (window.PIER_COORDS) {
-    PIER_COORDS.forEach(p => {
-        const bridgeId = getBridgeIdForPier(p);
-        const baseColor = getBridgeColor(bridgeId);
+    let fill = baseColor;
+    if (status === "Good") fill = "green";
+    else if (status === "Fair") fill = "yellow";
+    else if (status === "Poor") fill = "red";
 
-        const statusKey = `${bridgeId}_${p.name}_status`;
-        const status = localStorage.getItem(statusKey);
+    const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    dot.setAttribute("cx", p.e);
+    dot.setAttribute("cy", p.n);
+    dot.setAttribute("r", 6);
+    dot.setAttribute("fill", fill);
+    dot.setAttribute("class", "pier-dot");
 
-        let fill = 'white';
-        if (status === 'Good') fill = 'green';
-        else if (status === 'Fair') fill = 'yellow';
-        else if (status === 'Poor') fill = 'red';
-        else fill = baseColor;
+    dot.onclick = () => {
+        window.location.href = `field.html?bridge=${bridgeId}&pier=${encodeURIComponent(p.name)}&element=Column`;
+    };
 
-        const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        dot.setAttribute("cx", p.e);
-        dot.setAttribute("cy", p.n);
-        dot.setAttribute("r", 6);
-        dot.setAttribute("fill", fill);
-        dot.setAttribute("class", "pier-dot");
+    svg.appendChild(dot);
 
-        dot.onclick = () => {
-            window.location.href = `field.html?bridge=${bridgeId}&pier=${encodeURIComponent(p.name)}&element=Column`;
-        };
+    const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    label.setAttribute("x", p.e + 10);
+    label.setAttribute("y", p.n + 4);
+    label.setAttribute("class", "pier-label");
+    label.textContent = p.name;
+    svg.appendChild(label);
+});
 
-        svg.appendChild(dot);
+/* ============================
+   PAN + ZOOM
+   ============================ */
 
-        const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        label.setAttribute("x", p.e + 10);
-        label.setAttribute("y", p.n + 4);
-        label.setAttribute("class", "pier-label");
-        label.textContent = p.name;
-        svg.appendChild(label);
-    });
-}
-
-/* Pan + Zoom */
 let isPanning = false;
 let startX, startY;
 
