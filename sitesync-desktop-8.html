@@ -5,8 +5,30 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SiteSync Desktop — IC1 Road Improvements</title>
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js">
+var DP_CORRECT='12345',DP_ENTERED='',DP_LOCKED=false,DP_ATTEMPTS=0;
+function dpTap(d){if(DP_LOCKED||DP_ENTERED.length>=5)return;DP_ENTERED+=d;dpUpdateDots();if(DP_ENTERED.length===5)setTimeout(dpCheck,200);}
+function dpDel(){if(DP_LOCKED)return;DP_ENTERED=DP_ENTERED.slice(0,-1);dpUpdateDots();document.getElementById('desk-pin-err').textContent='';}
+function dpUpdateDots(){for(var i=0;i<5;i++){var d=document.getElementById('dpd'+i);if(!d)return;d.className='dpdot';if(i<DP_ENTERED.length)d.classList.add('filled');}}
+function dpCheck(){
+  if(DP_ENTERED===DP_CORRECT){
+    for(var i=0;i<5;i++){var d=document.getElementById('dpd'+i);if(d)d.className='dpdot success';}
+    setTimeout(function(){var l=document.getElementById('desk-lock');if(l){l.style.transition='opacity 0.4s';l.style.opacity='0';setTimeout(function(){l.style.display='none';},400);}},500);
+  } else {
+    DP_ATTEMPTS++;
+    for(var i=0;i<5;i++){var d=document.getElementById('dpd'+i);if(d)d.className='dpdot error';}
+    var dots=document.getElementById('desk-pin-dots');
+    if(dots){var sh=[10,-10,8,-8,5,0],si=0;var sv=setInterval(function(){dots.style.transform='translateX('+sh[si]+'px)';si++;if(si>=sh.length){clearInterval(sv);dots.style.transform='';}},60);}
+    document.getElementById('desk-pin-err').textContent=DP_ATTEMPTS>=5?'Too many attempts. Wait 30s.':'Incorrect PIN';
+    if(DP_ATTEMPTS>=5){DP_LOCKED=true;setTimeout(function(){DP_LOCKED=false;DP_ATTEMPTS=0;document.getElementById('desk-pin-err').textContent='';},30000);}
+    setTimeout(function(){DP_ENTERED='';dpUpdateDots();for(var i=0;i<5;i++){var d=document.getElementById('dpd'+i);if(d)d.className='dpdot';}},700);
+  }
+}
+
+</script>
 <script>
+// Safe localStorage wrapper
+var _ls=(function(){try{_ls.setItem('_t','1');_ls.removeItem('_t');return localStorage;}catch(e){var m={};return{getItem:function(k){return m[k]||null;},setItem:function(k,v){m[k]=String(v);},removeItem:function(k){delete m[k];}};}})();
 function toggleSummary(){
   var ov=document.getElementById('summary-overlay');
   if(!ov) return;
@@ -706,6 +728,39 @@ function buildSummary(){
 </head>
 <body>
 
+<div id="desk-lock" style="position:fixed;inset:0;z-index:99999;background:#07090d;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:Inter,sans-serif;">
+  <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(88,166,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(88,166,255,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;"></div>
+  <div style="text-align:center;margin-bottom:32px;position:relative;">
+    <div style="font-family:Rajdhani,sans-serif;font-size:28px;font-weight:900;color:#fff;">SiteSync Desktop</div>
+    <div style="font-size:12px;color:rgba(255,255,255,0.3);letter-spacing:3px;margin-top:2px;">IC1 ROAD IMPROVEMENTS</div>
+  </div>
+  <div id="desk-pin-dots" style="display:flex;gap:14px;margin-bottom:10px;">
+    <div class="dpdot" id="dpd0"></div><div class="dpdot" id="dpd1"></div><div class="dpdot" id="dpd2"></div><div class="dpdot" id="dpd3"></div><div class="dpdot" id="dpd4"></div>
+  </div>
+  <div id="desk-pin-err" style="font-size:13px;color:#E63946;height:20px;margin-bottom:20px;font-weight:600;text-align:center;"></div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:260px;">
+    <button class="dpbtn" onclick="dpTap('1')"><span class="dpnum">1</span></button>
+    <button class="dpbtn" onclick="dpTap('2')"><span class="dpnum">2</span><span class="dpsub">ABC</span></button>
+    <button class="dpbtn" onclick="dpTap('3')"><span class="dpnum">3</span><span class="dpsub">DEF</span></button>
+    <button class="dpbtn" onclick="dpTap('4')"><span class="dpnum">4</span><span class="dpsub">GHI</span></button>
+    <button class="dpbtn" onclick="dpTap('5')"><span class="dpnum">5</span><span class="dpsub">JKL</span></button>
+    <button class="dpbtn" onclick="dpTap('6')"><span class="dpnum">6</span><span class="dpsub">MNO</span></button>
+    <button class="dpbtn" onclick="dpTap('7')"><span class="dpnum">7</span><span class="dpsub">PQRS</span></button>
+    <button class="dpbtn" onclick="dpTap('8')"><span class="dpnum">8</span><span class="dpsub">TUV</span></button>
+    <button class="dpbtn" onclick="dpTap('9')"><span class="dpnum">9</span><span class="dpsub">WXYZ</span></button>
+    <div></div>
+    <button class="dpbtn" onclick="dpTap('0')"><span class="dpnum">0</span></button>
+    <button class="dpbtn dpbtn-del" onclick="dpDel()"><svg width="24" height="18" viewBox="0 0 24 18" fill="none"><path d="M9 1H22C22.6 1 23 1.4 23 2V16C23 16.6 22.6 17 22 17H9L1 9L9 1Z" stroke="white" stroke-width="1.5" fill="rgba(255,255,255,0.08)"/><line x1="13" y1="6" x2="19" y2="12" stroke="white" stroke-width="1.8" stroke-linecap="round"/><line x1="19" y1="6" x2="13" y2="12" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+  </div>
+</div>
+<style>
+.dpdot{width:13px;height:13px;border-radius:50%;border:2px solid rgba(255,255,255,0.4);background:transparent;transition:background 0.15s;}
+.dpdot.filled{background:#fff;border-color:#fff;}.dpdot.success{background:#06D6A0;border-color:#06D6A0;}.dpdot.error{background:#E63946;border-color:#E63946;}
+.dpbtn{background:rgba(255,255,255,0.08);border:none;border-radius:50%;width:76px;height:76px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background 0.1s;gap:0;}
+.dpbtn:active{background:rgba(255,255,255,0.22);}.dpbtn-del{background:transparent;}
+.dpnum{font-size:30px;font-weight:300;color:#fff;line-height:1;}.dpsub{font-size:9px;font-weight:600;color:rgba(255,255,255,0.4);letter-spacing:1px;margin-top:1px;}
+</style>
+
 <!-- TOP BAR -->
 <div id="topbar">
   <div class="logo">
@@ -730,6 +785,7 @@ function buildSummary(){
     <button class="nav-tab" onclick="switchTab('plan')">📐 Plan</button>
     <button class="nav-tab" onclick="switchTab('docs')">📋 Docs</button>
     <button class="nav-tab" onclick="switchTab('photos')" style="border-color:rgba(88,166,255,0.4);color:#58A6FF;">📸 Photos</button>
+    <button class="nav-tab" onclick="switchTab('report')" style="border-color:rgba(212,168,67,0.4);color:#D4A843;">📋 Report</button>
     <button class="nav-tab" onclick="switchTab('admin')" style="border-color:rgba(231,76,60,0.4);color:#E74C3C;">🛡 Admin</button>
   </div>
   <div class="divider"></div>
@@ -1001,7 +1057,7 @@ function changeAdminPw(){
   if(!p1||!p2||!msg) return;
   if(p1.value.length<4){msg.style.color='#E63946';msg.textContent='❌ Password must be at least 4 characters';return;}
   if(p1.value!==p2.value){msg.style.color='#E63946';msg.textContent='❌ Passwords do not match';return;}
-  localStorage.setItem('ic1_adminpw',p1.value);
+  _ls.setItem('ic1_adminpw',p1.value);
   msg.style.color='#06D6A0';
   msg.textContent='✅ Password changed successfully!';
   p1.value=''; p2.value='';
@@ -1012,7 +1068,7 @@ function adminUnlock(){
   var inp = document.getElementById('admin-pw-input');
   var err = document.getElementById('admin-pw-err');
   var pw = inp ? inp.value : '';
-  var correct = localStorage.getItem('ic1_adminpw')||'12345';
+  var correct = '12345';
   if(pw === correct){
     _adminUnlocked = true;
     renderAdminContent();
@@ -1056,7 +1112,7 @@ function renderRoadWeightsForm(){
   var el = document.getElementById('road-weights-form');
   if(!el) return;
   try{
-    var stored = JSON.parse(localStorage.getItem('ic1_road_weights')||'null');
+    var stored = JSON.parse(_ls.getItem('ic1_road_weights')||'null');
     if(stored) _roadWeights = stored;
   }catch(e){}
   var h = '';
@@ -1092,7 +1148,7 @@ function saveRoadWeights(){
     var el = document.getElementById('rw-'+s.id);
     if(el) s.w = parseFloat(el.value)||0;
   });
-  localStorage.setItem('ic1_road_weights', JSON.stringify(_roadWeights));
+  _ls.setItem('ic1_road_weights', JSON.stringify(_roadWeights));
   if(FB_DB){
     FB_DB.ref('ic1_bridges/ROAD_WEIGHTS').set(_roadWeights)
       .then(function(){ showToast('✅ Road weights saved & synced!'); })
@@ -1107,7 +1163,7 @@ function renderStageWeightsForm(){
   if(!el) return;
   // Load from localStorage if saved
   try{
-    var stored = JSON.parse(localStorage.getItem('ic1_stage_weights')||'null');
+    var stored = JSON.parse(_ls.getItem('ic1_stage_weights')||'null');
     if(stored) _stageWeights = stored;
   }catch(e){}
   var h = '';
@@ -1143,7 +1199,7 @@ function saveStageWeights(){
     var el = document.getElementById('sw-'+s.id);
     if(el) s.w = parseFloat(el.value)||0;
   });
-  localStorage.setItem('ic1_stage_weights', JSON.stringify(_stageWeights));
+  _ls.setItem('ic1_stage_weights', JSON.stringify(_stageWeights));
   if(FB_DB){
     FB_DB.ref('ic1_bridges/STAGE_WEIGHTS').set(_stageWeights)
       .then(function(){ showToast('✅ Stage weights saved & synced!'); })
@@ -1158,7 +1214,7 @@ function renderWeightsForm(){
   if(!el) return;
   // Load from localStorage
   try{
-    var stored = JSON.parse(localStorage.getItem('ic1_ws_weights')||'null');
+    var stored = JSON.parse(_ls.getItem('ic1_ws_weights')||'null');
     if(stored) _adminWeights = stored;
   }catch(e){}
 
@@ -1199,7 +1255,7 @@ function saveWeights(){
     var el = document.getElementById('w-'+k);
     if(el) _adminWeights[k] = parseFloat(el.value)||0;
   });
-  localStorage.setItem('ic1_ws_weights', JSON.stringify(_adminWeights));
+  _ls.setItem('ic1_ws_weights', JSON.stringify(_adminWeights));
   // Push to Firebase
   if(FB_DB){
     FB_DB.ref('ic1_bridges/WEIGHTS').set(_adminWeights)
@@ -1214,12 +1270,12 @@ function renderPinsForm(){
   var el = document.getElementById('pins-form');
   if(!el) return;
   var pins = {};
-  try{ pins = JSON.parse(localStorage.getItem('ic1_user_pins')||'{}'); }catch(e){}
+  try{ pins = JSON.parse(_ls.getItem('ic1_user_pins')||'{}'); }catch(e){}
   if(FB_DB){
     FB_DB.ref('ic1_bridges/USER_PINS').once('value').then(function(snap){
       var fbPins = snap.val()||{};
       Object.assign(pins, fbPins);
-      localStorage.setItem('ic1_user_pins', JSON.stringify(pins));
+      _ls.setItem('ic1_user_pins', JSON.stringify(pins));
       _renderPinsList(pins);
     });
   } else {
@@ -1255,10 +1311,10 @@ function addUser(){
   var pin = pinEl ? pinEl.value.trim() : '';
   if(!name||!pin){ showToast('Enter name and PIN'); return; }
   var pins = {};
-  try{ pins = JSON.parse(localStorage.getItem('ic1_user_pins')||'{}'); }catch(e){}
+  try{ pins = JSON.parse(_ls.getItem('ic1_user_pins')||'{}'); }catch(e){}
   var safeKey = name.replace(/[.#$\[\]/]/g,'_');
   pins[safeKey] = pin;
-  localStorage.setItem('ic1_user_pins', JSON.stringify(pins));
+  _ls.setItem('ic1_user_pins', JSON.stringify(pins));
   nameEl.value=''; pinEl.value='';
   _renderPinsList(pins);
   showToast('User added — tap Save to sync');
@@ -1266,22 +1322,22 @@ function addUser(){
 
 function deleteUser(name){
   var pins = {};
-  try{ pins = JSON.parse(localStorage.getItem('ic1_user_pins')||'{}'); }catch(e){}
+  try{ pins = JSON.parse(_ls.getItem('ic1_user_pins')||'{}'); }catch(e){}
   delete pins[name];
-  localStorage.setItem('ic1_user_pins', JSON.stringify(pins));
+  _ls.setItem('ic1_user_pins', JSON.stringify(pins));
   _renderPinsList(pins);
 }
 
 function savePins(){
   var pins = {};
-  try{ pins = JSON.parse(localStorage.getItem('ic1_user_pins')||'{}'); }catch(e){}
+  try{ pins = JSON.parse(_ls.getItem('ic1_user_pins')||'{}'); }catch(e){}
   // Also collect any edited values from inputs
   document.querySelectorAll('#pins-form input[data-user]').forEach(function(el){
     var u = el.getAttribute('data-user');
     var safeKey = u.replace(/[.#$\[\]/]/g,'_');
     if(el.value.trim()) pins[safeKey] = el.value.trim();
   });
-  localStorage.setItem('ic1_user_pins', JSON.stringify(pins));
+  _ls.setItem('ic1_user_pins', JSON.stringify(pins));
   if(FB_DB){
     firebase.database().ref('ic1_bridges/USER_PINS').set(pins)
       .then(function(){ showToast('✅ PINs saved & synced to all devices!'); })
@@ -1388,25 +1444,26 @@ var CULVERTS = [
 ];
 
 var STAGES = [
-  {id:'BH', label:'Borehole',          w:0.196, col:'#10B981'},
-  {id:'PRB',label:'Probing',           w:1.958, col:'#CE93D8'},
-  {id:'PIL',label:'Piling',            w:17.626,col:'#60A5FA'},
-  {id:'EXC',label:'Excavation',        w:4.896, col:'#FBBF24'},
-  {id:'BLD',label:'Blinding',          w:2.938, col:'#94A3B8'},
-  {id:'FRB',label:'Foundation Rebar',  w:7.834, col:'#F87171'},
-  {id:'FRC',label:'Foundation Conc.',  w:9.792, col:'#FB923C'},
-  {id:'STR',label:'Pier Structure',    w:21.543,col:'#A78BFA'},
-  {id:'BRG',label:'Bearings',          w:4.896, col:'#34D399'},
-  {id:'GRD',label:'Girder Supply',     w:13.709,col:'#38BDF8'},
-  {id:'ERE',label:'Girder Erection',   w:8.813, col:'#F472B6'}
+  {id:'BH', label:'Borehole',          w:0.208, col:'#10B981'},
+  {id:'PRB',label:'Probing',           w:2.079, col:'#CE93D8'},
+  {id:'PIL',label:'Piling',            w:18.711,col:'#60A5FA'},
+  {id:'EXC',label:'Excavation',        w:5.197, col:'#FBBF24'},
+  {id:'BLD',label:'Blinding',          w:3.119, col:'#94A3B8'},
+  {id:'FRB',label:'Foundation Rebar',  w:8.316, col:'#F87171'},
+  {id:'FRC',label:'Foundation Conc.',  w:10.395, col:'#FB923C'},
+  {id:'STR',label:'Pier Structure',    w:22.869,col:'#A78BFA'},
+  {id:'BRG',label:'Bearings',          w:5.197, col:'#34D399'},
+  {id:'GRD',label:'Girder Supply',     w:14.553,col:'#38BDF8'},
+  {id:'ERE',label:'Girder Erection',   w:9.356, col:'#F472B6'}
 ];
 
 // Progress data - loaded from localStorage
 var PS = {};
-try { PS = JSON.parse(localStorage.getItem('ic1_ps')||'{}'); } catch(e){}
+try { PS = JSON.parse(_ls.getItem('ic1_ps')||'{}'); } catch(e){}
 
 // Piers that have photos on site
 var PHOTO_PIERS = {};
+var PHOTO_WALL = {};
 var EMB_DATA = {};
 var ROAD_DATA = {ibn:{},sattam:{}};
 var MY_LOC = null;
@@ -2658,12 +2715,12 @@ function showPierPanel(pier){
     FB_DB.ref('ic1_bridges/PHOTO_WALL').orderByChild('pier').equalTo(pier.name).once('value', function(snap){
       var photos = snap.val();
       if(!photos||Object.keys(photos).length===0) return;
-      var list = Object.keys(photos).map(function(k){ return photos[k]; });
+      var list = Object.keys(photos).map(function(k){ var o=photos[k]; o._fbkey=k; return o; });
       list.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
 
       var ph = '<div style="margin-top:14px;border-top:1px solid rgba(255,255,255,0.08);padding-top:14px;">';
       ph += '<div style="font-size:9px;font-weight:800;color:#D4A843;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">📸 Site Photos ('+list.length+')</div>';
-      list.forEach(function(p, i){
+      list.forEach(function(p){
         var statusCol = p.status==='Complete'?'#06D6A0':p.status==='In Progress'?'#D4A843':p.status==='On Hold'?'#E63946':'#64748B';
         ph += '<div style="margin-bottom:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:8px;overflow:hidden;">';
         ph += '<img src="'+p.url+'" style="width:100%;max-height:160px;object-fit:cover;display:block;" loading="lazy">';
@@ -3274,37 +3331,13 @@ function drawSCurve(){
 }
 
 
-function deletePhoto(idx){
-  if(!window._photoList || idx >= window._photoList.length){
-    alert('Photo not found in list (idx='+idx+')');
-    return;
-  }
-  var p = window._photoList[idx];
-  var fbKey = p._fbkey;
-  if(!fbKey){
-    alert('Firebase key missing for this photo');
-    return;
-  }
-  if(!confirm('Delete this photo?\nThis cannot be undone.')) return;
-
-  // Remove card from UI immediately
-  var card = document.querySelector('.photo-card[data-idx="'+idx+'"]');
-  if(card){
-    card.style.transition = 'opacity 0.3s';
-    card.style.opacity = '0';
-    setTimeout(function(){ if(card.parentNode) card.parentNode.removeChild(card); }, 350);
-  }
-
-  // Delete from Firebase
-  FB_DB.ref('ic1_bridges/PHOTO_WALL/'+fbKey).remove(function(err){
-    if(err){
-      alert('Delete failed: ' + (err.message || err));
-      if(card){ card.style.opacity='1'; }
-    } else {
-      // Remove from local list
-      window._photoList.splice(idx, 1);
-    }
-  });
+function deletePhoto(btn){
+  var key=btn.dataset.key;
+  if(!key){alert('Key missing');return;}
+  if(!confirm('Delete this photo permanently?'))return;
+  var card=btn.closest('.photo-card');
+  if(card){card.style.transition='opacity 0.3s';card.style.opacity='0';setTimeout(function(){if(card.parentNode)card.remove();},350);}
+  if(FB_DB)FB_DB.ref('ic1_bridges/PHOTO_WALL/'+key).remove(function(err){if(err)alert('Delete failed: '+(err.message||err));});
 }
 
 function renderPhotos(){
@@ -3314,7 +3347,7 @@ function renderPhotos(){
 
   if(!FB_DB){ el.innerHTML='<div style="padding:20px;text-align:center;color:#E63946;">Firebase not connected</div>'; return; }
 
-  FB_DB.ref('ic1_bridges/PHOTO_WALL').orderByChild('ts').limitToLast(200).on('value', function(snap){
+  FB_DB.ref('ic1_bridges/PHOTO_WALL').orderByChild('ts').limitToLast(200).once('value', function(snap){
     var photos = snap.val();
     if(!photos||Object.keys(photos).length===0){
       el.innerHTML='<div style="padding:40px;text-align:center;color:rgba(255,255,255,0.3);font-size:16px;">📸 No photos yet</div>';
@@ -3322,9 +3355,8 @@ function renderPhotos(){
     }
 
     // Sort by timestamp descending
-    window._photoList = Object.keys(photos).map(function(k){ return Object.assign({_fbkey:k},photos[k]); });
-    window._photoList.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
-    var list = window._photoList;
+    var list = Object.keys(photos).map(function(k){ return Object.assign({key:k},photos[k]); });
+    list.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
 
     // Filter controls
     var today = new Date().toISOString().slice(0,10);
@@ -3337,22 +3369,25 @@ function renderPhotos(){
     h += '<div style="margin-left:auto;display:flex;gap:8px;">';
     h += '<button onclick="filterPhotos(\'all\')" id="filter-all" style="padding:5px 12px;border-radius:6px;border:1px solid rgba(212,168,67,0.5);background:rgba(212,168,67,0.15);color:#D4A843;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">All</button>';
     h += '<button onclick="filterPhotos(\'today\')" id="filter-today" style="padding:5px 12px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.5);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Today</button>';
+    h += '<button onclick="launchWeekStory()" style="padding:5px 14px;border-radius:6px;border:1px solid rgba(239,68,68,0.5);background:rgba(239,68,68,0.12);color:#EF4444;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;">🎬 Week Story</button>';
+    h += '<button onclick="openExportVideo()" style="padding:5px 14px;border-radius:6px;border:1px solid rgba(6,214,160,0.5);background:rgba(6,214,160,0.12);color:#06D6A0;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;">⬇️ Export Video</button>';
     h += '</div></div>';
 
     // Photo grid
     h += '<div id="photo-grid" style="flex:1;overflow-y:auto;padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;">';
 
-    list.forEach(function(p, i){
+    list.forEach(function(p){
       var isToday = p.date===today;
       var pierCol = '#58A6FF';
-      if(p.pier){
+      var pierDisplay = p.pier||'—';
+      if(p.pier==='MISC'){ pierCol='#94A3B8'; pierDisplay='📷 General Site'; } else if(p.pier){
         for(var b=0;b<BRIDGES.length;b++){
           if(BRIDGES[b].piers.indexOf(p.pier)>-1){ pierCol={A:'#58A6FF',B:'#06D6A0',C:'#CE93D8',D:'#FF9F1C',E:'#FB923C',G:'#34D399'}[BRIDGES[b].id]||'#58A6FF'; break; }
         }
       }
       var statusCol = p.status==='Complete'?'#06D6A0':p.status==='In Progress'?'#D4A843':p.status==='On Hold'?'#E63946':'#64748B';
 
-      h += '<div class="photo-card" data-idx="'+i+'" data-date="'+p.date+'" style="background:#0a1628;border:1px solid rgba(255,255,255,0.08);border-radius:12px;overflow:hidden;'+(isToday?'border-color:rgba(212,168,67,0.4);':'')+'">';
+      h += '<div class="photo-card" data-date="'+p.date+'" style="background:#0a1628;border:1px solid rgba(255,255,255,0.08);border-radius:12px;overflow:hidden;'+(isToday?'border-color:rgba(212,168,67,0.4);':'')+'">';
       // Photo
       h += '<div style="position:relative;aspect-ratio:16/10;overflow:hidden;background:#111;">';
       h += '<img src="'+p.url+'" style="width:100%;height:100%;object-fit:cover;" loading="lazy" onerror="this.style.display=\'none\'">';
@@ -3361,18 +3396,18 @@ function renderPhotos(){
       // Info
       h += '<div style="padding:10px 12px;">';
       h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">';
-      h += '<span style="font-family:Rajdhani,sans-serif;font-size:16px;font-weight:900;color:'+pierCol+';">'+( p.pier||'—')+'</span>';
+      h += '<span style="font-family:Rajdhani,sans-serif;font-size:16px;font-weight:900;color:'+pierCol+';">'+( pierDisplay)+'</span>';
       h += '<span style="font-size:11px;font-weight:700;color:'+statusCol+';background:'+statusCol+'22;padding:2px 8px;border-radius:10px;">'+(p.status||'—')+'</span>';
       h += '</div>';
-      h += '<div style="font-size:12px;color:#94A3B8;margin-bottom:4px;font-weight:600;">'+(p.stage||'—')+'</div>';
+      h += '<div style="font-size:12px;color:#94A3B8;margin-bottom:4px;font-weight:600;">'+((p.stage==='Miscellaneous'?'General Site Photo':p.stage||'—'))+'</div>';
       if(p.note) h += '<div style="font-size:12px;color:#f1f5f9;background:rgba(255,255,255,0.04);padding:6px 8px;border-radius:6px;margin-bottom:6px;border-left:2px solid '+pierCol+';">📝 '+p.note+'</div>';
       h += '<div style="display:flex;justify-content:space-between;align-items:center;">';
       h += '<span style="font-size:11px;color:rgba(255,255,255,0.3);">📅 '+(p.date||'—')+'</span>';
       h += '<span style="font-size:11px;color:rgba(255,255,255,0.3);">👷 '+(p.by||'Field')+'</span>';
-      h += '</div>';
+      h += '</div></div>';
       h += '<div style="display:flex;border-top:1px solid rgba(255,255,255,0.06);">';
       h += '<a href="'+p.url+'" download target="_blank" style="flex:1;text-align:center;padding:10px;background:rgba(255,255,255,0.03);font-size:12px;font-weight:700;color:rgba(255,255,255,0.4);text-decoration:none;cursor:pointer;border-right:1px solid rgba(255,255,255,0.06);">💾 Save</a>';
-      h += '<button onclick="deletePhoto('+i+')" style="width:60px;padding:12px;border:none;background:rgba(231,76,60,0.2);color:#E63946;font-size:18px;font-weight:900;cursor:pointer;font-family:inherit;">🗑</button>';
+      h += '<button data-key="'+p._fbkey+'" onclick="deletePhoto(this)" style="width:56px;padding:10px;border:none;background:rgba(231,76,60,0.1);color:#E63946;font-size:18px;cursor:pointer;font-family:inherit;">🗑</button>';
       h += '</div>';
       h += '</div>';
     });
@@ -3433,7 +3468,7 @@ function fbInit(){
       var data = snap.val();
       if(data){
         PS = data;
-        try{ localStorage.setItem('ic1_ps', JSON.stringify(PS)); }catch(e){}
+        try{ _ls.setItem('ic1_ps', JSON.stringify(PS)); }catch(e){}
         buildSidebar();
         updateOverallPct();
         setSyncStatus('live');
@@ -3460,6 +3495,7 @@ function fbInit(){
     // Listen to photo wall - track which piers have photos
     FB_DB.ref('ic1_bridges/PHOTO_WALL').on('value', function(snap){
       var photos = snap.val();
+      PHOTO_WALL = photos || {};
       var count = photos ? Object.keys(photos).length : 0;
       var el = document.getElementById('kpi-photos');
       if(el) el.textContent = count;
@@ -3652,5 +3688,365 @@ window.addEventListener('load',function(){
     <div id="summary-content"></div>
   </div>
 </div>
-</body>
-</html>
+
+<!-- ═══ EXPORT VIDEO OVERLAY ═══ -->
+<div id="export-video-overlay" style="display:none;position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,0.92);align-items:center;justify-content:center;font-family:Inter,sans-serif;">
+  <div style="background:#0a1628;border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:28px;width:90%;max-width:480px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <div><div style="font-family:Rajdhani,sans-serif;font-size:24px;font-weight:900;color:#06D6A0;">⬇️ Export Video</div><div style="font-size:12px;color:rgba(255,255,255,0.35);margin-top:2px;">Generate a shareable video with AI narration</div></div>
+      <button onclick="closeExportVideo()" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:#fff;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">✕</button>
+    </div>
+    <div style="margin-bottom:16px;"><div style="font-size:10px;color:rgba(255,255,255,0.4);font-weight:700;letter-spacing:1px;margin-bottom:8px;">📅 PHOTO RANGE</div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);"><input type="radio" name="ev-range" value="week" checked style="accent-color:#06D6A0;"><span style="font-size:13px;color:#fff;font-weight:600;">This week <span style="color:rgba(255,255,255,0.35);font-weight:400;">(last 7 days)</span></span></label>
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);"><input type="radio" name="ev-range" value="today" style="accent-color:#06D6A0;"><span style="font-size:13px;color:#fff;font-weight:600;">Today only</span></label>
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);"><input type="radio" name="ev-range" value="all" style="accent-color:#06D6A0;"><span style="font-size:13px;color:#fff;font-weight:600;">All photos</span></label>
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);"><input type="radio" name="ev-range" value="custom" style="accent-color:#06D6A0;" onchange="document.getElementById('ev-custom-dates').style.display='flex'"><span style="font-size:13px;color:#fff;font-weight:600;">Custom range</span></label>
+      <div id="ev-custom-dates" style="display:none;gap:10px;padding:0 12px;">
+        <div style="flex:1;"><div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:4px;">FROM</div><input type="date" id="ev-from-date" style="width:100%;padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:#1e293b;color:#fff;font-size:13px;outline:none;box-sizing:border-box;"></div>
+        <div style="flex:1;"><div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:4px;">TO</div><input type="date" id="ev-to-date" style="width:100%;padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:#1e293b;color:#fff;font-size:13px;outline:none;box-sizing:border-box;"></div>
+      </div>
+    </div></div>
+    <div style="margin-bottom:20px;"><div style="font-size:10px;color:rgba(255,255,255,0.4);font-weight:700;letter-spacing:1px;margin-bottom:8px;">🎬 QUALITY</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);"><input type="radio" name="ev-quality" value="hd" checked style="accent-color:#06D6A0;"><span style="font-size:13px;color:#fff;font-weight:600;">HD <span style="color:rgba(255,255,255,0.35);">1280×720</span></span></label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);"><input type="radio" name="ev-quality" value="fhd" style="accent-color:#06D6A0;"><span style="font-size:13px;color:#fff;font-weight:600;">Full HD <span style="color:rgba(255,255,255,0.35);">1920×1080</span></span></label>
+    </div></div>
+    <div id="ev-count-preview" style="background:rgba(6,214,160,0.08);border:1px solid rgba(6,214,160,0.2);border-radius:8px;padding:10px 14px;margin-bottom:20px;font-size:13px;color:#06D6A0;font-weight:600;"></div>
+    <button onclick="startExportVideo()" id="ev-generate-btn" style="width:100%;padding:14px;border-radius:10px;background:linear-gradient(135deg,#06D6A0,#0EA5E9);border:none;color:#000;font-size:15px;font-weight:900;cursor:pointer;font-family:inherit;">▶ Generate Video</button>
+    <div id="ev-progress-area" style="display:none;margin-top:16px;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span id="ev-progress-label" style="font-size:12px;color:rgba(255,255,255,0.6);">Rendering...</span><span id="ev-progress-pct" style="font-size:12px;color:#06D6A0;font-weight:700;">0%</span></div>
+      <div style="height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;"><div id="ev-progress-bar" style="height:100%;background:#06D6A0;width:0%;transition:width 0.3s;border-radius:3px;"></div></div>
+      <div id="ev-eta" style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:4px;text-align:right;"></div>
+    </div>
+  </div>
+</div>
+<canvas id="ev-canvas" style="display:none;"></canvas>
+<script>
+
+// ═══ EXPORT VIDEO + AI NARRATION ════════════════════════════════
+var EV_recording = false;
+
+function openExportVideo(){
+  if(!PHOTO_WALL||Object.keys(PHOTO_WALL).length===0){
+    if(FB_DB){FB_DB.ref('ic1_bridges/PHOTO_WALL').once('value',function(s){PHOTO_WALL=s.val()||{};openExportVideo();});return;}
+    alert('No photos yet');return;
+  }
+  var ov=document.getElementById('export-video-overlay');
+  if(ov){ ov.style.display='flex'; }
+  var today=new Date().toISOString().slice(0,10);
+  var weekAgo=new Date(Date.now()-7*24*60*60*1000).toISOString().slice(0,10);
+  var fd=document.getElementById('ev-from-date'),td=document.getElementById('ev-to-date');
+  if(fd)fd.value=weekAgo; if(td)td.value=today;
+  var pa=document.getElementById('ev-progress-area'),gb=document.getElementById('ev-generate-btn');
+  if(pa)pa.style.display='none'; if(gb)gb.style.display='block';
+  evUpdateCount();
+  document.querySelectorAll('input[name="ev-range"]').forEach(function(r){
+    r.onchange=function(){ var cd=document.getElementById('ev-custom-dates'); if(cd)cd.style.display=this.value==='custom'?'flex':'none'; evUpdateCount(); };
+  });
+}
+
+function closeExportVideo(){
+  var ov=document.getElementById('export-video-overlay');
+  if(ov)ov.style.display='none';
+  EV_recording=false;
+}
+
+function evGetPhotos(){
+  var el=document.querySelector('input[name="ev-range"]:checked');
+  var range=el?el.value:'week';
+  var today=new Date().toISOString().slice(0,10);
+  var weekAgo=new Date(Date.now()-7*24*60*60*1000).toISOString().slice(0,10);
+  var all=Object.values(PHOTO_WALL||{}).filter(function(p){return p.url;});
+  all.sort(function(a,b){return(a.ts||0)-(b.ts||0);});
+  if(range==='week')return all.filter(function(p){return p.date>=weekAgo&&p.date<=today;});
+  if(range==='today')return all.filter(function(p){return p.date===today;});
+  if(range==='all')return all;
+  if(range==='custom'){ var f=document.getElementById('ev-from-date').value,t=document.getElementById('ev-to-date').value; return all.filter(function(p){return p.date>=f&&p.date<=t;}); }
+  return all;
+}
+
+function evUpdateCount(){
+  var photos=evGetPhotos(); var dur=photos.length*4;
+  var el=document.getElementById('ev-count-preview');
+  if(el)el.textContent='📸 '+photos.length+' photos · ~'+Math.floor(dur/60)+'m '+(dur%60)+'s video';
+}
+
+function startExportVideo(){
+  var photos=evGetPhotos();
+  if(photos.length===0){alert('No photos in selected range');return;}
+  if(!window.MediaRecorder){alert('Video export requires Chrome or Edge browser.');return;}
+  var qEl=document.querySelector('input[name="ev-quality"]:checked');
+  var quality=qEl?qEl.value:'hd';
+  var W=quality==='fhd'?1920:1280, H=quality==='fhd'?1080:720, FPS=25;
+  var PHOTO_FRAMES=FPS*4, FADE=Math.floor(FPS*0.4), TITLE_FRAMES=FPS*2;
+  var canvas=document.getElementById('ev-canvas');
+  canvas.width=W; canvas.height=H;
+  var gb=document.getElementById('ev-generate-btn'), pa=document.getElementById('ev-progress-area');
+  if(gb)gb.style.display='none'; if(pa)pa.style.display='block';
+  var pl=document.getElementById('ev-progress-label'); if(pl)pl.textContent='🤖 AI writing story...';
+  var mimeType=MediaRecorder.isTypeSupported('video/webm;codecs=vp9')?'video/webm;codecs=vp9':'video/webm';
+  var stream=canvas.captureStream(FPS);
+  var recorder=new MediaRecorder(stream,{mimeType:mimeType,videoBitsPerSecond:quality==='fhd'?8000000:4000000});
+  var chunks=[];
+  recorder.ondataavailable=function(e){if(e.data.size>0)chunks.push(e.data);};
+  recorder.onstop=function(){
+    var blob=new Blob(chunks,{type:mimeType});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a'); a.href=url; a.download='SiteSync_IC1_'+new Date().toISOString().slice(0,10)+'.webm'; a.click();
+    URL.revokeObjectURL(url);
+    if(pl)pl.textContent='✅ Video downloaded!';
+    setTimeout(function(){closeExportVideo();if(gb)gb.style.display='block';},2500);
+  };
+  EV_recording=true;
+  buildAINarration(photos,function(narration){
+    if(pl)pl.textContent='🎬 Rendering...';
+    // Start recorder only when we are about to draw
+    recorder.start();
+    renderVideo(photos,W,H,FPS,PHOTO_FRAMES,FADE,TITLE_FRAMES,canvas.getContext('2d'),recorder,narration);
+  });
+}
+
+function buildAINarration(photos,callback){
+  var brAct={},stAct={},dates=[];
+  photos.forEach(function(p){
+    if(p.pier&&p.pier!=='MISC'){var br=typeof getBrId==='function'?getBrId(p.pier):'?';brAct[br]=(brAct[br]||0)+1;}
+    if(p.stage&&p.stage!=='Miscellaneous'){var sn=p.stage;if(typeof STAGES!=='undefined')STAGES.forEach(function(s){if(s.id===p.stage)sn=s.label;});stAct[sn]=(stAct[sn]||0)+1;}
+    if(p.date&&dates.indexOf(p.date)<0)dates.push(p.date);
+  });
+  dates.sort();
+  var totalW=0,doneW=0;
+  if(typeof PIERS!=='undefined'&&typeof STAGES!=='undefined'){
+    PIERS.forEach(function(p){STAGES.forEach(function(s){totalW+=s.w;var v=(PS[p.name]||{})[s.id]||'Not Started';if(v==='Complete'||v==='Inspected')doneW+=s.w;else if(v==='In Progress')doneW+=s.w*0.5;});});
+  }
+  var pct=PIERS&&PIERS.length>0?Math.round(doneW/PIERS.length*10)/10:0;
+  var brList=Object.keys(brAct).map(function(b){return 'Bridge '+b+' ('+brAct[b]+')';}).join(', ');
+  var stList=Object.keys(stAct).map(function(s){return stAct[s]+'x '+s;}).join(', ');
+  var dateRange=dates.length>1?dates[0]+' to '+dates[dates.length-1]:(dates[0]||'this week');
+  var notes=photos.filter(function(p){return p.note;}).map(function(p){return p.note;}).slice(0,3).join('; ');
+  var prompt="Write a 90-word cinematic narration for an IC1 Road Improvements construction video in Diriyah, Riyadh. Period: "+dateRange+". "+photos.length+" photos. Bridges: "+(brList||'various')+". Work: "+(stList||'various')+". Progress: "+pct+"%. "+(notes?"Notes: "+notes+". ":"")+"3 parts: powerful opening, weekly summary, motivational closing. Documentary narrator style. Plain text.";
+  fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:250,messages:[{role:'user',content:prompt}]})})
+  .then(function(r){return r.json();})
+  .then(function(d){callback(d.content&&d.content[0]?d.content[0].text.trim():evDefaultScript(pct,photos.length,dateRange));})
+  .catch(function(){callback(evDefaultScript(pct,photos.length,dateRange));});
+}
+
+function evDefaultScript(pct,n,dr){
+  return 'IC1 Road Improvements. Diriyah, Riyadh. '+n+' moments from the field tell the story of steady progress this week. From deep foundations to rising piers, every photo marks a milestone. With overall completion now at '+pct+' percent, the team moves forward with purpose and precision. The road to completion is being built — one pier at a time.';
+}
+
+function evSpeakNarration(script){
+  if(!window.speechSynthesis)return;
+  window.speechSynthesis.cancel();
+  var u=new SpeechSynthesisUtterance(script);
+  u.lang='en-US'; u.rate=0.82; u.pitch=1.0; u.volume=1.0;
+  var voices=window.speechSynthesis.getVoices();
+  var v=voices.find(function(x){return /Google|Daniel|Samantha|Karen/i.test(x.name)&&x.lang.startsWith('en');})||voices.find(function(x){return x.lang.startsWith('en');});
+  if(v)u.voice=v;
+  window.speechSynthesis.speak(u);
+}
+
+function renderVideo(photos, W, H, FPS, PHOTO_FRAMES, FADE, TITLE_FRAMES, ctx, recorder, narration){
+  var STORY_TEXTS = {
+    'PIL':'Piling — foundations built underground.',
+    'EXC':'Excavation prepares the ground.',
+    'BLD':'Blinding concrete laid.',
+    'FRB':'Foundation rebar assembled.',
+    'FRC':'Foundation concrete poured.',
+    'STR':'Pier structure rising toward the sky.',
+    'BRG':'Bearings installed.',
+    'GRD':'Girders delivered to site.',
+    'ERE':'Girder erection — bridging the span.',
+    'BH':'Borehole drilling complete.',
+    'PRB':'Probing complete.'
+  };
+
+  // ── STEP 1: Load ALL images as blobs via Promise.all ────────────
+  var loadPromises = photos.map(function(p){
+    return fetch(p.url)
+      .then(function(r){ return r.blob(); })
+      .then(function(blob){
+        return new Promise(function(resolve){
+          var img = new Image();
+          img.onload  = function(){ p._img = img; resolve(); };
+          img.onerror = function(){ p._img = null; resolve(); };
+          img.src = URL.createObjectURL(blob);
+        });
+      })
+      .catch(function(){ p._img = null; return Promise.resolve(); });
+  });
+
+  // Update label while loading
+  var pl = document.getElementById('ev-progress-label');
+  if(pl) pl.textContent = '📸 Loading ' + photos.length + ' images...';
+
+  Promise.all(loadPromises).then(function(){
+
+    var loaded = photos.filter(function(p){ return p._img; }).length;
+    if(pl) pl.textContent = '🎬 Rendering... (' + loaded + '/' + photos.length + ' images ready)';
+
+    // ── STEP 2: Draw first title frame BEFORE starting recorder ───
+    ctx.fillStyle = '#07090d';
+    ctx.fillRect(0, 0, W, H);
+    ctx.textAlign = 'center';
+    ctx.font = 'bold ' + (W/8) + 'px sans-serif';
+    ctx.fillStyle = '#D4A843';
+    ctx.fillText('SiteSync', W/2, H/2);
+    ctx.textAlign = 'left';
+
+    // ── STEP 3: Start recorder only after canvas has content ──────
+    recorder.start();
+
+    // Speak narration
+    if(narration) setTimeout(function(){ evSpeakNarration(narration); }, 300);
+
+    // ── STEP 4: Animation loop ─────────────────────────────────────
+    var frame = 0, cur = 0, t0 = Date.now();
+    var total = TITLE_FRAMES + photos.length * PHOTO_FRAMES;
+
+    function drawPlaceholder(p, alpha){
+      // No image available - draw dark card with text
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = 'rgba(15,30,54,0.95)';
+      ctx.fillRect(0, 0, W, H);
+      ctx.font = 'bold ' + (W/14) + 'px sans-serif';
+      ctx.fillStyle = 'rgba(212,168,67,0.6)';
+      ctx.textAlign = 'center';
+      ctx.fillText(p&&p.pier ? p.pier : 'IC1 Site', W/2, H*0.45);
+      var sn = p&&p.stage||'';
+      if(typeof STAGES!=='undefined') STAGES.forEach(function(s){ if(p&&s.id===p.stage) sn=s.label; });
+      ctx.font = 'bold ' + (W/32) + 'px sans-serif';
+      ctx.fillStyle = 'rgba(255,255,255,0.4)';
+      ctx.fillText(sn, W/2, H*0.55);
+      ctx.textAlign = 'left';
+      ctx.globalAlpha = 1;
+    }
+
+    function drawPhoto(p, fi, alpha){
+      if(!p._img){
+        drawPlaceholder(p, alpha);
+        return;
+      }
+      try{
+        var img=p._img, iw=img.naturalWidth, ih=img.naturalHeight;
+        if(!iw||!ih){ drawPlaceholder(p,alpha); return; }
+        var ks = 1.04 + (fi/PHOTO_FRAMES)*0.06;
+        // Blurred background
+        ctx.save();
+        ctx.filter = 'blur(32px) brightness(0.2)';
+        var bs = Math.max(W/iw, H/ih) * 1.3;
+        ctx.drawImage(img, (W-iw*bs)/2, (H-ih*bs)/2, iw*bs, ih*bs);
+        ctx.restore();
+        // Main photo with Ken Burns
+        var s = Math.min(W/iw, H/ih) * ks;
+        ctx.globalAlpha = alpha;
+        ctx.drawImage(img, (W-iw*s)/2, (H-ih*s)/2, iw*s, ih*s);
+        ctx.globalAlpha = 1;
+      } catch(e){
+        drawPlaceholder(p, alpha);
+      }
+    }
+
+    function draw(){
+      if(!EV_recording){ recorder.stop(); return; }
+
+      // Progress UI
+      var pct = Math.round(frame/total*100);
+      var pb=document.getElementById('ev-progress-bar');
+      var pp=document.getElementById('ev-progress-pct');
+      var et=document.getElementById('ev-eta');
+      if(pb) pb.style.width = pct + '%';
+      if(pp) pp.textContent = pct + '%';
+      if(pl) pl.textContent = 'Photo '+(Math.min(cur+1,photos.length))+' / '+photos.length;
+      if(et && pct > 3){
+        var el = (Date.now()-t0)/1000;
+        et.textContent = '~' + Math.round(el/pct*(100-pct)) + 's remaining';
+      }
+
+      ctx.fillStyle = '#07090d';
+      ctx.fillRect(0, 0, W, H);
+
+      if(frame < TITLE_FRAMES){
+        // Title card
+        var ta = Math.min(1, frame/10);
+        ctx.globalAlpha = ta;
+        ctx.textAlign = 'center';
+        // Grid
+        ctx.strokeStyle='rgba(88,166,255,0.04)'; ctx.lineWidth=1;
+        for(var gx=0;gx<W;gx+=60){ctx.beginPath();ctx.moveTo(gx,0);ctx.lineTo(gx,H);ctx.stroke();}
+        for(var gy=0;gy<H;gy+=60){ctx.beginPath();ctx.moveTo(0,gy);ctx.lineTo(W,gy);ctx.stroke();}
+        ctx.font='bold '+(W/50)+'px sans-serif';
+        ctx.fillStyle='rgba(255,255,255,0.3)';
+        ctx.fillText('IC1 ROAD IMPROVEMENTS — DIRIYAH', W/2, H*0.37);
+        ctx.font='bold '+(W/8)+'px sans-serif';
+        ctx.fillStyle='#D4A843';
+        ctx.shadowColor='rgba(212,168,67,0.3)'; ctx.shadowBlur=25;
+        ctx.fillText('SiteSync', W/2, H*0.54); ctx.shadowBlur=0;
+        ctx.font='bold '+(W/38)+'px sans-serif';
+        ctx.fillStyle='rgba(255,255,255,0.5)';
+        ctx.fillText(photos.length+' photos', W/2, H*0.65);
+        // Narration text
+        if(narration && ta>0.4){
+          ctx.font=(W/72)+'px sans-serif';
+          ctx.fillStyle='rgba(255,255,255,0.25)';
+          var nw=narration.split(' '),nl='',nls=[],nmx=W*0.75;
+          nw.forEach(function(w){var t=nl+w+' ';if(ctx.measureText(t).width>nmx&&nl){nls.push(nl);nl=w+' ';}else nl=t;});
+          nls.push(nl);
+          nls.slice(0,3).forEach(function(l,li){ ctx.fillText(l.trim(),W/2,H*0.76+(W/62)*li*1.5); });
+        }
+        ctx.globalAlpha=1; ctx.textAlign='left';
+
+      } else {
+        cur = Math.floor((frame-TITLE_FRAMES)/PHOTO_FRAMES);
+        if(cur >= photos.length){ recorder.stop(); return; }
+
+        var fi   = (frame-TITLE_FRAMES) % PHOTO_FRAMES;
+        var alpha = fi<FADE ? fi/FADE : fi>PHOTO_FRAMES-FADE ? (PHOTO_FRAMES-fi)/FADE : 1;
+        var p = photos[cur];
+
+        drawPhoto(p, fi, alpha);
+
+        // Gradient overlay
+        var gr = ctx.createLinearGradient(0,H*0.42,0,H);
+        gr.addColorStop(0,'rgba(0,0,0,0)'); gr.addColorStop(1,'rgba(0,0,0,0.92)');
+        ctx.fillStyle=gr; ctx.fillRect(0,0,W,H);
+
+        // Text
+        var ta2 = Math.min(1, Math.max(0, (fi-6)/10)) * alpha;
+        ctx.globalAlpha = ta2;
+        var nm = p&&p.pier==='MISC'?'General Site Photo':(p&&p.pier?'Bridge '+(typeof getBrId==='function'?getBrId(p.pier):'')+' — Pier '+p.pier:'IC1 Site');
+        ctx.font='bold '+(W/12)+'px sans-serif'; ctx.fillStyle='#fff';
+        ctx.shadowColor='rgba(0,0,0,0.9)'; ctx.shadowBlur=20;
+        ctx.fillText(nm, W*0.05, H*0.73); ctx.shadowBlur=0;
+        var sn=p&&p.stage?p.stage:'';
+        if(typeof STAGES!=='undefined') STAGES.forEach(function(s){if(p&&s.id===p.stage) sn=s.label;});
+        ctx.font='bold '+(W/32)+'px sans-serif'; ctx.fillStyle='#D4A843';
+        ctx.fillText(sn, W*0.05, H*0.73+W/10);
+        var st=(STORY_TEXTS[p&&p.stage]||'Construction progresses.')+(p&&p.note?' "'+p.note+'"':'');
+        ctx.font=(W/50)+'px sans-serif'; ctx.fillStyle='rgba(255,255,255,0.6)';
+        var sw=st.split(' '),sl='',sls=[],smx=W*0.72;
+        sw.forEach(function(w){var t=sl+w+' ';if(ctx.measureText(t).width>smx&&sl){sls.push(sl);sl=w+' ';}else sl=t;});
+        sls.push(sl);
+        sls.forEach(function(l,li){ ctx.fillText(l,W*0.05,H*0.73+W/10+(W/32)*(1.6+li*1.5)); });
+        ctx.font=(W/68)+'px sans-serif'; ctx.fillStyle='rgba(255,255,255,0.3)';
+        ctx.fillText('📅 '+(p&&p.date||'—')+'   👷 '+(p&&p.by||'Field'), W*0.05, H*0.96);
+
+        // Progress bar + counter
+        ctx.globalAlpha=alpha;
+        ctx.fillStyle='rgba(255,255,255,0.08)'; ctx.fillRect(0,0,W,4);
+        ctx.fillStyle='#D4A843'; ctx.fillRect(0,0,W*((cur+fi/PHOTO_FRAMES)/photos.length),4);
+        ctx.font='bold '+(W/60)+'px monospace'; ctx.fillStyle='rgba(255,255,255,0.35)';
+        ctx.textAlign='right'; ctx.fillText((cur+1)+'/'+photos.length,W*0.97,H*0.055);
+        ctx.textAlign='left'; ctx.globalAlpha=1;
+      }
+
+      frame++;
+      requestAnimationFrame(draw);
+    }
+
+    draw();
+
+  }); // end Promise.all
+}
+
+>
