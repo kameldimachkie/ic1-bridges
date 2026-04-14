@@ -7,6 +7,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script>
+// Safe localStorage wrapper — works even when blocked by corporate IT
+var _ls=(function(){try{_ls.setItem('_t','1');_ls.removeItem('_t');return localStorage;}catch(e){var m={};return{getItem:function(k){return m[k]||null;},setItem:function(k,v){m[k]=String(v);},removeItem:function(k){delete m[k];}};}})();
 function toggleSummary(){
   var ov=document.getElementById('summary-overlay');
   if(!ov) return;
@@ -730,6 +732,7 @@ function buildSummary(){
     <button class="nav-tab" onclick="switchTab('plan')">📐 Plan</button>
     <button class="nav-tab" onclick="switchTab('docs')">📋 Docs</button>
     <button class="nav-tab" onclick="switchTab('photos')" style="border-color:rgba(88,166,255,0.4);color:#58A6FF;">📸 Photos</button>
+    <button class="nav-tab" onclick="switchTab('report')" style="border-color:rgba(212,168,67,0.4);color:#D4A843;">📋 Report</button>
     <button class="nav-tab" onclick="switchTab('admin')" style="border-color:rgba(231,76,60,0.4);color:#E74C3C;">🛡 Admin</button>
   </div>
   <div class="divider"></div>
@@ -1001,7 +1004,7 @@ function changeAdminPw(){
   if(!p1||!p2||!msg) return;
   if(p1.value.length<4){msg.style.color='#E63946';msg.textContent='❌ Password must be at least 4 characters';return;}
   if(p1.value!==p2.value){msg.style.color='#E63946';msg.textContent='❌ Passwords do not match';return;}
-  localStorage.setItem('ic1_adminpw',p1.value);
+  _ls.setItem('ic1_adminpw',p1.value);
   msg.style.color='#06D6A0';
   msg.textContent='✅ Password changed successfully!';
   p1.value=''; p2.value='';
@@ -1012,7 +1015,7 @@ function adminUnlock(){
   var inp = document.getElementById('admin-pw-input');
   var err = document.getElementById('admin-pw-err');
   var pw = inp ? inp.value : '';
-  var correct = localStorage.getItem('ic1_adminpw')||'12345';
+  var correct = '12345';
   if(pw === correct){
     _adminUnlocked = true;
     renderAdminContent();
@@ -1056,7 +1059,7 @@ function renderRoadWeightsForm(){
   var el = document.getElementById('road-weights-form');
   if(!el) return;
   try{
-    var stored = JSON.parse(localStorage.getItem('ic1_road_weights')||'null');
+    var stored = JSON.parse(_ls.getItem('ic1_road_weights')||'null');
     if(stored) _roadWeights = stored;
   }catch(e){}
   var h = '';
@@ -1092,7 +1095,7 @@ function saveRoadWeights(){
     var el = document.getElementById('rw-'+s.id);
     if(el) s.w = parseFloat(el.value)||0;
   });
-  localStorage.setItem('ic1_road_weights', JSON.stringify(_roadWeights));
+  _ls.setItem('ic1_road_weights', JSON.stringify(_roadWeights));
   if(FB_DB){
     FB_DB.ref('ic1_bridges/ROAD_WEIGHTS').set(_roadWeights)
       .then(function(){ showToast('✅ Road weights saved & synced!'); })
@@ -1107,7 +1110,7 @@ function renderStageWeightsForm(){
   if(!el) return;
   // Load from localStorage if saved
   try{
-    var stored = JSON.parse(localStorage.getItem('ic1_stage_weights')||'null');
+    var stored = JSON.parse(_ls.getItem('ic1_stage_weights')||'null');
     if(stored) _stageWeights = stored;
   }catch(e){}
   var h = '';
@@ -1143,7 +1146,7 @@ function saveStageWeights(){
     var el = document.getElementById('sw-'+s.id);
     if(el) s.w = parseFloat(el.value)||0;
   });
-  localStorage.setItem('ic1_stage_weights', JSON.stringify(_stageWeights));
+  _ls.setItem('ic1_stage_weights', JSON.stringify(_stageWeights));
   if(FB_DB){
     FB_DB.ref('ic1_bridges/STAGE_WEIGHTS').set(_stageWeights)
       .then(function(){ showToast('✅ Stage weights saved & synced!'); })
@@ -1158,7 +1161,7 @@ function renderWeightsForm(){
   if(!el) return;
   // Load from localStorage
   try{
-    var stored = JSON.parse(localStorage.getItem('ic1_ws_weights')||'null');
+    var stored = JSON.parse(_ls.getItem('ic1_ws_weights')||'null');
     if(stored) _adminWeights = stored;
   }catch(e){}
 
@@ -1199,7 +1202,7 @@ function saveWeights(){
     var el = document.getElementById('w-'+k);
     if(el) _adminWeights[k] = parseFloat(el.value)||0;
   });
-  localStorage.setItem('ic1_ws_weights', JSON.stringify(_adminWeights));
+  _ls.setItem('ic1_ws_weights', JSON.stringify(_adminWeights));
   // Push to Firebase
   if(FB_DB){
     FB_DB.ref('ic1_bridges/WEIGHTS').set(_adminWeights)
@@ -1214,12 +1217,12 @@ function renderPinsForm(){
   var el = document.getElementById('pins-form');
   if(!el) return;
   var pins = {};
-  try{ pins = JSON.parse(localStorage.getItem('ic1_user_pins')||'{}'); }catch(e){}
+  try{ pins = JSON.parse(_ls.getItem('ic1_user_pins')||'{}'); }catch(e){}
   if(FB_DB){
     FB_DB.ref('ic1_bridges/USER_PINS').once('value').then(function(snap){
       var fbPins = snap.val()||{};
       Object.assign(pins, fbPins);
-      localStorage.setItem('ic1_user_pins', JSON.stringify(pins));
+      _ls.setItem('ic1_user_pins', JSON.stringify(pins));
       _renderPinsList(pins);
     });
   } else {
@@ -1255,10 +1258,10 @@ function addUser(){
   var pin = pinEl ? pinEl.value.trim() : '';
   if(!name||!pin){ showToast('Enter name and PIN'); return; }
   var pins = {};
-  try{ pins = JSON.parse(localStorage.getItem('ic1_user_pins')||'{}'); }catch(e){}
+  try{ pins = JSON.parse(_ls.getItem('ic1_user_pins')||'{}'); }catch(e){}
   var safeKey = name.replace(/[.#$\[\]/]/g,'_');
   pins[safeKey] = pin;
-  localStorage.setItem('ic1_user_pins', JSON.stringify(pins));
+  _ls.setItem('ic1_user_pins', JSON.stringify(pins));
   nameEl.value=''; pinEl.value='';
   _renderPinsList(pins);
   showToast('User added — tap Save to sync');
@@ -1266,22 +1269,22 @@ function addUser(){
 
 function deleteUser(name){
   var pins = {};
-  try{ pins = JSON.parse(localStorage.getItem('ic1_user_pins')||'{}'); }catch(e){}
+  try{ pins = JSON.parse(_ls.getItem('ic1_user_pins')||'{}'); }catch(e){}
   delete pins[name];
-  localStorage.setItem('ic1_user_pins', JSON.stringify(pins));
+  _ls.setItem('ic1_user_pins', JSON.stringify(pins));
   _renderPinsList(pins);
 }
 
 function savePins(){
   var pins = {};
-  try{ pins = JSON.parse(localStorage.getItem('ic1_user_pins')||'{}'); }catch(e){}
+  try{ pins = JSON.parse(_ls.getItem('ic1_user_pins')||'{}'); }catch(e){}
   // Also collect any edited values from inputs
   document.querySelectorAll('#pins-form input[data-user]').forEach(function(el){
     var u = el.getAttribute('data-user');
     var safeKey = u.replace(/[.#$\[\]/]/g,'_');
     if(el.value.trim()) pins[safeKey] = el.value.trim();
   });
-  localStorage.setItem('ic1_user_pins', JSON.stringify(pins));
+  _ls.setItem('ic1_user_pins', JSON.stringify(pins));
   if(FB_DB){
     firebase.database().ref('ic1_bridges/USER_PINS').set(pins)
       .then(function(){ showToast('✅ PINs saved & synced to all devices!'); })
@@ -1388,25 +1391,26 @@ var CULVERTS = [
 ];
 
 var STAGES = [
-  {id:'BH', label:'Borehole',          w:0.196, col:'#10B981'},
-  {id:'PRB',label:'Probing',           w:1.958, col:'#CE93D8'},
-  {id:'PIL',label:'Piling',            w:17.626,col:'#60A5FA'},
-  {id:'EXC',label:'Excavation',        w:4.896, col:'#FBBF24'},
-  {id:'BLD',label:'Blinding',          w:2.938, col:'#94A3B8'},
-  {id:'FRB',label:'Foundation Rebar',  w:7.834, col:'#F87171'},
-  {id:'FRC',label:'Foundation Conc.',  w:9.792, col:'#FB923C'},
-  {id:'STR',label:'Pier Structure',    w:21.543,col:'#A78BFA'},
-  {id:'BRG',label:'Bearings',          w:4.896, col:'#34D399'},
-  {id:'GRD',label:'Girder Supply',     w:13.709,col:'#38BDF8'},
-  {id:'ERE',label:'Girder Erection',   w:8.813, col:'#F472B6'}
+  {id:'BH', label:'Borehole',          w:0.208, col:'#10B981'},
+  {id:'PRB',label:'Probing',           w:2.079, col:'#CE93D8'},
+  {id:'PIL',label:'Piling',            w:18.711,col:'#60A5FA'},
+  {id:'EXC',label:'Excavation',        w:5.197, col:'#FBBF24'},
+  {id:'BLD',label:'Blinding',          w:3.119, col:'#94A3B8'},
+  {id:'FRB',label:'Foundation Rebar',  w:8.316, col:'#F87171'},
+  {id:'FRC',label:'Foundation Conc.',  w:10.395, col:'#FB923C'},
+  {id:'STR',label:'Pier Structure',    w:22.869,col:'#A78BFA'},
+  {id:'BRG',label:'Bearings',          w:5.197, col:'#34D399'},
+  {id:'GRD',label:'Girder Supply',     w:14.553,col:'#38BDF8'},
+  {id:'ERE',label:'Girder Erection',   w:9.356, col:'#F472B6'}
 ];
 
 // Progress data - loaded from localStorage
 var PS = {};
-try { PS = JSON.parse(localStorage.getItem('ic1_ps')||'{}'); } catch(e){}
+try { PS = JSON.parse(_ls.getItem('ic1_ps')||'{}'); } catch(e){}
 
 // Piers that have photos on site
 var PHOTO_PIERS = {};
+var PHOTO_WALL = {};
 var EMB_DATA = {};
 var ROAD_DATA = {ibn:{},sattam:{}};
 var MY_LOC = null;
@@ -2658,7 +2662,7 @@ function showPierPanel(pier){
     FB_DB.ref('ic1_bridges/PHOTO_WALL').orderByChild('pier').equalTo(pier.name).once('value', function(snap){
       var photos = snap.val();
       if(!photos||Object.keys(photos).length===0) return;
-      var list = Object.keys(photos).map(function(k){ return photos[k]; });
+      var list = Object.keys(photos).map(function(k){ var o=photos[k]; o._fbkey=k; return o; });
       list.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
 
       var ph = '<div style="margin-top:14px;border-top:1px solid rgba(255,255,255,0.08);padding-top:14px;">';
@@ -3273,6 +3277,16 @@ function drawSCurve(){
   }
 }
 
+
+function deletePhoto(btn){
+  var key = btn.dataset.key;
+  if(!key){ alert('Key missing'); return; }
+  if(!confirm('Delete this photo permanently?')) return;
+  var card = btn.closest('.photo-card');
+  if(card){ card.style.transition='opacity 0.3s'; card.style.opacity='0'; setTimeout(function(){if(card.parentNode)card.remove();},350); }
+  if(FB_DB) FB_DB.ref('ic1_bridges/PHOTO_WALL/'+key).remove(function(err){ if(err) alert('Delete failed: '+(err.message||err)); });
+}
+
 function renderPhotos(){
   var el = document.getElementById('photos-content');
   if(!el) return;
@@ -3302,6 +3316,8 @@ function renderPhotos(){
     h += '<div style="margin-left:auto;display:flex;gap:8px;">';
     h += '<button onclick="filterPhotos(\'all\')" id="filter-all" style="padding:5px 12px;border-radius:6px;border:1px solid rgba(212,168,67,0.5);background:rgba(212,168,67,0.15);color:#D4A843;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">All</button>';
     h += '<button onclick="filterPhotos(\'today\')" id="filter-today" style="padding:5px 12px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.5);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Today</button>';
+    h += '<button onclick="launchWeekStory()" style="padding:5px 14px;border-radius:6px;border:1px solid rgba(239,68,68,0.5);background:rgba(239,68,68,0.12);color:#EF4444;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;">🎬 Week Story</button>';
+    h += '<button onclick="openExportVideo()" style="padding:5px 14px;border-radius:6px;border:1px solid rgba(6,214,160,0.5);background:rgba(6,214,160,0.12);color:#06D6A0;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;">⬇️ Export Video</button>';
     h += '</div></div>';
 
     // Photo grid
@@ -3335,7 +3351,10 @@ function renderPhotos(){
       h += '<span style="font-size:11px;color:rgba(255,255,255,0.3);">📅 '+(p.date||'—')+'</span>';
       h += '<span style="font-size:11px;color:rgba(255,255,255,0.3);">👷 '+(p.by||'Field')+'</span>';
       h += '</div></div>';
-      h += '<a href="'+p.url+'" download target="_blank" style="display:block;text-align:center;padding:8px;background:rgba(255,255,255,0.03);border-top:1px solid rgba(255,255,255,0.06);font-size:12px;font-weight:700;color:rgba(255,255,255,0.4);text-decoration:none;cursor:pointer;">💾 Save Photo</a>';
+      h += '<div style="display:flex;border-top:1px solid rgba(255,255,255,0.06);">';
+      h += '<a href="'+p.url+'" download target="_blank" style="flex:1;text-align:center;padding:10px;background:rgba(255,255,255,0.03);font-size:12px;font-weight:700;color:rgba(255,255,255,0.4);text-decoration:none;cursor:pointer;border-right:1px solid rgba(255,255,255,0.06);">💾 Save</a>';
+      h += '<button onclick="deletePhoto(this)" data-key="'+p._fbkey+'" style="width:56px;padding:10px;border:none;background:rgba(231,76,60,0.1);color:#E63946;font-size:18px;cursor:pointer;font-family:inherit;">🗑</button>';
+      h += '</div>';
       h += '</div>';
     });
 
@@ -3395,7 +3414,7 @@ function fbInit(){
       var data = snap.val();
       if(data){
         PS = data;
-        try{ localStorage.setItem('ic1_ps', JSON.stringify(PS)); }catch(e){}
+        try{ _ls.setItem('ic1_ps', JSON.stringify(PS)); }catch(e){}
         buildSidebar();
         updateOverallPct();
         setSyncStatus('live');
@@ -3422,6 +3441,7 @@ function fbInit(){
     // Listen to photo wall - track which piers have photos
     FB_DB.ref('ic1_bridges/PHOTO_WALL').on('value', function(snap){
       var photos = snap.val();
+      PHOTO_WALL = photos || {};
       var count = photos ? Object.keys(photos).length : 0;
       var el = document.getElementById('kpi-photos');
       if(el) el.textContent = count;
@@ -3614,5 +3634,352 @@ window.addEventListener('load',function(){
     <div id="summary-content"></div>
   </div>
 </div>
+
+<div id="week-story-overlay" style="display:none;position:fixed;inset:0;z-index:99999;background:#000;flex-direction:column;">
+  <div id="story-stage" style="flex:1;position:relative;overflow:hidden;background:#000;">
+    <div id="story-bg" style="position:absolute;inset:-40px;background-size:cover;background-position:center;filter:blur(30px) brightness(0.3);transform:scale(1.15);transition:background-image 1.2s;"></div>
+    <img id="story-img" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;transition:opacity 0.8s,transform 6s;transform:scale(1.04);" src="">
+    <div style="position:absolute;top:0;left:0;right:0;padding:20px 28px;background:linear-gradient(to bottom,rgba(0,0,0,0.8),transparent);display:flex;justify-content:space-between;align-items:center;">
+      <div><div style="font-size:13px;font-weight:700;color:rgba(255,255,255,0.5);letter-spacing:3px;">IC1 ROAD IMPROVEMENTS</div><div id="story-week-label" style="font-size:20px;font-weight:900;color:#D4A843;"></div></div>
+      <div style="display:flex;align-items:center;gap:16px;"><span id="story-counter" style="font-size:13px;color:rgba(255,255,255,0.4);font-family:monospace;"></span><button onclick="closeWeekStory()" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">✕ Close</button></div>
+    </div>
+    <div style="position:absolute;top:0;left:0;right:0;height:3px;background:rgba(255,255,255,0.1);"><div id="story-progress" style="height:100%;background:#D4A843;width:0%;transition:width linear;"></div></div>
+    <div style="position:absolute;bottom:0;left:0;right:0;padding:40px 48px 90px;background:linear-gradient(to top,rgba(0,0,0,0.9),rgba(0,0,0,0.6) 60%,transparent);">
+      <div id="story-pier-name" style="font-family:Rajdhani,sans-serif;font-size:68px;font-weight:900;color:#fff;line-height:0.9;transform:translateY(20px);opacity:0;transition:transform 0.7s,opacity 0.7s;"></div>
+      <div id="story-stage-name" style="font-size:20px;font-weight:700;color:#D4A843;margin-top:8px;transform:translateY(20px);opacity:0;transition:transform 0.7s 0.15s,opacity 0.7s 0.15s;"></div>
+      <div id="story-story-text" style="font-size:14px;color:rgba(255,255,255,0.65);margin-top:10px;max-width:600px;line-height:1.6;transform:translateY(20px);opacity:0;transition:transform 0.7s 0.3s,opacity 0.7s 0.3s;"></div>
+      <div id="story-meta" style="font-size:12px;color:rgba(255,255,255,0.35);margin-top:14px;transform:translateY(20px);opacity:0;transition:transform 0.7s 0.45s,opacity 0.7s 0.45s;"></div>
+    </div>
+    <button onclick="storyNav(-1)" style="position:absolute;left:16px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:#fff;width:48px;height:48px;border-radius:50%;font-size:20px;cursor:pointer;">‹</button>
+    <button onclick="storyNav(1)" style="position:absolute;right:16px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:#fff;width:48px;height:48px;border-radius:50%;font-size:20px;cursor:pointer;">›</button>
+    <button id="story-play-btn" onclick="storyTogglePlay()" style="position:absolute;bottom:20px;right:20px;background:rgba(212,168,67,0.15);border:1px solid rgba(212,168,67,0.4);color:#D4A843;padding:10px 20px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">⏸ Pause</button>
+  </div>
+  <div id="story-thumbs" style="height:72px;background:rgba(0,0,0,0.9);border-top:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:4px;overflow-x:auto;padding:4px 12px;flex-shrink:0;"></div>
+</div>
+
+<script>
+var STORY={photos:[],idx:0,playing:true,timer:null,duration:5000};
+var STORY_TEXTS={'PIL':'Piling works progressing — the foundation of every great bridge starts underground.','EXC':'Excavation prepares the ground for concrete and steel.','BLD':'Blinding concrete laid.','FRB':'Foundation rebar assembled — the steel skeleton takes shape.','FRC':'Foundation concrete poured.','STR':'Pier structure rising toward the sky.','BRG':'Bearings installed.','GRD':'Girders delivered to site.','ERE':'Girder erection underway — bridging the span in one lift.','BH':'Borehole drilling complete.','PRB':'Probing and investigation complete.'};
+function getStoryText(p){ return STORY_TEXTS[p.stage]||'Construction progresses — every photo tells a story of dedication.'+(p.note?' Note: '+p.note:''); }
+function launchWeekStory(){
+  var now=new Date(),wa=new Date(now-7*24*60*60*1000);
+  var ws=wa.toISOString().slice(0,10),ts=now.toISOString().slice(0,10);
+  if(!PHOTO_WALL||Object.keys(PHOTO_WALL).length===0){ if(FB_DB){FB_DB.ref('ic1_bridges/PHOTO_WALL').once('value',function(snap){PHOTO_WALL=snap.val()||{};launchWeekStory();});return;} alert('No photos');return; }
+  var all=Object.values(PHOTO_WALL).filter(function(p){return p.date>=ws&&p.date<=ts&&p.url;});
+  all.sort(function(a,b){return(a.ts||0)-(b.ts||0);});
+  if(all.length===0){alert('No photos this week');return;}
+  STORY.photos=all;STORY.idx=0;STORY.playing=true;
+  var wl=document.getElementById('story-week-label');
+  if(wl) wl.textContent='Week of '+wa.toLocaleDateString('en-US',{month:'long',day:'numeric'})+' – '+now.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  var te=document.getElementById('story-thumbs');
+  if(te){te.innerHTML='';all.forEach(function(p,i){var t=document.createElement('div');t.style.cssText='width:100px;height:64px;flex-shrink:0;border-radius:6px;overflow:hidden;cursor:pointer;border:2px solid transparent;';t.id='story-thumb-'+i;t.onclick=(function(x){return function(){storyGoTo(x);};})(i);var img=document.createElement('img');img.src=p.url;img.style.cssText='width:100%;height:100%;object-fit:cover;';t.appendChild(img);te.appendChild(t);});}
+  document.getElementById('week-story-overlay').style.display='flex';
+  storyGoTo(0);
+}
+function storyGoTo(idx){
+  if(STORY.timer)clearTimeout(STORY.timer);
+  STORY.idx=Math.max(0,Math.min(STORY.photos.length-1,idx));
+  var p=STORY.photos[STORY.idx];
+  ['story-pier-name','story-stage-name','story-story-text','story-meta'].forEach(function(id){var e=document.getElementById(id);if(e){e.style.opacity='0';e.style.transform='translateY(20px)';}});
+  var img=document.getElementById('story-img'); img.style.opacity='0'; img.style.transform='scale(1.04)';
+  setTimeout(function(){img.src=p.url;img.onload=function(){img.style.opacity='1';img.style.transform='scale(1.08)';};},200);
+  document.getElementById('story-bg').style.backgroundImage='url('+p.url+')';
+  setTimeout(function(){
+    document.getElementById('story-pier-name').textContent=p.pier?'Pier '+p.pier:(p.sectionId||'IC1 Site');
+    var sn='';if(typeof STAGES!=='undefined')STAGES.forEach(function(s){if(s.id===p.stage)sn=s.label;});if(!sn)sn=p.stage||'Site Activity';
+    document.getElementById('story-stage-name').textContent=sn;
+    document.getElementById('story-story-text').textContent=getStoryText(p);
+    document.getElementById('story-meta').textContent='📅 '+(p.date||'—')+'  ·  👷 '+(p.by||'Field')+'  ·  '+(p.status||'');
+    ['story-pier-name','story-stage-name','story-story-text','story-meta'].forEach(function(id){var e=document.getElementById(id);if(e){e.style.opacity='1';e.style.transform='translateY(0)';}});
+  },400);
+  document.getElementById('story-counter').textContent=(STORY.idx+1)+' / '+STORY.photos.length;
+  STORY.photos.forEach(function(_,i){var t=document.getElementById('story-thumb-'+i);if(t)t.style.borderColor=i===STORY.idx?'#D4A843':'transparent';});
+  var at=document.getElementById('story-thumb-'+STORY.idx);if(at)at.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+  var prog=document.getElementById('story-progress');if(prog){prog.style.transition='none';prog.style.width='0%';setTimeout(function(){prog.style.transition='width '+STORY.duration+'ms linear';prog.style.width='100%';},50);}
+  if(STORY.playing)STORY.timer=setTimeout(function(){storyGoTo(STORY.idx<STORY.photos.length-1?STORY.idx+1:0);},STORY.duration);
+}
+function storyNav(dir){storyGoTo(STORY.idx+dir);}
+function storyTogglePlay(){STORY.playing=!STORY.playing;document.getElementById('story-play-btn').textContent=STORY.playing?'⏸ Pause':'▶ Play';if(STORY.playing)storyGoTo(STORY.idx);else if(STORY.timer){clearTimeout(STORY.timer);STORY.timer=null;}}
+function closeWeekStory(){if(STORY.timer)clearTimeout(STORY.timer);STORY.playing=false;document.getElementById('week-story-overlay').style.display='none';document.getElementById('story-img').src='';}
+document.addEventListener('keydown',function(e){if(document.getElementById('week-story-overlay').style.display==='none')return;if(e.key==='ArrowRight')storyNav(1);else if(e.key==='ArrowLeft')storyNav(-1);else if(e.key===' '){e.preventDefault();storyTogglePlay();}else if(e.key==='Escape')closeWeekStory();});
+
+// ═══ EXPORT VIDEO ═══════════════════════════════════════════════
+var EV_recording = false;
+
+function openExportVideo(){
+  if(!PHOTO_WALL||Object.keys(PHOTO_WALL).length===0){
+    if(FB_DB){FB_DB.ref('ic1_bridges/PHOTO_WALL').once('value',function(s){PHOTO_WALL=s.val()||{};openExportVideo();});return;}
+    alert('No photos yet');return;
+  }
+  var ov=document.getElementById('export-video-overlay');
+  if(ov){ ov.style.display='flex'; }
+  var today=new Date().toISOString().slice(0,10);
+  var weekAgo=new Date(Date.now()-7*24*60*60*1000).toISOString().slice(0,10);
+  var fd=document.getElementById('ev-from-date'),td=document.getElementById('ev-to-date');
+  if(fd) fd.value=weekAgo;
+  if(td) td.value=today;
+  var pa=document.getElementById('ev-progress-area'),gb=document.getElementById('ev-generate-btn');
+  if(pa) pa.style.display='none';
+  if(gb) gb.style.display='block';
+  evUpdateCount();
+  document.querySelectorAll('input[name="ev-range"]').forEach(function(r){r.onchange=evUpdateCount;});
+  document.querySelectorAll('input[name="ev-range"]').forEach(function(r){r.onchange=function(){
+    var cd=document.getElementById('ev-custom-dates');
+    if(cd) cd.style.display=this.value==='custom'?'flex':'none';
+    evUpdateCount();
+  };});
+}
+
+function closeExportVideo(){
+  var ov=document.getElementById('export-video-overlay');
+  if(ov) ov.style.display='none';
+  EV_recording=false;
+}
+
+function evGetPhotos(){
+  var el=document.querySelector('input[name="ev-range"]:checked');
+  var range=el?el.value:'week';
+  var today=new Date().toISOString().slice(0,10);
+  var weekAgo=new Date(Date.now()-7*24*60*60*1000).toISOString().slice(0,10);
+  var all=Object.values(PHOTO_WALL||{}).filter(function(p){return p.url;});
+  all.sort(function(a,b){return(a.ts||0)-(b.ts||0);});
+  if(range==='week') return all.filter(function(p){return p.date>=weekAgo&&p.date<=today;});
+  if(range==='today') return all.filter(function(p){return p.date===today;});
+  if(range==='all') return all;
+  if(range==='custom'){
+    var f=document.getElementById('ev-from-date').value;
+    var t=document.getElementById('ev-to-date').value;
+    return all.filter(function(p){return p.date>=f&&p.date<=t;});
+  }
+  return all;
+}
+
+function evUpdateCount(){
+  var photos=evGetPhotos();
+  var dur=photos.length*4;
+  var el=document.getElementById('ev-count-preview');
+  if(el) el.textContent='📸 '+photos.length+' photos · ~'+Math.floor(dur/60)+'m '+( dur%60)+'s video';
+}
+
+function startExportVideo(){
+  var photos=evGetPhotos();
+  if(photos.length===0){alert('No photos in selected range');return;}
+  if(!window.MediaRecorder){alert('Video export requires Chrome or Edge browser.');return;}
+
+  var qEl=document.querySelector('input[name="ev-quality"]:checked');
+  var quality=qEl?qEl.value:'hd';
+  var W=quality==='fhd'?1920:1280, H=quality==='fhd'?1080:720, FPS=25;
+  var PHOTO_FRAMES=FPS*4, FADE=Math.floor(FPS*0.4), TITLE_FRAMES=FPS*2;
+
+  var canvas=document.getElementById('ev-canvas');
+  canvas.width=W; canvas.height=H;
+  var ctx=canvas.getContext('2d');
+
+  var gb=document.getElementById('ev-generate-btn');
+  var pa=document.getElementById('ev-progress-area');
+  if(gb) gb.style.display='none';
+  if(pa) pa.style.display='block';
+
+  var mimeType=MediaRecorder.isTypeSupported('video/webm;codecs=vp9')?'video/webm;codecs=vp9':'video/webm';
+  var stream=canvas.captureStream(FPS);
+  var recorder=new MediaRecorder(stream,{mimeType:mimeType,videoBitsPerSecond:quality==='fhd'?8000000:4000000});
+  var chunks=[];
+  recorder.ondataavailable=function(e){if(e.data.size>0)chunks.push(e.data);};
+  recorder.onstop=function(){
+    var blob=new Blob(chunks,{type:mimeType});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a'); a.href=url; a.download='SiteSync_IC1_'+new Date().toISOString().slice(0,10)+'.webm'; a.click();
+    URL.revokeObjectURL(url);
+    var pl=document.getElementById('ev-progress-label'); if(pl) pl.textContent='✅ Video downloaded!';
+    setTimeout(function(){closeExportVideo();if(gb)gb.style.display='block';},2500);
+  };
+
+  EV_recording=true;
+  recorder.start();
+
+  var STORY_TEXTS={'PIL':'Piling — the foundation of every great bridge starts underground.','EXC':'Excavation prepares the ground.','BLD':'Blinding concrete laid.','FRB':'Foundation rebar assembled.','FRC':'Foundation concrete poured.','STR':'Pier structure rising toward the sky.','BRG':'Bearings installed.','GRD':'Girders delivered to site.','ERE':'Girder erection — bridging the span in one lift.','BH':'Borehole drilling complete.','PRB':'Probing and investigation complete.'};
+
+  // Preload images
+  var loaded=0;
+  photos.forEach(function(p){
+    var img=new Image(); img.crossOrigin='anonymous';
+    img.onload=function(){p._img=img;loaded++;};
+    img.onerror=function(){loaded++;};
+    img.src=p.url;
+  });
+
+  function waitLoad(cb){ if(loaded>=photos.length)cb(); else setTimeout(function(){waitLoad(cb);},200); }
+
+  waitLoad(function(){
+    var frame=0, curPhoto=0, startTime=Date.now();
+    var totalFrames=TITLE_FRAMES+photos.length*PHOTO_FRAMES;
+
+    function drawFrame(){
+      if(!EV_recording){recorder.stop();return;}
+      // Progress
+      var pct=Math.round(frame/totalFrames*100);
+      var pb=document.getElementById('ev-progress-bar'),pp=document.getElementById('ev-progress-pct'),pl=document.getElementById('ev-progress-label'),et=document.getElementById('ev-eta');
+      if(pb) pb.style.width=pct+'%';
+      if(pp) pp.textContent=pct+'%';
+      if(pl) pl.textContent='Photo '+(curPhoto+1)+' of '+photos.length;
+      if(et&&pct>5){var elapsed=(Date.now()-startTime)/1000;if(et) et.textContent='~'+Math.round(elapsed/pct*(100-pct))+'s remaining';}
+
+      ctx.fillStyle='#07090d'; ctx.fillRect(0,0,W,H);
+
+      if(frame<TITLE_FRAMES){
+        // Title card
+        var ta=Math.min(1,frame/12);
+        ctx.globalAlpha=ta;
+        ctx.font='bold '+(W/52)+'px sans-serif'; ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.textAlign='center';
+        ctx.fillText('IC1 ROAD IMPROVEMENTS — DIRIYAH GATE',W/2,H*0.38);
+        ctx.font='bold '+(W/8)+'px sans-serif'; ctx.fillStyle='#D4A843';
+        ctx.shadowColor='rgba(212,168,67,0.4)'; ctx.shadowBlur=30;
+        ctx.fillText('SiteSync',W/2,H*0.54); ctx.shadowBlur=0;
+        ctx.font='bold '+(W/40)+'px sans-serif'; ctx.fillStyle='rgba(255,255,255,0.5)';
+        ctx.fillText(photos.length+' photos',W/2,H*0.66);
+        ctx.textAlign='left'; ctx.globalAlpha=1;
+      } else {
+        curPhoto=Math.floor((frame-TITLE_FRAMES)/PHOTO_FRAMES);
+        if(curPhoto>=photos.length){recorder.stop();return;}
+        var fi=(frame-TITLE_FRAMES)%PHOTO_FRAMES;
+        var alpha=fi<FADE?(fi/FADE):fi>PHOTO_FRAMES-FADE?((PHOTO_FRAMES-fi)/FADE):1;
+        var p=photos[curPhoto];
+        if(p&&p._img&&p._img.naturalWidth){
+          var img=p._img, iw=img.naturalWidth, ih=img.naturalHeight;
+          var ks=1.04+(fi/PHOTO_FRAMES)*0.06;
+          // Blur bg
+          ctx.save(); ctx.filter='blur(35px) brightness(0.25)';
+          var bs=Math.max(W/iw,H/ih)*1.3;
+          ctx.drawImage(img,(W-iw*bs)/2,(H-ih*bs)/2,iw*bs,ih*bs);
+          ctx.restore();
+          // Main photo
+          var s=Math.min(W/iw,H/ih)*ks;
+          ctx.globalAlpha=alpha;
+          ctx.drawImage(img,(W-iw*s)/2,(H-ih*s)/2,iw*s,ih*s);
+          ctx.globalAlpha=1;
+        }
+        // Gradient
+        var gr=ctx.createLinearGradient(0,H*0.45,0,H);
+        gr.addColorStop(0,'rgba(0,0,0,0)'); gr.addColorStop(1,'rgba(0,0,0,0.9)');
+        ctx.fillStyle=gr; ctx.fillRect(0,0,W,H);
+
+        var ta=Math.min(1,Math.max(0,(fi-8)/12))*alpha;
+        ctx.globalAlpha=ta;
+        // Big name
+        var nm=p.pier?'Bridge '+(typeof getBrId==='function'?getBrId(p.pier):'')+' — Pier '+p.pier:(p.sectionId||'IC1 Site');
+        ctx.font='bold '+(W/13)+'px sans-serif'; ctx.fillStyle='#fff';
+        ctx.shadowColor='rgba(0,0,0,0.9)'; ctx.shadowBlur=24;
+        ctx.fillText(nm,W*0.05,H*0.73); ctx.shadowBlur=0;
+        // Stage
+        var sn=p.stage||''; if(typeof STAGES!=='undefined') STAGES.forEach(function(s){if(s.id===p.stage)sn=s.label;});
+        ctx.font='bold '+(W/34)+'px sans-serif'; ctx.fillStyle='#D4A843';
+        ctx.fillText(sn,W*0.05,H*0.73+W/11);
+        // Story
+        var st=(STORY_TEXTS[p.stage]||'Construction progresses.')+(p.note?' "'+p.note+'"':'');
+        ctx.font=(W/50)+'px sans-serif'; ctx.fillStyle='rgba(255,255,255,0.6)';
+        var words=st.split(' '),line='',lines2=[],mxW=W*0.72;
+        words.forEach(function(w){var tl=line+w+' ';if(ctx.measureText(tl).width>mxW&&line){lines2.push(line);line=w+' ';}else line=tl;}); lines2.push(line);
+        lines2.forEach(function(l,li){ctx.fillText(l,W*0.05,H*0.73+W/11+(W/34)*(1.5+li*1.5));});
+        // Date
+        ctx.font=(W/68)+'px sans-serif'; ctx.fillStyle='rgba(255,255,255,0.35)';
+        ctx.fillText('📅 '+(p.date||'—')+'   👷 '+(p.by||'Field'),W*0.05,H*0.96);
+        ctx.globalAlpha=alpha;
+        // Top bar
+        ctx.fillStyle='rgba(255,255,255,0.1)'; ctx.fillRect(0,0,W,5);
+        ctx.fillStyle='#D4A843'; ctx.fillRect(0,0,W*((curPhoto+fi/PHOTO_FRAMES)/photos.length),5);
+        // Counter
+        ctx.font='bold '+(W/60)+'px monospace'; ctx.fillStyle='rgba(255,255,255,0.4)';
+        ctx.textAlign='right'; ctx.fillText((curPhoto+1)+'/'+photos.length,W*0.97,H*0.06);
+        ctx.textAlign='left'; ctx.globalAlpha=1;
+      }
+      frame++;
+      requestAnimationFrame(drawFrame);
+    }
+    drawFrame();
+  });
+}
+
+</script>
+
+
+<!-- ═══ EXPORT VIDEO OVERLAY ═══ -->
+<div id="export-video-overlay" style="display:none;position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,0.92);display:none;align-items:center;justify-content:center;font-family:Inter,sans-serif;">
+  <div style="background:#0a1628;border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:28px;width:90%;max-width:480px;">
+
+    <!-- Header -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <div>
+        <div style="font-family:Rajdhani,sans-serif;font-size:24px;font-weight:900;color:#06D6A0;">⬇️ Export Video</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.35);margin-top:2px;">Generate a shareable video of site photos</div>
+      </div>
+      <button onclick="closeExportVideo()" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:#fff;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">✕</button>
+    </div>
+
+    <!-- Photo range -->
+    <div style="margin-bottom:16px;">
+      <div style="font-size:10px;color:rgba(255,255,255,0.4);font-weight:700;letter-spacing:1px;margin-bottom:8px;">📅 PHOTO RANGE</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);">
+          <input type="radio" name="ev-range" value="week" checked style="accent-color:#06D6A0;">
+          <span style="font-size:13px;color:#fff;font-weight:600;">This week <span style="color:rgba(255,255,255,0.35);font-weight:400;">(last 7 days)</span></span>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);">
+          <input type="radio" name="ev-range" value="today" style="accent-color:#06D6A0;">
+          <span style="font-size:13px;color:#fff;font-weight:600;">Today only</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);">
+          <input type="radio" name="ev-range" value="all" style="accent-color:#06D6A0;">
+          <span style="font-size:13px;color:#fff;font-weight:600;">All photos</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);" id="ev-custom-label">
+          <input type="radio" name="ev-range" value="custom" style="accent-color:#06D6A0;" onchange="document.getElementById('ev-custom-dates').style.display='flex'">
+          <span style="font-size:13px;color:#fff;font-weight:600;">Custom range</span>
+        </label>
+        <div id="ev-custom-dates" style="display:none;gap:10px;padding:0 12px;">
+          <div style="flex:1;"><div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:4px;">FROM</div><input type="date" id="ev-from-date" style="width:100%;padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:#1e293b;color:#fff;font-size:13px;outline:none;box-sizing:border-box;"></div>
+          <div style="flex:1;"><div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:4px;">TO</div><input type="date" id="ev-to-date" style="width:100%;padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:#1e293b;color:#fff;font-size:13px;outline:none;box-sizing:border-box;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quality -->
+    <div style="margin-bottom:20px;">
+      <div style="font-size:10px;color:rgba(255,255,255,0.4);font-weight:700;letter-spacing:1px;margin-bottom:8px;">🎬 QUALITY</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);">
+          <input type="radio" name="ev-quality" value="hd" checked style="accent-color:#06D6A0;">
+          <span style="font-size:13px;color:#fff;font-weight:600;">HD <span style="color:rgba(255,255,255,0.35);font-weight:400;">1280×720</span></span>
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);">
+          <input type="radio" name="ev-quality" value="fhd" style="accent-color:#06D6A0;">
+          <span style="font-size:13px;color:#fff;font-weight:600;">Full HD <span style="color:rgba(255,255,255,0.35);font-weight:400;">1920×1080</span></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Photo count preview -->
+    <div id="ev-count-preview" style="background:rgba(6,214,160,0.08);border:1px solid rgba(6,214,160,0.2);border-radius:8px;padding:10px 14px;margin-bottom:20px;font-size:13px;color:#06D6A0;font-weight:600;"></div>
+
+    <!-- Generate button -->
+    <button onclick="startExportVideo()" id="ev-generate-btn" style="width:100%;padding:14px;border-radius:10px;background:linear-gradient(135deg,#06D6A0,#0EA5E9);border:none;color:#000;font-size:15px;font-weight:900;cursor:pointer;font-family:inherit;letter-spacing:0.5px;">▶ Generate Video</button>
+
+    <!-- Progress area (hidden until generating) -->
+    <div id="ev-progress-area" style="display:none;margin-top:16px;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+        <span id="ev-progress-label" style="font-size:12px;color:rgba(255,255,255,0.6);">Rendering...</span>
+        <span id="ev-progress-pct" style="font-size:12px;color:#06D6A0;font-weight:700;">0%</span>
+      </div>
+      <div style="height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;">
+        <div id="ev-progress-bar" style="height:100%;background:#06D6A0;width:0%;transition:width 0.3s;border-radius:3px;"></div>
+      </div>
+      <div id="ev-eta" style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:4px;text-align:right;"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Hidden canvas for video rendering -->
+<canvas id="ev-canvas" style="display:none;"></canvas>
+
 </body>
 </html>
