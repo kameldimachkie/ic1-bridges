@@ -7,6 +7,64 @@
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script>
+
+// ═══ DESKTOP PIN LOGIN ═══════════════════════════════════════
+var DP_CORRECT = '12345';
+var DP_ENTERED = '';
+var DP_LOCKED  = false;
+var DP_ATTEMPTS = 0;
+
+function dpTap(d){
+  if(DP_LOCKED || DP_ENTERED.length >= 5) return;
+  DP_ENTERED += d;
+  dpUpdateDots();
+  if(DP_ENTERED.length === 5) setTimeout(dpCheck, 200);
+}
+
+function dpDel(){
+  if(DP_LOCKED) return;
+  DP_ENTERED = DP_ENTERED.slice(0,-1);
+  dpUpdateDots();
+  document.getElementById('desk-pin-err').textContent = '';
+}
+
+function dpUpdateDots(){
+  for(var i=0;i<5;i++){
+    var d=document.getElementById('dpd'+i);
+    if(!d) return;
+    d.className='dpdot';
+    if(i < DP_ENTERED.length) d.classList.add('filled');
+  }
+}
+
+function dpCheck(){
+  if(DP_ENTERED === DP_CORRECT){
+    for(var i=0;i<5;i++){ var d=document.getElementById('dpd'+i); if(d){d.className='dpdot success';} }
+    setTimeout(function(){
+      var lock=document.getElementById('desk-lock');
+      if(lock){ lock.style.transition='opacity 0.4s'; lock.style.opacity='0'; setTimeout(function(){lock.style.display='none';},400); }
+    },500);
+  } else {
+    DP_ATTEMPTS++;
+    for(var i=0;i<5;i++){ var d=document.getElementById('dpd'+i); if(d){d.className='dpdot error';} }
+    // Shake
+    var dots=document.getElementById('desk-pin-dots');
+    if(dots){
+      var shakes=[10,-10,8,-8,5,0], si=0;
+      var sh=setInterval(function(){ dots.style.transform='translateX('+shakes[si]+'px)'; si++; if(si>=shakes.length){clearInterval(sh);dots.style.transform='';} },60);
+    }
+    var msg = DP_ATTEMPTS>=5 ? 'Too many attempts. Wait 30s.' : 'Incorrect PIN';
+    document.getElementById('desk-pin-err').textContent = msg;
+    if(DP_ATTEMPTS>=5){ DP_LOCKED=true; setTimeout(function(){DP_LOCKED=false;DP_ATTEMPTS=0;document.getElementById('desk-pin-err').textContent='';},30000); }
+    setTimeout(function(){
+      DP_ENTERED=''; dpUpdateDots();
+      for(var i=0;i<5;i++){ var d=document.getElementById('dpd'+i); if(d){d.className='dpdot';} }
+    },700);
+  }
+}
+
+// Safe localStorage wrapper — works even when blocked by corporate IT
+var _ls=(function(){try{_ls.setItem('_t','1');_ls.removeItem('_t');return localStorage;}catch(e){var m={};return{getItem:function(k){return m[k]||null;},setItem:function(k,v){m[k]=String(v);},removeItem:function(k){delete m[k];}};}})();
 function toggleSummary(){
   var ov=document.getElementById('summary-overlay');
   if(!ov) return;
@@ -702,26 +760,70 @@ function buildSummary(){
     font-size: 16px;
     cursor: pointer;
   }
-
-@media print {
-  body { background: white !important; color: black !important; }
-  #sidebar, #top-bar, #map-container, .tab-btn, #tab-progress, #tab-plan, #tab-photos, #tab-docs { display: none !important; }
-  #tab-report { display: block !important; position: static !important; }
-  #report-content-desk { overflow: visible !important; padding: 0 !important; }
-  .rpt-no-print { display: none !important; }
-  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-}
-
-.ptab {
-  flex:1; padding:11px 4px; border:none; border-bottom:2px solid transparent;
-  background:transparent; color:rgba(255,255,255,0.4); font-size:12px; font-weight:700;
-  cursor:pointer; font-family:Inter,sans-serif; transition:all 0.2s;
-}
-.ptab:hover { color:rgba(255,255,255,0.7); }
-.active-ptab { color:#D4A843 !important; border-bottom-color:#D4A843 !important; background:rgba(212,168,67,0.06) !important; }
 </style>
 </head>
 <body>
+
+<!-- ═══ DESKTOP PIN LOGIN ═══ -->
+<div id="desk-lock" style="position:fixed;inset:0;z-index:99999;background:#07090d;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:Inter,sans-serif;">
+
+  <!-- Background grid -->
+  <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(88,166,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(88,166,255,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;"></div>
+
+  <!-- Logo + title -->
+  <div style="text-align:center;margin-bottom:32px;position:relative;">
+    <div style="font-family:Rajdhani,sans-serif;font-size:28px;font-weight:900;color:#fff;letter-spacing:1px;">SiteSync Desktop</div>
+    <div style="font-size:12px;color:rgba(255,255,255,0.3);letter-spacing:3px;margin-top:2px;">IC1 ROAD IMPROVEMENTS</div>
+  </div>
+
+  <!-- PIN dots -->
+  <div id="desk-pin-dots" style="display:flex;justify-content:center;gap:14px;margin-bottom:10px;">
+    <div class="dpdot" id="dpd0"></div>
+    <div class="dpdot" id="dpd1"></div>
+    <div class="dpdot" id="dpd2"></div>
+    <div class="dpdot" id="dpd3"></div>
+    <div class="dpdot" id="dpd4"></div>
+  </div>
+
+  <!-- Error -->
+  <div id="desk-pin-err" style="font-size:13px;color:#E63946;height:20px;margin-bottom:20px;font-weight:600;text-align:center;"></div>
+
+  <!-- Keypad -->
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:260px;">
+    <button class="dpbtn" onclick="dpTap('1')"><span class="dpnum">1</span></button>
+    <button class="dpbtn" onclick="dpTap('2')"><span class="dpnum">2</span><span class="dpsub">ABC</span></button>
+    <button class="dpbtn" onclick="dpTap('3')"><span class="dpnum">3</span><span class="dpsub">DEF</span></button>
+    <button class="dpbtn" onclick="dpTap('4')"><span class="dpnum">4</span><span class="dpsub">GHI</span></button>
+    <button class="dpbtn" onclick="dpTap('5')"><span class="dpnum">5</span><span class="dpsub">JKL</span></button>
+    <button class="dpbtn" onclick="dpTap('6')"><span class="dpnum">6</span><span class="dpsub">MNO</span></button>
+    <button class="dpbtn" onclick="dpTap('7')"><span class="dpnum">7</span><span class="dpsub">PQRS</span></button>
+    <button class="dpbtn" onclick="dpTap('8')"><span class="dpnum">8</span><span class="dpsub">TUV</span></button>
+    <button class="dpbtn" onclick="dpTap('9')"><span class="dpnum">9</span><span class="dpsub">WXYZ</span></button>
+    <div></div>
+    <button class="dpbtn" onclick="dpTap('0')"><span class="dpnum">0</span></button>
+    <button class="dpbtn dpbtn-del" onclick="dpDel()">
+      <svg width="24" height="18" viewBox="0 0 24 18" fill="none">
+        <path d="M9 1H22C22.6 1 23 1.4 23 2V16C23 16.6 22.6 17 22 17H9L1 9L9 1Z" stroke="white" stroke-width="1.5" fill="rgba(255,255,255,0.08)"/>
+        <line x1="13" y1="6" x2="19" y2="12" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+        <line x1="19" y1="6" x2="13" y2="12" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
+
+</div>
+
+<style>
+.dpdot { width:13px;height:13px;border-radius:50%;border:2px solid rgba(255,255,255,0.4);background:transparent;transition:background 0.15s; }
+.dpdot.filled  { background:#fff;border-color:#fff; }
+.dpdot.success { background:#06D6A0;border-color:#06D6A0; }
+.dpdot.error   { background:#E63946;border-color:#E63946; }
+.dpbtn { background:rgba(255,255,255,0.08);border:none;border-radius:50%;width:76px;height:76px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background 0.1s;gap:0; }
+.dpbtn:active { background:rgba(255,255,255,0.22); }
+.dpbtn-del { background:transparent; }
+.dpnum { font-size:30px;font-weight:300;color:#fff;line-height:1; }
+.dpsub { font-size:9px;font-weight:600;color:rgba(255,255,255,0.4);letter-spacing:1px;margin-top:1px; }
+</style>
+
 
 <!-- TOP BAR -->
 <div id="topbar">
@@ -846,20 +948,7 @@ function buildSummary(){
 
   <!-- PROGRESS TAB -->
   <div id="tab-progress" style="display:none;flex:1;flex-direction:column;overflow:hidden;background:#07090d;">
-    <!-- Progress sub-tabs -->
-    <div style="display:flex;gap:0;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;background:#0a1628;">
-      <button id="ptab-overview"    class="ptab active-ptab" onclick="showProgressTab('overview')">📊 Overview</button>
-      <button id="ptab-bridges"     class="ptab" onclick="showProgressTab('bridges')">🌉 Bridges</button>
-      <button id="ptab-embankment"  class="ptab" onclick="showProgressTab('embankment')">🏔️ Embankment</button>
-      <button id="ptab-roads"       class="ptab" onclick="showProgressTab('roads')">🛣️ Roads</button>
-    </div>
-    <!-- Sub-tab content areas -->
-    <div id="progress-overview"    style="flex:1;overflow-y:auto;padding:20px;display:block;"></div>
-    <div id="progress-bridges"     style="flex:1;overflow-y:auto;padding:20px;display:none;"></div>
-    <div id="progress-embankment"  style="flex:1;overflow-y:auto;padding:20px;display:none;"></div>
-    <div id="progress-roads"       style="flex:1;overflow-y:auto;padding:20px;display:none;"></div>
-    <!-- Keep for backward compat -->
-    <div id="progress-content" style="display:none;"></div>
+    <div id="progress-content" style="flex:1;display:flex;flex-direction:column;overflow:hidden;"></div>
   </div>
 
   <!-- PLAN TAB -->
@@ -869,20 +958,6 @@ function buildSummary(){
 
   <!-- REPORT TAB -->
   <div id="tab-report" style="display:none;flex:1;flex-direction:column;overflow:hidden;background:#0f172a;">
-    <!-- Date range picker bar -->
-    <div style="padding:14px 20px;background:#0a1628;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:12px;flex-wrap:wrap;flex-shrink:0;">
-      <div style="font-size:13px;font-weight:700;color:#D4A843;">📅 Report Period:</div>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <label style="font-size:11px;color:rgba(255,255,255,0.4);">FROM</label>
-        <input type="date" id="rpt-from" style="padding:7px 10px;border-radius:7px;border:1px solid rgba(212,168,67,0.4);background:#1e293b;color:#fff;font-size:13px;font-family:inherit;outline:none;">
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <label style="font-size:11px;color:rgba(255,255,255,0.4);">TO</label>
-        <input type="date" id="rpt-to" style="padding:7px 10px;border-radius:7px;border:1px solid rgba(212,168,67,0.4);background:#1e293b;color:#fff;font-size:13px;font-family:inherit;outline:none;">
-      </div>
-      <button id="rpt-generate-btn" style="padding:8px 18px;border-radius:8px;background:rgba(212,168,67,0.2);border:2px solid #D4A843;color:#D4A843;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;">🔍 Preview Report</button>
-      <button id="rpt-download-btn" style="display:none;padding:8px 18px;border-radius:8px;background:#06D6A0;border:none;color:#000;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;">⬇️ Download PDF</button>
-    </div>
     <div id="report-content-desk" style="flex:1;overflow-y:auto;padding:20px;"></div>
   </div>
 
@@ -1046,7 +1121,7 @@ function changeAdminPw(){
   if(!p1||!p2||!msg) return;
   if(p1.value.length<4){msg.style.color='#E63946';msg.textContent='❌ Password must be at least 4 characters';return;}
   if(p1.value!==p2.value){msg.style.color='#E63946';msg.textContent='❌ Passwords do not match';return;}
-  localStorage.setItem('ic1_adminpw',p1.value);
+  _ls.setItem('ic1_adminpw',p1.value);
   msg.style.color='#06D6A0';
   msg.textContent='✅ Password changed successfully!';
   p1.value=''; p2.value='';
@@ -1057,7 +1132,7 @@ function adminUnlock(){
   var inp = document.getElementById('admin-pw-input');
   var err = document.getElementById('admin-pw-err');
   var pw = inp ? inp.value : '';
-  var correct = localStorage.getItem('ic1_adminpw')||'12345';
+  var correct = '12345';
   if(pw === correct){
     _adminUnlocked = true;
     renderAdminContent();
@@ -1101,7 +1176,7 @@ function renderRoadWeightsForm(){
   var el = document.getElementById('road-weights-form');
   if(!el) return;
   try{
-    var stored = JSON.parse(localStorage.getItem('ic1_road_weights')||'null');
+    var stored = JSON.parse(_ls.getItem('ic1_road_weights')||'null');
     if(stored) _roadWeights = stored;
   }catch(e){}
   var h = '';
@@ -1115,12 +1190,6 @@ function renderRoadWeightsForm(){
     h += '</div>';
   });
   el.innerHTML = h;
-  // Wire card clicks
-  el.querySelectorAll('.prog-card').forEach(function(card){
-    card.onmouseover = function(){ this.style.borderColor = this.style.borderColor.replace('33','88'); };
-    card.onmouseout  = function(){ this.style.borderColor = this.style.borderColor.replace('88','33'); };
-    card.onclick = function(){ showProgressTab(this.dataset.tab); };
-  });
   updateRoadWeightsTotal();
 }
 
@@ -1143,7 +1212,7 @@ function saveRoadWeights(){
     var el = document.getElementById('rw-'+s.id);
     if(el) s.w = parseFloat(el.value)||0;
   });
-  localStorage.setItem('ic1_road_weights', JSON.stringify(_roadWeights));
+  _ls.setItem('ic1_road_weights', JSON.stringify(_roadWeights));
   if(FB_DB){
     FB_DB.ref('ic1_bridges/ROAD_WEIGHTS').set(_roadWeights)
       .then(function(){ showToast('✅ Road weights saved & synced!'); })
@@ -1158,7 +1227,7 @@ function renderStageWeightsForm(){
   if(!el) return;
   // Load from localStorage if saved
   try{
-    var stored = JSON.parse(localStorage.getItem('ic1_stage_weights')||'null');
+    var stored = JSON.parse(_ls.getItem('ic1_stage_weights')||'null');
     if(stored) _stageWeights = stored;
   }catch(e){}
   var h = '';
@@ -1194,7 +1263,7 @@ function saveStageWeights(){
     var el = document.getElementById('sw-'+s.id);
     if(el) s.w = parseFloat(el.value)||0;
   });
-  localStorage.setItem('ic1_stage_weights', JSON.stringify(_stageWeights));
+  _ls.setItem('ic1_stage_weights', JSON.stringify(_stageWeights));
   if(FB_DB){
     FB_DB.ref('ic1_bridges/STAGE_WEIGHTS').set(_stageWeights)
       .then(function(){ showToast('✅ Stage weights saved & synced!'); })
@@ -1209,7 +1278,7 @@ function renderWeightsForm(){
   if(!el) return;
   // Load from localStorage
   try{
-    var stored = JSON.parse(localStorage.getItem('ic1_ws_weights')||'null');
+    var stored = JSON.parse(_ls.getItem('ic1_ws_weights')||'null');
     if(stored) _adminWeights = stored;
   }catch(e){}
 
@@ -1250,7 +1319,7 @@ function saveWeights(){
     var el = document.getElementById('w-'+k);
     if(el) _adminWeights[k] = parseFloat(el.value)||0;
   });
-  localStorage.setItem('ic1_ws_weights', JSON.stringify(_adminWeights));
+  _ls.setItem('ic1_ws_weights', JSON.stringify(_adminWeights));
   // Push to Firebase
   if(FB_DB){
     FB_DB.ref('ic1_bridges/WEIGHTS').set(_adminWeights)
@@ -1265,12 +1334,12 @@ function renderPinsForm(){
   var el = document.getElementById('pins-form');
   if(!el) return;
   var pins = {};
-  try{ pins = JSON.parse(localStorage.getItem('ic1_user_pins')||'{}'); }catch(e){}
+  try{ pins = JSON.parse(_ls.getItem('ic1_user_pins')||'{}'); }catch(e){}
   if(FB_DB){
     FB_DB.ref('ic1_bridges/USER_PINS').once('value').then(function(snap){
       var fbPins = snap.val()||{};
       Object.assign(pins, fbPins);
-      localStorage.setItem('ic1_user_pins', JSON.stringify(pins));
+      _ls.setItem('ic1_user_pins', JSON.stringify(pins));
       _renderPinsList(pins);
     });
   } else {
@@ -1306,10 +1375,10 @@ function addUser(){
   var pin = pinEl ? pinEl.value.trim() : '';
   if(!name||!pin){ showToast('Enter name and PIN'); return; }
   var pins = {};
-  try{ pins = JSON.parse(localStorage.getItem('ic1_user_pins')||'{}'); }catch(e){}
+  try{ pins = JSON.parse(_ls.getItem('ic1_user_pins')||'{}'); }catch(e){}
   var safeKey = name.replace(/[.#$\[\]/]/g,'_');
   pins[safeKey] = pin;
-  localStorage.setItem('ic1_user_pins', JSON.stringify(pins));
+  _ls.setItem('ic1_user_pins', JSON.stringify(pins));
   nameEl.value=''; pinEl.value='';
   _renderPinsList(pins);
   showToast('User added — tap Save to sync');
@@ -1317,22 +1386,22 @@ function addUser(){
 
 function deleteUser(name){
   var pins = {};
-  try{ pins = JSON.parse(localStorage.getItem('ic1_user_pins')||'{}'); }catch(e){}
+  try{ pins = JSON.parse(_ls.getItem('ic1_user_pins')||'{}'); }catch(e){}
   delete pins[name];
-  localStorage.setItem('ic1_user_pins', JSON.stringify(pins));
+  _ls.setItem('ic1_user_pins', JSON.stringify(pins));
   _renderPinsList(pins);
 }
 
 function savePins(){
   var pins = {};
-  try{ pins = JSON.parse(localStorage.getItem('ic1_user_pins')||'{}'); }catch(e){}
+  try{ pins = JSON.parse(_ls.getItem('ic1_user_pins')||'{}'); }catch(e){}
   // Also collect any edited values from inputs
   document.querySelectorAll('#pins-form input[data-user]').forEach(function(el){
     var u = el.getAttribute('data-user');
     var safeKey = u.replace(/[.#$\[\]/]/g,'_');
     if(el.value.trim()) pins[safeKey] = el.value.trim();
   });
-  localStorage.setItem('ic1_user_pins', JSON.stringify(pins));
+  _ls.setItem('ic1_user_pins', JSON.stringify(pins));
   if(FB_DB){
     firebase.database().ref('ic1_bridges/USER_PINS').set(pins)
       .then(function(){ showToast('✅ PINs saved & synced to all devices!'); })
@@ -1360,7 +1429,7 @@ var BRIDGES = [
   {id:'C',col:'#CE93D8',piers:['AB-1C','1C','2C','3C','4C','5C-1','5C-2','6C','7C','8C','9C','10C','11C','12C','13C','14C','15C','16C','17C']},
   {id:'D',col:'#FF9F1C',piers:['AB-1D','1D','2D','3D-1','3D-2','4D','5D','6D','7D','8D','9D','10D','11D-1','11D-2','12D']},
   {id:'E',col:'#EF4444',piers:['1E','2E','3E','4E','5E','6E','7E','8E','9E','10E','11E','12E','13E','14E','15E','16E','17E']},
-  {id:'G',col:'#34D399',piers:['AB-1G','1G','2G','AB-2G']},
+  {id:'G',col:'#34D399',piers:['AB-1G','1G','2G','AB-2G','AB-1B']},
   {id:'K',col:'#F43F5E',piers:['AB-1K','AB-2K']},
   {id:'L',col:'#8B5CF6',piers:['AB-1L','AB-2L']},
   {id:'M',col:'#EC4899',piers:['AB-1M','1M-L','1M-R','AB-2M']},
@@ -1439,25 +1508,26 @@ var CULVERTS = [
 ];
 
 var STAGES = [
-  {id:'BH', label:'Borehole',          w:0.196, col:'#10B981'},
-  {id:'PRB',label:'Probing',           w:1.958, col:'#CE93D8'},
-  {id:'PIL',label:'Piling',            w:17.626,col:'#60A5FA'},
-  {id:'EXC',label:'Excavation',        w:4.896, col:'#FBBF24'},
-  {id:'BLD',label:'Blinding',          w:2.938, col:'#94A3B8'},
-  {id:'FRB',label:'Foundation Rebar',  w:7.834, col:'#F87171'},
-  {id:'FRC',label:'Foundation Conc.',  w:9.792, col:'#FB923C'},
-  {id:'STR',label:'Pier Structure',    w:21.543,col:'#A78BFA'},
-  {id:'BRG',label:'Bearings',          w:4.896, col:'#34D399'},
-  {id:'GRD',label:'Girder Supply',     w:13.709,col:'#38BDF8'},
-  {id:'ERE',label:'Girder Erection',   w:8.813, col:'#F472B6'}
+  {id:'BH', label:'Borehole',          w:0.208, col:'#10B981'},
+  {id:'PRB',label:'Probing',           w:2.079, col:'#CE93D8'},
+  {id:'PIL',label:'Piling',            w:18.711,col:'#60A5FA'},
+  {id:'EXC',label:'Excavation',        w:5.197, col:'#FBBF24'},
+  {id:'BLD',label:'Blinding',          w:3.119, col:'#94A3B8'},
+  {id:'FRB',label:'Foundation Rebar',  w:8.316, col:'#F87171'},
+  {id:'FRC',label:'Foundation Conc.',  w:10.395, col:'#FB923C'},
+  {id:'STR',label:'Pier Structure',    w:22.869,col:'#A78BFA'},
+  {id:'BRG',label:'Bearings',          w:5.197, col:'#34D399'},
+  {id:'GRD',label:'Girder Supply',     w:14.553,col:'#38BDF8'},
+  {id:'ERE',label:'Girder Erection',   w:9.356, col:'#F472B6'}
 ];
 
 // Progress data - loaded from localStorage
 var PS = {};
-try { PS = JSON.parse(localStorage.getItem('ic1_ps')||'{}'); } catch(e){}
+try { PS = JSON.parse(_ls.getItem('ic1_ps')||'{}'); } catch(e){}
 
 // Piers that have photos on site
 var PHOTO_PIERS = {};
+var PHOTO_WALL = {};
 var EMB_DATA = {};
 var ROAD_DATA = {ibn:{},sattam:{}};
 var MY_LOC = null;
@@ -1500,17 +1570,14 @@ var layers = {roads:true, culverts:true, bms:false, offset:true};
 var isDragging = false, dragStartX, dragStartY, dragStartOX, dragStartOY;
 
 function getBrId(name){
-  // First: check BRIDGES array (most reliable)
   for(var i=0;i<BRIDGES.length;i++)
     if(BRIDGES[i].piers.indexOf(name)>-1) return BRIDGES[i].id;
-  // Fallback: extract bridge letter from pier name
-  // Pier names format: '1B', '7B-1', 'AB-1B', '5C-1', etc.
-  // The bridge letter is the last uppercase letter in the base name
-  var base = name.split('-')[0]; // '7B' from '7B-1', 'AB' from 'AB-1B' — wait, AB-1B splits to ['AB','1B']
-  // Better: get last char that is a letter A-N
-  var m = name.match(/([A-N])(?:[^A-N]*$)/);
-  if(m) return m[1];
-  return '?';
+  if(name.endsWith('A')) return 'A';
+  if(name.indexOf('B')>-1) return 'B';
+  if(name.indexOf('C')>-1) return 'C';
+  if(name.indexOf('D')>-1) return 'D';
+  if(name.indexOf('E')>-1) return 'E';
+  return 'G';
 }
 
 function getBrColor(brId){
@@ -2486,45 +2553,8 @@ function draw(){
   });
 
   // ── Zone Labels ─────────────────────────────────────
-  var ZONES = [
-    {name:'ZONE 1', n:2736490, e:661290},
-    {name:'ZONE 2', n:2736250, e:660600},
-    {name:'ZONE 3', n:2736650, e:660480},
-    {name:'ZONE 4', n:2737050, e:660970},
-  ];
 
-  ZONES.forEach(function(z){
-    var pos = toCanvas(z.n, z.e);
 
-    // Scale inversely with zoom — shrink and fade as user zooms in
-    var zoomFactor = Math.max(0.3, Math.min(1, 1 / scale));
-    var cr = Math.round(33 * zoomFactor);
-    var alpha = Math.max(0.15, Math.min(0.85, zoomFactor));
-
-    if(cr < 6) return;
-
-    ctx.globalAlpha = alpha;
-    ctx.shadowColor = 'rgba(30,100,200,0.8)';
-    ctx.shadowBlur = 6 * zoomFactor;
-    ctx.fillStyle = '#0f2d6e';
-    ctx.beginPath(); ctx.arc(pos.x, pos.y, cr, 0, Math.PI*2); ctx.fill();
-    ctx.strokeStyle = '#38BDF8';
-    ctx.lineWidth = Math.max(0.5, 1.5 * zoomFactor);
-    ctx.beginPath(); ctx.arc(pos.x, pos.y, cr, 0, Math.PI*2); ctx.stroke();
-    ctx.shadowBlur = 0;
-
-    var parts = z.name.split(' ');
-    var fs1 = Math.max(6, Math.round(12 * zoomFactor));
-    var fs2 = Math.max(8, Math.round(18 * zoomFactor));
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold '+fs1+'px Inter,sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(parts[0], pos.x, pos.y - cr*0.28);
-    ctx.font = 'bold '+fs2+'px Inter,sans-serif';
-    ctx.fillText(parts[1], pos.x, pos.y + cr*0.28);
-    ctx.globalAlpha = 1;
-  });
 
   // ── KKR ETW widening lines (from CSV) ────────────────
   if(typeof KKR_ETW_LEFT!=='undefined'){
@@ -2736,7 +2766,7 @@ function showPierPanel(pier){
     var stCol=st==='Complete'||st==='Inspected'?'#06D6A0':st==='In Progress'?'#D4A843':st==='On Hold'?'#E63946':'#475569';
     var stBg=st==='Complete'||st==='Inspected'?'rgba(6,214,160,0.1)':st==='In Progress'?'rgba(212,168,67,0.1)':st==='On Hold'?'rgba(230,57,70,0.1)':'rgba(255,255,255,0.03)';
     h+='<div class="stage-item">';
-    h+='<div><div style="font-size:11px;color:var(--text);">'+s.label+'</div>';
+    h+='<div><div style="font-size:11px;color:var(--text);">'+s.name+'</div>';
     h+='<div style="font-size:9px;color:var(--dimL);">Weight: '+s.w+'%</div></div>';
     h+='<span class="stage-status" style="color:'+stCol+';background:'+stBg+';border:1px solid '+stCol+'44;">'+st+'</span>';
     h+='</div>';
@@ -2749,7 +2779,7 @@ function showPierPanel(pier){
     FB_DB.ref('ic1_bridges/PHOTO_WALL').orderByChild('pier').equalTo(pier.name).once('value', function(snap){
       var photos = snap.val();
       if(!photos||Object.keys(photos).length===0) return;
-      var list = Object.keys(photos).map(function(k){ return photos[k]; });
+      var list = Object.keys(photos).map(function(k){ var o=photos[k]; o._fbkey=k; return o; });
       list.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
 
       var ph = '<div style="margin-top:14px;border-top:1px solid rgba(255,255,255,0.08);padding-top:14px;">';
@@ -2894,314 +2924,145 @@ function switchTab(tab){
     else if(tab==='report'){
       var tabReport=document.getElementById('tab-report');
       if(tabReport) tabReport.style.display='flex';
-      initializeReportTab();
+      renderDailyReport();
     }
     else if(tab==='admin'){ mapArea.style.display='flex'; sidebar.style.display='flex'; openAdmin(); }
   }
 }
 
 function renderProgress(){
-  showProgressTab('overview');
-}
-
-function showProgressTab(tab){
-  // Update tab buttons
-  document.querySelectorAll('.ptab').forEach(function(b){ b.classList.remove('active-ptab'); });
-  var activeBtn = document.getElementById('ptab-'+tab);
-  if(activeBtn) activeBtn.classList.add('active-ptab');
-
-  // Show/hide content areas
-  ['overview','bridges','embankment','roads'].forEach(function(t){
-    var el = document.getElementById('progress-'+t);
-    if(el) el.style.display = t===tab ? 'block' : 'none';
-  });
-
-  // Render selected tab
-  if(tab==='overview')    renderProgressOverview();
-  else if(tab==='bridges')     renderProgressBridges();
-  else if(tab==='embankment')  renderProgressEmbankment();
-  else if(tab==='roads')       renderProgressRoads();
-}
-
-// ── TAB 1: OVERVIEW ─────────────────────────────────────────────────
-function renderProgressOverview(){
-  var el = document.getElementById('progress-overview');
+  var el = document.getElementById('progress-content');
   if(!el) return;
   var brColors = {A:'#58A6FF',B:'#06D6A0',C:'#CE93D8',D:'#FF9F1C',E:'#FB923C',G:'#34D399',K:'#F43F5E',L:'#8B5CF6',M:'#EC4899',N:'#14B8A6'};
 
-  // Bridge stats
-  var totalPiers=PIERS.length, activePiers=0, completePiers=0, holdPiers=0;
+  var totalPiers = PIERS.length;
+  var activePiers=0, completePiers=0, holdPiers=0;
   PIERS.forEach(function(p){
     var col=getPierColor(p.name);
     if(col==='#D4A843') activePiers++;
     else if(col==='#06D6A0') completePiers++;
     else if(col==='#E63946') holdPiers++;
   });
+  var overallPct = Math.round((completePiers/totalPiers)*100);
 
-  // Weighted overall bridge %
-  var totalW=0, doneW=0;
-  PIERS.forEach(function(p){
-    var stages=PS[p.name]||{};
-    STAGES.forEach(function(s){
-      totalW+=s.w;
-      if(stages[s.id]==='Complete'||stages[s.id]==='Inspected') doneW+=s.w;
-    });
-  });
-  var bridgePct = totalW>0?Math.round(doneW/totalW*100):0;
+  var h = '<div style="display:flex;flex-direction:column;height:100%;padding:14px 20px;box-sizing:border-box;">';
 
-  // Emb %
-  var _ed=typeof EMB_DATA!=='undefined'?EMB_DATA:{};
-  var nL=typeof EMB_TOTAL_LAYERS!=='undefined'?EMB_TOTAL_LAYERS:16;
-  var embTotal=0, embDone=0;
-  (typeof EMB_STATIONS!=='undefined'?EMB_STATIONS:[]).forEach(function(s){
-    var ch=s.ch; embTotal+=nL;
-    embDone+=parseInt(_ed['KKR_Emb_L_'+Math.floor(ch/1000)+'_'+String(ch%1000).padStart(3,'0')]||0);
+  // KPI row - compact
+  h += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px;flex-shrink:0;">';
+  [{v:totalPiers,l:'Total Piers',c:'#58A6FF'},{v:activePiers,l:'In Progress',c:'#D4A843'},
+   {v:completePiers,l:'Complete',c:'#06D6A0'},{v:holdPiers,l:'On Hold',c:'#E63946'}
+  ].forEach(function(k){
+    h += '<div style="background:#0a1628;border:1px solid '+k.c+'44;border-top:3px solid '+k.c+';border-radius:10px;padding:12px;text-align:center;">';
+    h += '<div style="font-size:36px;font-weight:900;color:'+k.c+';font-family:JetBrains Mono,monospace;line-height:1;">'+k.v+'</div>';
+    h += '<div style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:4px;font-weight:700;">'+k.l+'</div>';
+    h += '</div>';
   });
-  (typeof EMB_STATIONS_R!=='undefined'?EMB_STATIONS_R:[]).forEach(function(s){
-    var ch=s.ch; embTotal+=nL;
-    embDone+=parseInt(_ed['KKR_Emb_R_'+Math.floor(ch/1000)+'_'+String(ch%1000).padStart(3,'0')]||0);
-  });
-  var embPct = embTotal>0?Math.round(embDone/embTotal*100):0;
+  h += '</div>';
 
-  // Road %
-  var _rd=typeof ROAD_DATA!=='undefined'?ROAD_DATA:{};
-  var rdTotal=0, rdDone=0;
-  ['ibn','sattam'].forEach(function(rk){
-    var stns=rk==='ibn'?IBN_STATIONS:SAT_STATIONS;
-    (stns||[]).forEach(function(s){
-      (typeof ROAD_LAYERS!=='undefined'?ROAD_LAYERS:[]).forEach(function(l){
-        rdTotal++;
-        if((_rd[rk]||{})[s.name.replace(/[^a-zA-Z0-9]/g,'_')+'_'+l.id]==='Complete') rdDone++;
+  // Overall bar - compact
+  h += '<div style="background:#0a1628;border:1px solid rgba(212,168,67,0.3);border-radius:10px;padding:12px 16px;margin-bottom:12px;flex-shrink:0;display:flex;align-items:center;gap:16px;">';
+  h += '<span style="font-size:15px;font-weight:800;color:#f1f5f9;white-space:nowrap;">Overall Completion</span>';
+  h += '<div style="flex:1;height:16px;background:rgba(255,255,255,0.08);border-radius:8px;overflow:hidden;">';
+  h += '<div style="height:100%;width:'+overallPct+'%;background:linear-gradient(90deg,#D4A843,#06D6A0);border-radius:8px;box-shadow:0 0 10px rgba(212,168,67,0.4);"></div>';
+  h += '</div>';
+  h += '<span style="font-family:JetBrains Mono,monospace;font-size:24px;font-weight:900;color:#D4A843;white-space:nowrap;">'+overallPct+'%</span>';
+  h += '</div>';
+
+  // Histogram canvas - fills remaining space
+  h += '<div style="flex:1;background:#0a1628;border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:16px;display:flex;flex-direction:column;min-height:0;">';
+  h += '<div style="font-size:15px;font-weight:800;color:#f1f5f9;margin-bottom:10px;flex-shrink:0;">📊 Bridge Progress Histogram</div>';
+  h += '<canvas id="progress-canvas" style="flex:1;width:100%;display:block;min-height:0;"></canvas>';
+  h += '</div>';
+
+  // Embankment progress section
+  // KKR Road Widening KPI
+  h += '<div style="background:#0a1628;border:1px solid rgba(20,184,166,0.3);border-radius:10px;padding:12px 16px;margin-top:12px;">';
+  h += '<div style="font-size:14px;font-weight:800;color:#14B8A6;margin-bottom:8px;">🛣️ KKR Road Widening — L,M,N (0.8%)</div>';
+  h += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px;">';
+  var widTotal=0,widDone=0;
+  KKR_WIDENING_ACTS.forEach(function(act){
+    widTotal++;
+    var status=PS&&PS['KKR_WID']?PS['KKR_WID'][act.id]:'';
+    if(status==='Complete') widDone++;
+    var col=status==='Complete'?'#06D6A0':status==='In Progress'?'#D4A843':'rgba(255,255,255,0.1)';
+    h += '<div style="border:1px solid '+col+';border-radius:6px;padding:6px;text-align:center;">';
+    h += '<div style="font-size:9px;color:rgba(255,255,255,0.5);">'+act.label+'</div>';
+    h += '<div style="font-size:10px;font-weight:800;color:'+col+';">'+(status||'—')+'</div>';
+    h += '</div>';
+  });
+  h += '</div>';
+  var widPct=widTotal>0?Math.round((widDone/widTotal)*100):0;
+  h += '<div style="display:flex;align-items:center;gap:10px;">';
+  h += '<div style="flex:1;height:8px;background:rgba(255,255,255,0.08);border-radius:4px;overflow:hidden;">';
+  h += '<div style="height:100%;width:'+widPct+'%;background:#14B8A6;border-radius:4px;"></div></div>';
+  h += '<div style="font-size:20px;font-weight:900;color:#14B8A6;font-family:JetBrains Mono,monospace;">'+widPct+'%</div>';
+  h += '</div></div>';
+
+  // Road Layers Progress KPI
+  h += '<div style="background:#0a1628;border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px 16px;margin-top:12px;">';
+  h += '<div style="font-size:14px;font-weight:800;color:#f1f5f9;margin-bottom:10px;">🛣️ Road Layers Progress</div>';
+  h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">';
+  [{key:'ibn',label:'Ibn Saud',col:'#34D399'},{key:'sattam',label:'Sattam',col:'#A78BFA'}].forEach(function(rd){
+    var pct=typeof getRoadProgress==='function'?getRoadProgress(rd.key):0;
+    h += '<div style="background:rgba(255,255,255,0.02);border:1px solid '+rd.col+'33;border-radius:8px;padding:10px;">';
+    h += '<div style="font-size:12px;font-weight:700;color:'+rd.col+';margin-bottom:6px;">'+rd.label+'</div>';
+    if(typeof ROAD_LAYERS!=='undefined'){
+      ROAD_LAYERS.forEach(function(layer){
+        var rdData=(ROAD_DATA&&ROAD_DATA[rd.key])||{};
+        var stns=rd.key==='ibn'?IBN_STATIONS:SAT_STATIONS;
+        var done=0,total=stns?stns.length:0;
+        if(stns) stns.forEach(function(s){
+          var k=s.name.replace(/[^a-zA-Z0-9]/g,'_')+'_'+layer.id;
+          if(rdData[k]==='Complete'||rdData[k]==='Inspected') done++;
+        });
+        var lPct=total>0?Math.round(done/total*100):0;
+        h += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">';
+        h += '<div style="width:8px;height:8px;border-radius:50%;background:'+layer.col+';flex-shrink:0;"></div>';
+        h += '<div style="flex:1;font-size:10px;color:rgba(255,255,255,0.5);">'+layer.label+'</div>';
+        h += '<div style="width:50px;height:4px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;">';
+        h += '<div style="height:100%;width:'+lPct+'%;background:'+layer.col+';"></div></div>';
+        h += '<div style="font-size:10px;color:'+layer.col+';font-weight:700;width:26px;">'+lPct+'%</div>';
+        h += '</div>';
       });
-    });
-  });
-  var rdPct = rdTotal>0?Math.round(rdDone/rdTotal*100):0;
-
-  // Overall weighted
-  var overallPct = Math.round(bridgePct*0.8 + embPct*0.1 + rdPct*0.1);
-
-  var h = '';
-
-  // Overall hero card
-  h += '<div style="background:linear-gradient(135deg,#0a1628,#1e293b);border:1px solid rgba(212,168,67,0.3);border-radius:16px;padding:24px;margin-bottom:20px;display:flex;align-items:center;gap:24px;">';
-  h += '<div style="text-align:center;">';
-  h += '<div style="font-size:56px;font-weight:900;color:#D4A843;font-family:JetBrains Mono,monospace;line-height:1;">'+overallPct+'%</div>';
-  h += '<div style="font-size:12px;color:rgba(255,255,255,0.4);margin-top:4px;letter-spacing:1px;">OVERALL</div>';
-  h += '</div>';
-  h += '<div style="flex:1;">';
-  h += '<div style="height:10px;background:rgba(255,255,255,0.08);border-radius:5px;overflow:hidden;margin-bottom:12px;">';
-  h += '<div style="height:100%;width:'+overallPct+'%;background:linear-gradient(90deg,#D4A843,#F59E0B);border-radius:5px;"></div></div>';
-  h += '<div style="font-size:13px;color:rgba(255,255,255,0.5);">'+completePiers+' piers complete · '+activePiers+' in progress · '+holdPiers+' on hold</div>';
-  h += '</div></div>';
-
-  // 3 section cards
-  h += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px;">';
-  [{label:'🌉 Bridges',pct:bridgePct,col:'#58A6FF',sub:completePiers+'/'+totalPiers+' piers done',tab:'bridges'},
-   {label:'🏔️ Embankment',pct:embPct,col:'#D4A843',sub:'L&R sides · '+nL+' layers',tab:'embankment'},
-   {label:'🛣️ Roads',pct:rdPct,col:'#34D399',sub:'Ibn Saud & Sattam',tab:'roads'}
-  ].forEach(function(item){
-    h += '<div class="prog-card" data-tab="'+item.tab+'" style="cursor:pointer;background:#0a1628;border:1px solid '+item.col+'33;border-radius:12px;padding:16px;transition:border 0.2s;">';
-    h += '<div style="font-size:14px;font-weight:800;color:'+item.col+';margin-bottom:10px;">'+item.label+'</div>';
-    h += '<div style="font-size:36px;font-weight:900;color:'+item.col+';font-family:JetBrains Mono,monospace;line-height:1;margin-bottom:8px;">'+item.pct+'%</div>';
-    h += '<div style="height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;margin-bottom:8px;">';
-    h += '<div style="height:100%;width:'+item.pct+'%;background:'+item.col+';border-radius:3px;"></div></div>';
-    h += '<div style="font-size:11px;color:rgba(255,255,255,0.35);">'+item.sub+'</div>';
-    h += '<div style="font-size:10px;color:'+item.col+'66;margin-top:8px;font-weight:700;">Click to view details →</div>';
-    h += '</div>';
-  });
-  h += '</div>';
-
-  // Bridge breakdown by bridge ID
-  h += '<div style="background:#0a1628;border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:16px;">';
-  h += '<div style="font-size:14px;font-weight:800;color:#f1f5f9;margin-bottom:14px;">Bridge Breakdown</div>';
-  h += '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">';
-  var allBridgeIds = ['A','B','C','D','E','G','K','L','M','N'];
-  allBridgeIds.forEach(function(bid){
-    var col = brColors[bid]||'#58A6FF';
-    var bPiers = PIERS.filter(function(p){ return p.bridge===bid||(function(){for(var i=0;i<BRIDGES.length;i++)if(BRIDGES[i].id===bid&&BRIDGES[i].piers.indexOf(p.name)>-1)return true;return false;})(); });
-    if(bPiers.length===0) return;
-    var done=0,wip=0;
-    bPiers.forEach(function(p){ var c=getPierColor(p.name); if(c==='#06D6A0')done++; else if(c==='#D4A843')wip++; });
-    var bPct = Math.round(done/bPiers.length*100);
-    h += '<div style="background:'+col+'11;border:1px solid '+col+'33;border-radius:8px;padding:10px;text-align:center;">';
-    h += '<div style="font-size:16px;font-weight:900;color:'+col+';">'+bid+'</div>';
-    h += '<div style="font-size:18px;font-weight:900;color:'+col+';font-family:JetBrains Mono,monospace;">'+bPct+'%</div>';
-    h += '<div style="font-size:9px;color:rgba(255,255,255,0.3);margin-top:2px;">'+done+'/'+bPiers.length+' piers</div>';
-    h += '<div style="height:4px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;margin-top:6px;">';
-    h += '<div style="height:100%;width:'+bPct+'%;background:'+col+';"></div></div>';
+    }
+    h += '<div style="height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;margin-top:6px;">';
+    h += '<div style="height:100%;width:'+pct+'%;background:'+rd.col+';border-radius:3px;"></div></div>';
+    h += '<div style="font-size:20px;font-weight:900;color:'+rd.col+';font-family:JetBrains Mono,monospace;margin-top:4px;">'+pct+'%</div>';
     h += '</div>';
   });
   h += '</div></div>';
 
-  el.innerHTML = h;
-}
-
-// ── TAB 2: BRIDGES ──────────────────────────────────────────────────
-function renderProgressBridges(){
-  var el = document.getElementById('progress-bridges');
-  if(!el) return;
-  var brColors = {A:'#58A6FF',B:'#06D6A0',C:'#CE93D8',D:'#FF9F1C',E:'#FB923C',G:'#34D399',K:'#F43F5E',L:'#8B5CF6',M:'#EC4899',N:'#14B8A6'};
-
-  var h = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;">';
-
-  // Left: histogram canvas
-  h += '<div style="background:#0a1628;border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:16px;">';
-  h += '<div style="font-size:14px;font-weight:800;color:#f1f5f9;margin-bottom:12px;">📊 Stage Completion Histogram</div>';
-  h += '<canvas id="progress-canvas" style="width:100%;height:280px;display:block;"></canvas>';
-  h += '</div>';
-
-  // Right: pier table per bridge
-  h += '<div style="display:flex;flex-direction:column;gap:10px;">';
-  BRIDGES.forEach(function(br){
-    var col = brColors[br.id]||'#58A6FF';
-    var done=0,wip=0,total=br.piers.length;
-    br.piers.forEach(function(pn){ var c=getPierColor(pn); if(c==='#06D6A0')done++; else if(c==='#D4A843')wip++; });
-    var pct=Math.round(done/total*100);
-    h += '<div style="background:#0a1628;border:1px solid '+col+'33;border-radius:10px;padding:12px;">';
-    h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">';
-    h += '<div style="display:flex;align-items:center;gap:8px;">';
-    h += '<div style="width:10px;height:10px;border-radius:50%;background:'+col+';"></div>';
-    h += '<span style="font-size:13px;font-weight:800;color:'+col+';">Bridge '+br.id+'</span>';
-    h += '<span style="font-size:11px;color:rgba(255,255,255,0.4);">'+total+' piers</span></div>';
-    h += '<span style="font-size:18px;font-weight:900;color:'+col+';font-family:JetBrains Mono,monospace;">'+pct+'%</span>';
-    h += '</div>';
-    h += '<div style="height:5px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;margin-bottom:8px;">';
-    h += '<div style="height:100%;width:'+pct+'%;background:'+col+';border-radius:3px;"></div></div>';
-    h += '<div style="display:flex;gap:6px;flex-wrap:wrap;">';
-    br.piers.forEach(function(pn){
-      var pc=getPierColor(pn);
-      var isDone=pc==="#06D6A0",isWip=pc==="#D4A843";
-      h += '<span style="font-size:10px;padding:2px 7px;border-radius:4px;font-weight:700;background:'+(isDone?col+'22':isWip?'rgba(212,168,67,0.15)':'rgba(255,255,255,0.05)')+';color:'+(isDone?col:isWip?'#D4A843':'rgba(255,255,255,0.3)')+';">'+(isDone?'✓ ':isWip?'⚡ ':'')+pn+'</span>';
-    });
-    h += '</div></div>';
-  });
-  h += '</div></div>';
-
-  el.innerHTML = h;
-
-  // Draw histogram
-  setTimeout(function(){
-    var canvas=document.getElementById('progress-canvas');
-    if(!canvas||typeof drawHistogram!=='function') return;
-    drawHistogram(canvas);
-  },100);
-}
-
-// ── TAB 3: EMBANKMENT ───────────────────────────────────────────────
-function renderProgressEmbankment(){
-  var el = document.getElementById('progress-embankment');
-  if(!el) return;
-
-  var _ed=typeof EMB_DATA!=='undefined'?EMB_DATA:{};
-  var nL=typeof EMB_TOTAL_LAYERS!=='undefined'?EMB_TOTAL_LAYERS:16;
-
-  var h = '';
-
-  [{side:'L',label:'Left Side (West)',col:'#D4A843',stns:typeof EMB_STATIONS!=='undefined'?EMB_STATIONS:[]},
-   {side:'R',label:'Right Side (East)',col:'#F59E0B',stns:typeof EMB_STATIONS_R!=='undefined'?EMB_STATIONS_R:[]}
-  ].forEach(function(sd){
-    var total=sd.stns.length*nL, done=0;
-    sd.stns.forEach(function(s){
-      var ch=s.ch;
-      done+=parseInt(_ed['KKR_Emb_'+sd.side+'_'+Math.floor(ch/1000)+'_'+String(ch%1000).padStart(3,'0')]||0);
-    });
-    var pct=total>0?Math.round(done/total*100):0;
-
-    h += '<div style="background:#0a1628;border:1px solid rgba(212,168,67,0.25);border-radius:12px;padding:16px;margin-bottom:16px;">';
-    h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">';
-    h += '<div style="font-size:15px;font-weight:800;color:'+sd.col+';">🏔️ KKR Embankment — '+sd.label+'</div>';
-    h += '<div style="font-size:28px;font-weight:900;color:'+sd.col+';font-family:JetBrains Mono,monospace;">'+pct+'%</div>';
-    h += '</div>';
-    h += '<div style="height:8px;background:rgba(255,255,255,0.08);border-radius:4px;overflow:hidden;margin-bottom:14px;">';
-    h += '<div style="height:100%;width:'+pct+'%;background:'+sd.col+';border-radius:4px;"></div></div>';
-    h += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:6px;">';
-
-    sd.stns.forEach(function(s){
-      var ch=s.ch;
-      var fk='KKR_Emb_'+sd.side+'_'+Math.floor(ch/1000)+'_'+String(ch%1000).padStart(3,'0');
-      var layersDone=parseInt(_ed[fk]||0);
-      var sPct=Math.round(layersDone/nL*100);
-      var lbl=String(Math.floor(ch/1000))+'+'+String(ch%1000).padStart(3,'0');
-      var sCol=sPct===100?'#06D6A0':sPct>0?sd.col:'rgba(255,255,255,0.1)';
-      h += '<div style="background:'+sCol+'15;border:1px solid '+sCol+'44;border-radius:7px;padding:6px 4px;text-align:center;">';
-      h += '<div style="font-size:10px;font-weight:700;color:'+sCol+';">'+lbl+'</div>';
-      h += '<div style="font-size:12px;font-weight:900;color:'+sCol+';">'+sPct+'%</div>';
-      h += '<div style="font-size:9px;color:rgba(255,255,255,0.3);">'+layersDone+'/'+nL+'</div>';
-      h += '</div>';
-    });
-    h += '</div></div>';
-  });
-
-  el.innerHTML = h;
-}
-
-// ── TAB 4: ROADS ────────────────────────────────────────────────────
-function renderProgressRoads(){
-  var el = document.getElementById('progress-roads');
-  if(!el) return;
-
-  var _rd=typeof ROAD_DATA!=='undefined'?ROAD_DATA:{};
-  var layers=typeof ROAD_LAYERS!=='undefined'?ROAD_LAYERS:[];
-  var h = '';
-
-  [{key:'ibn',label:'Ibn Saud Road',col:'#34D399',stns:typeof IBN_STATIONS!=='undefined'?IBN_STATIONS:[]},
-   {key:'sattam',label:'Sattam Road',col:'#A78BFA',stns:typeof SAT_STATIONS!=='undefined'?SAT_STATIONS:[]}
-  ].forEach(function(rd){
-    var rdData=_rd[rd.key]||{};
-    var total=rd.stns.length*layers.length, done=0;
-    rd.stns.forEach(function(s){
-      var ak=s.name.replace(/[^a-zA-Z0-9]/g,'_');
-      layers.forEach(function(l){ if(rdData[ak+'_'+l.id]==='Complete') done++; });
-    });
-    var pct=total>0?Math.round(done/total*100):0;
-
-    h += '<div style="background:#0a1628;border:1px solid '+rd.col+'33;border-radius:12px;padding:16px;margin-bottom:16px;">';
-    h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">';
-    h += '<div style="font-size:15px;font-weight:800;color:'+rd.col+';">🛣️ '+rd.label+'</div>';
-    h += '<div style="font-size:28px;font-weight:900;color:'+rd.col+';font-family:JetBrains Mono,monospace;">'+pct+'%</div>';
-    h += '</div>';
-    h += '<div style="height:8px;background:rgba(255,255,255,0.08);border-radius:4px;overflow:hidden;margin-bottom:16px;">';
-    h += '<div style="height:100%;width:'+pct+'%;background:'+rd.col+';border-radius:4px;"></div></div>';
-
-    // Layer by layer breakdown
-    h += '<div style="margin-bottom:16px;">';
-    h += '<div style="font-size:11px;color:rgba(255,255,255,0.4);font-weight:700;letter-spacing:1px;margin-bottom:8px;">LAYER PROGRESS</div>';
-    layers.forEach(function(layer){
-      var lDone=0;
-      rd.stns.forEach(function(s){
-        var ak=s.name.replace(/[^a-zA-Z0-9]/g,'_');
-        if(rdData[ak+'_'+layer.id]==='Complete') lDone++;
+  // KKR Embankment KPI
+  h += '<div style="background:#0a1628;border:1px solid rgba(212,168,67,0.3);border-radius:10px;padding:12px 16px;margin-top:12px;">';
+  h += '<div style="font-size:14px;font-weight:800;color:#D4A843;margin-bottom:8px;">🏔 KKR Embankment (0.8%)</div>';
+  h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
+  ['L','R'].forEach(function(side){
+    var total=0,done=0;
+    if(typeof EMB_STATIONS!=='undefined'){
+      EMB_STATIONS.forEach(function(s){
+        total+=EMB_TOTAL_LAYERS;
+        // Field saves key as: 'KKR Emb L 0+710'.replace(/[^a-zA-Z0-9]/g,'_') = 'KKR_Emb_L_0_710'
+        var ch=s.ch;
+        var chStr=String(Math.floor(ch/1000))+'_'+String(ch%1000).padStart(3,'0');
+        var key='KKR_Emb_'+side+'_'+chStr;
+        var val=(EMB_DATA&&EMB_DATA[key])||0;
+        done+=parseInt(val)||0;
       });
-      var lPct=rd.stns.length>0?Math.round(lDone/rd.stns.length*100):0;
-      h += '<div style="display:grid;grid-template-columns:160px 1fr 50px;gap:10px;align-items:center;margin-bottom:8px;">';
-      h += '<div style="display:flex;align-items:center;gap:7px;"><div style="width:10px;height:10px;border-radius:50%;background:'+layer.col+';flex-shrink:0;"></div><span style="font-size:12px;font-weight:700;color:#f1f5f9;">'+layer.label+'</span></div>';
-      h += '<div style="height:8px;background:rgba(255,255,255,0.06);border-radius:4px;overflow:hidden;">';
-      h += '<div style="height:100%;width:'+lPct+'%;background:'+layer.col+';border-radius:4px;"></div></div>';
-      h += '<div style="font-size:12px;font-weight:800;color:'+layer.col+';text-align:right;">'+lPct+'%</div>';
-      h += '</div>';
-    });
+    }
+    var pct=total>0?Math.round((done/total)*100):0;
+    h += '<div style="background:rgba(212,168,67,0.05);border:1px solid rgba(212,168,67,0.2);border-radius:8px;padding:10px;">';
+    h += '<div style="font-size:12px;color:#D4A843;font-weight:700;margin-bottom:6px;">'+(side==='L'?'Left (West)':'Right (East)')+'</div>';
+    h += '<div style="height:8px;background:rgba(255,255,255,0.08);border-radius:4px;overflow:hidden;margin-bottom:4px;">';
+    h += '<div style="height:100%;width:'+pct+'%;background:#D4A843;border-radius:4px;"></div></div>';
+    h += '<div style="font-size:18px;font-weight:900;color:#D4A843;font-family:JetBrains Mono,monospace;">'+pct+'%</div>';
     h += '</div>';
-
-    // Station heatmap
-    h += '<div style="font-size:11px;color:rgba(255,255,255,0.4);font-weight:700;letter-spacing:1px;margin-bottom:8px;">STATION HEATMAP</div>';
-    h += '<div style="display:flex;flex-wrap:wrap;gap:4px;">';
-    rd.stns.forEach(function(s){
-      var ak=s.name.replace(/[^a-zA-Z0-9]/g,'_');
-      var sDone=layers.filter(function(l){return rdData[ak+'_'+l.id]==='Complete';}).length;
-      var sPct=layers.length>0?Math.round(sDone/layers.length*100):0;
-      var sCol=sPct===100?'#06D6A0':sPct>0?rd.col:'rgba(255,255,255,0.08)';
-      var lbl=s.name.split(' ').pop();
-      h += '<div style="background:'+sCol+'22;border:1px solid '+sCol+'55;border-radius:5px;padding:4px 6px;text-align:center;min-width:48px;" title="'+s.name+': '+sPct+'%">';
-      h += '<div style="font-size:9px;color:'+sCol+';font-weight:700;">'+lbl+'</div>';
-      h += '<div style="font-size:10px;font-weight:900;color:'+sCol+';">'+sPct+'%</div>';
-      h += '</div>';
-    });
-    h += '</div></div>';
   });
+  h += '</div></div>';
 
+  h += '</div>';
   el.innerHTML = h;
+  setTimeout(drawProgressHistogram, 100);
 }
-
 
 function drawProgressHistogram(){
   var canvas = document.getElementById('progress-canvas');
@@ -3533,6 +3394,16 @@ function drawSCurve(){
   }
 }
 
+
+function deletePhoto(btn){
+  var key = btn.dataset.key;
+  if(!key){ alert('Key missing'); return; }
+  if(!confirm('Delete this photo permanently?')) return;
+  var card = btn.closest('.photo-card');
+  if(card){ card.style.transition='opacity 0.3s'; card.style.opacity='0'; setTimeout(function(){if(card.parentNode)card.remove();},350); }
+  if(FB_DB) FB_DB.ref('ic1_bridges/PHOTO_WALL/'+key).remove(function(err){ if(err) alert('Delete failed: '+(err.message||err)); });
+}
+
 function renderPhotos(){
   var el = document.getElementById('photos-content');
   if(!el) return;
@@ -3562,6 +3433,8 @@ function renderPhotos(){
     h += '<div style="margin-left:auto;display:flex;gap:8px;">';
     h += '<button onclick="filterPhotos(\'all\')" id="filter-all" style="padding:5px 12px;border-radius:6px;border:1px solid rgba(212,168,67,0.5);background:rgba(212,168,67,0.15);color:#D4A843;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">All</button>';
     h += '<button onclick="filterPhotos(\'today\')" id="filter-today" style="padding:5px 12px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.5);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Today</button>';
+    h += '<button onclick="launchWeekStory()" style="padding:5px 14px;border-radius:6px;border:1px solid rgba(239,68,68,0.5);background:rgba(239,68,68,0.12);color:#EF4444;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;">🎬 Week Story</button>';
+    h += '<button onclick="openExportVideo()" style="padding:5px 14px;border-radius:6px;border:1px solid rgba(6,214,160,0.5);background:rgba(6,214,160,0.12);color:#06D6A0;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;">⬇️ Export Video</button>';
     h += '</div></div>';
 
     // Photo grid
@@ -3570,7 +3443,11 @@ function renderPhotos(){
     list.forEach(function(p){
       var isToday = p.date===today;
       var pierCol = '#58A6FF';
-      if(p.pier){
+      var pierDisplay = p.pier||'—';
+      if(p.pier === 'MISC'){
+        pierCol = '#94A3B8';
+        pierDisplay = '📷 General Site';
+      } else if(p.pier){
         for(var b=0;b<BRIDGES.length;b++){
           if(BRIDGES[b].piers.indexOf(p.pier)>-1){ pierCol={A:'#58A6FF',B:'#06D6A0',C:'#CE93D8',D:'#FF9F1C',E:'#FB923C',G:'#34D399'}[BRIDGES[b].id]||'#58A6FF'; break; }
         }
@@ -3586,16 +3463,19 @@ function renderPhotos(){
       // Info
       h += '<div style="padding:10px 12px;">';
       h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">';
-      h += '<span style="font-family:Rajdhani,sans-serif;font-size:16px;font-weight:900;color:'+pierCol+';">'+( p.pier||'—')+'</span>';
+      h += '<span style="font-family:Rajdhani,sans-serif;font-size:16px;font-weight:900;color:'+pierCol+';">'+( pierDisplay)+'</span>';
       h += '<span style="font-size:11px;font-weight:700;color:'+statusCol+';background:'+statusCol+'22;padding:2px 8px;border-radius:10px;">'+(p.status||'—')+'</span>';
       h += '</div>';
-      h += '<div style="font-size:12px;color:#94A3B8;margin-bottom:4px;font-weight:600;">'+(p.stage||'—')+'</div>';
+      h += '<div style="font-size:12px;color:#94A3B8;margin-bottom:4px;font-weight:600;">'+((p.stage==='Miscellaneous'?'General Site Photo':p.stage||'—'))+'</div>';
       if(p.note) h += '<div style="font-size:12px;color:#f1f5f9;background:rgba(255,255,255,0.04);padding:6px 8px;border-radius:6px;margin-bottom:6px;border-left:2px solid '+pierCol+';">📝 '+p.note+'</div>';
       h += '<div style="display:flex;justify-content:space-between;align-items:center;">';
       h += '<span style="font-size:11px;color:rgba(255,255,255,0.3);">📅 '+(p.date||'—')+'</span>';
       h += '<span style="font-size:11px;color:rgba(255,255,255,0.3);">👷 '+(p.by||'Field')+'</span>';
       h += '</div></div>';
-      h += '<a href="'+p.url+'" download target="_blank" style="display:block;text-align:center;padding:8px;background:rgba(255,255,255,0.03);border-top:1px solid rgba(255,255,255,0.06);font-size:12px;font-weight:700;color:rgba(255,255,255,0.4);text-decoration:none;cursor:pointer;">💾 Save Photo</a>';
+      h += '<div style="display:flex;border-top:1px solid rgba(255,255,255,0.06);">';
+      h += '<a href="'+p.url+'" download target="_blank" style="flex:1;text-align:center;padding:10px;background:rgba(255,255,255,0.03);font-size:12px;font-weight:700;color:rgba(255,255,255,0.4);text-decoration:none;cursor:pointer;border-right:1px solid rgba(255,255,255,0.06);">💾 Save</a>';
+      h += '<button onclick="deletePhoto(this)" data-key="'+p._fbkey+'" style="width:56px;padding:10px;border:none;background:rgba(231,76,60,0.1);color:#E63946;font-size:18px;cursor:pointer;font-family:inherit;">🗑</button>';
+      h += '</div>';
       h += '</div>';
     });
 
@@ -3655,7 +3535,7 @@ function fbInit(){
       var data = snap.val();
       if(data){
         PS = data;
-        try{ localStorage.setItem('ic1_ps', JSON.stringify(PS)); }catch(e){}
+        try{ _ls.setItem('ic1_ps', JSON.stringify(PS)); }catch(e){}
         buildSidebar();
         updateOverallPct();
         setSyncStatus('live');
@@ -3682,6 +3562,7 @@ function fbInit(){
     // Listen to photo wall - track which piers have photos
     FB_DB.ref('ic1_bridges/PHOTO_WALL').on('value', function(snap){
       var photos = snap.val();
+      PHOTO_WALL = photos || {};
       var count = photos ? Object.keys(photos).length : 0;
       var el = document.getElementById('kpi-photos');
       if(el) el.textContent = count;
@@ -3723,282 +3604,120 @@ function updateOverallPct(){
   if(el) el.textContent = pct + '%';
 }
 
-function initializeReportTab(){
-  // Set default dates to today
-  var today = new Date().toISOString().slice(0,10);
-  var fromEl = document.getElementById('rpt-from');
-  var toEl   = document.getElementById('rpt-to');
-  if(fromEl && !fromEl.value) fromEl.value = today;
-  if(toEl   && !toEl.value)   toEl.value   = today;
-
-  // Wire Generate button
-  var genBtn = document.getElementById('rpt-generate-btn');
-  if(genBtn){
-    genBtn.onclick = function(){
-      var f = document.getElementById('rpt-from').value;
-      var t = document.getElementById('rpt-to').value;
-      if(!f||!t){ alert('Please select a date range'); return; }
-      if(t < f){ alert('TO date must be after FROM date'); return; }
-      renderReport(f, t);
-    };
-  }
-
-  // Wire Download button
-  var dlBtn = document.getElementById('rpt-download-btn');
-  if(dlBtn){
-    dlBtn.onclick = function(){ window.print(); };
-  }
-
-  // Show placeholder
+function renderDailyReport(){
   var el = document.getElementById('report-content-desk');
-  if(el && el.innerHTML.trim()===''){
-    el.innerHTML = '<div style="text-align:center;padding:60px 20px;color:#64748B;">'
-      +'<div style="font-size:48px;margin-bottom:16px;">📋</div>'
-      +'<div style="font-size:16px;font-weight:700;color:#94A3B8;margin-bottom:8px;">Select a date range and click Preview Report</div>'
-      +'<div style="font-size:13px;">The report will show bridge progress, embankment, roads and all photos for the selected period.</div>'
-      +'</div>';
-  }
-}
-
-function renderReport(fromDate, toDate){
-  var el=document.getElementById('report-content-desk');
   if(!el) return;
-  var now=new Date();
-  var fromD=new Date(fromDate), toD=new Date(toDate);
-  var rangeLabel = fromDate===toDate ? fromDate : fromDate+' to '+toDate;
-  document.getElementById('rpt-download-btn').style.display='none';
-
-  // Show loading
-  el.innerHTML='<div style="text-align:center;padding:60px 20px;">'
-    +'<div style="font-size:32px;margin-bottom:12px;">⏳</div>'
-    +'<div style="font-size:14px;color:#94A3B8;">Loading activity for '+rangeLabel+'...</div></div>';
-
-  if(!FB_DB){ el.innerHTML='<div style="color:#E63946;text-align:center;padding:40px;">Firebase not connected</div>'; return; }
-
-  // Load photos in date range
-  FB_DB.ref('ic1_bridges/PHOTO_WALL').once('value', function(snap){
-    var allPhotos=snap.val()||{};
-    var photos=Object.values(allPhotos).filter(function(p){
-      if(!p.date) return false;
-      return p.date>=fromDate && p.date<=toDate;
-    });
-    photos.sort(function(a,b){return (a.ts||0)-(b.ts||0);});
-
-    buildReportHTML(el, fromDate, toDate, rangeLabel, now, photos);
-  });
-}
-
-function buildReportHTML(el, fromDate, toDate, rangeLabel, now, photos){
-  var h='';
-
-  // ── COVER ──────────────────────────────────────────────────────────
-  h+='<div id="rpt-body" style="max-width:900px;margin:0 auto;font-family:Inter,sans-serif;">';
+  var today = new Date().toISOString().slice(0,10);
+  var now = new Date();
+  var h = '';
 
   // Header
-  h+='<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid rgba(212,168,67,0.4);">';
-  h+='<div>';
-  h+='<div style="font-family:Rajdhani,sans-serif;font-size:32px;font-weight:900;color:#f1f5f9;">📋 Site Progress Report</div>';
-  h+='<div style="font-size:13px;color:#94A3B8;margin-top:4px;">Period: <b style="color:#D4A843;">'+rangeLabel+'</b></div>';
-  h+='<div style="font-size:12px;color:#64748B;margin-top:2px;">Generated: '+now.toLocaleDateString()+' at '+now.getHours()+':'+String(now.getMinutes()).padStart(2,'0')+'</div>';
-  h+='</div>';
-  h+='<div style="text-align:right;">';
-  h+='<img src="https://raw.githubusercontent.com/kameldimachkie/ic1-bridges/main/SyncSite.png" style="height:48px;opacity:0.8;">';
-  h+='<div style="font-size:11px;color:#64748B;margin-top:4px;">IC1 Road Improvements</div>';
-  h+='</div></div>';
+  h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">';
+  h += '<div>';
+  h += '<div style="font-family:Rajdhani,sans-serif;font-size:28px;font-weight:900;color:#f1f5f9;">📋 Daily Site Report</div>';
+  h += '<div style="font-size:13px;color:#94A3B8;margin-top:2px;">Generated at '+now.getHours()+':'+String(now.getMinutes()).padStart(2,'0')+' · '+today+'</div>';
+  h += '</div>';
+  h += '<button onclick="printDailyReport();" style="padding:10px 20px;border-radius:8px;background:#06D6A0;border:none;color:#000;font-weight:800;font-size:13px;cursor:pointer;font-family:Inter,sans-serif;">🖨 Print / Export PDF</button>';
+  h += '</div>';
 
-  // Project info cards
-  h+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px;">';
-  [{label:'PROJECT',val:'IC1 Road Improvements'},{label:'CONSULTANT',val:'Khatib & Alami'},
-   {label:'PERIOD',val:rangeLabel},{label:'PHOTOS',val:photos.length+' taken'}].forEach(function(c){
-    h+='<div style="background:#1e293b;border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px;">';
-    h+='<div style="font-size:9px;color:#D4A843;letter-spacing:2px;font-weight:800;margin-bottom:4px;">'+c.label+'</div>';
-    h+='<div style="font-size:13px;font-weight:700;color:#f1f5f9;">'+c.val+'</div></div>';
-  });
-  h+='</div>';
+  // Project info
+  h += '<div style="background:#1e293b;border:1px solid rgba(212,168,67,0.3);border-radius:12px;padding:14px 18px;margin-bottom:18px;display:flex;gap:30px;flex-wrap:wrap;">';
+  h += '<div><div style="font-size:9px;color:#D4A843;letter-spacing:2px;font-weight:800;">PROJECT</div><div style="font-size:14px;font-weight:700;color:#f1f5f9;">IC1 Road Improvements</div></div>';
+  h += '<div><div style="font-size:9px;color:#D4A843;letter-spacing:2px;font-weight:800;">DATE</div><div style="font-size:14px;font-weight:700;color:#f1f5f9;">'+today+'</div></div>';
+  h += '<div><div style="font-size:9px;color:#D4A843;letter-spacing:2px;font-weight:800;">CONSULTANT</div><div style="font-size:14px;font-weight:700;color:#f1f5f9;">Khatib & Alami</div></div>';
+  h += '<div><div style="font-size:9px;color:#D4A843;letter-spacing:2px;font-weight:800;">REPORT TIME</div><div style="font-size:14px;font-weight:700;color:#06D6A0;">2:00 PM</div></div>';
+  h += '</div>';
 
-  // ── OVERALL PROGRESS ───────────────────────────────────────────────
-  h+='<div style="background:#0a1628;border:1px solid rgba(212,168,67,0.3);border-radius:12px;padding:16px;margin-bottom:20px;">';
-  h+='<div style="font-size:16px;font-weight:800;color:#D4A843;margin-bottom:14px;">📊 Overall Progress Snapshot</div>';
-  h+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">';
+  el.innerHTML = h + '<div style="text-align:center;padding:30px;color:#94A3B8;">Loading today activity...</div>';
 
-  // Bridge progress
-  var totalStages=0,doneStages=0;
-  PIERS.forEach(function(p){
-    STAGES.forEach(function(s){
-      totalStages++;
-      var v=(PS[p.name]||{})[s.id]||'';
-      if(v==='Complete'||v==='Inspected') doneStages++;
-    });
-  });
-  var bridgePct=totalStages>0?Math.round(doneStages/totalStages*100):0;
+  if(!FB_DB){ el.innerHTML += '<div style="color:#E63946;text-align:center;">Firebase not connected</div>'; return; }
 
-  // Emb progress
-  var embTotal=0,embDone=0;
-  var _ed=typeof EMB_DATA!=='undefined'?EMB_DATA:{};
-  var nL=typeof EMB_TOTAL_LAYERS!=='undefined'?EMB_TOTAL_LAYERS:16;
-  (typeof EMB_STATIONS!=='undefined'?EMB_STATIONS:[]).forEach(function(s){
-    var ch=s.ch, fk='KKR_Emb_L_'+Math.floor(ch/1000)+'_'+String(ch%1000).padStart(3,'0');
-    embTotal+=nL; embDone+=parseInt(_ed[fk]||0);
-  });
-  (typeof EMB_STATIONS_R!=='undefined'?EMB_STATIONS_R:[]).forEach(function(s){
-    var ch=s.ch, fk='KKR_Emb_R_'+Math.floor(ch/1000)+'_'+String(ch%1000).padStart(3,'0');
-    embTotal+=nL; embDone+=parseInt(_ed[fk]||0);
-  });
-  var embPct=embTotal>0?Math.round(embDone/embTotal*100):0;
+  // Load today's photos from Firebase
+  FB_DB.ref('ic1_bridges/PHOTO_WALL').orderByChild('date').equalTo(today).once('value', function(snap){
+    var photos = snap.val();
+    var photoList = photos ? Object.values(photos) : [];
+    photoList.sort(function(a,b){ return (a.ts||0)-(b.ts||0); });
 
-  // Road progress
-  var rdTotal=0,rdDone=0;
-  var _rd=typeof ROAD_DATA!=='undefined'?ROAD_DATA:{};
-  ['ibn','sattam'].forEach(function(rk){
-    var stns=rk==='ibn'?IBN_STATIONS:SAT_STATIONS;
-    (stns||[]).forEach(function(s){
-      (typeof ROAD_LAYERS!=='undefined'?ROAD_LAYERS:[]).forEach(function(l){
-        rdTotal++;
-        if((_rd[rk]||{})[s.name.replace(/[^a-zA-Z0-9]/g,'_')+'_'+l.id]==='Complete') rdDone++;
+    // Load today's reports
+    FB_DB.ref('ic1_bridges/REPORTS').orderByChild('date').equalTo(today).once('value', function(snapR){
+      var reports = snapR.val();
+      var reportList = reports ? Object.values(reports) : [];
+
+      var content2 = h;
+
+      // Summary cards
+      var activePiers=0, completePiers=0;
+      PIERS.forEach(function(p){
+        var col=getPierColor(p.name);
+        if(col==='#D4A843') activePiers++;
+        else if(col==='#06D6A0') completePiers++;
       });
-    });
-  });
-  var rdPct=rdTotal>0?Math.round(rdDone/rdTotal*100):0;
 
-  [{label:'🌉 Bridges',pct:bridgePct,col:'#58A6FF'},{label:'🏔️ Embankment',pct:embPct,col:'#D4A843'},{label:'🛣️ Roads',pct:rdPct,col:'#34D399'}].forEach(function(item){
-    h+='<div style="background:#1e293b;border-radius:10px;padding:14px;text-align:center;">';
-    h+='<div style="font-size:13px;font-weight:700;color:'+item.col+';margin-bottom:8px;">'+item.label+'</div>';
-    h+='<div style="font-size:32px;font-weight:900;color:'+item.col+';font-family:JetBrains Mono,monospace;">'+item.pct+'%</div>';
-    h+='<div style="height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;margin-top:8px;">';
-    h+='<div style="height:100%;width:'+item.pct+'%;background:'+item.col+';border-radius:3px;"></div></div>';
-    h+='</div>';
-  });
-  h+='</div></div>';
+      content2 += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;">';
+      [{v:photoList.length,l:"Todays Photos",c:'#58A6FF'},{v:reportList.length,l:'New Reports',c:'#E63946'},
+       {v:activePiers,l:'Piers Active',c:'#D4A843'},{v:completePiers,l:'Piers Complete',c:'#06D6A0'}
+      ].forEach(function(k){
+        content2 += '<div style="background:#1e293b;border:1px solid '+k.c+'44;border-top:3px solid '+k.c+';border-radius:10px;padding:14px;text-align:center;">';
+        content2 += '<div style="font-size:32px;font-weight:900;color:'+k.c+';font-family:JetBrains Mono,monospace;">'+k.v+'</div>';
+        content2 += '<div style="font-size:11px;color:#94A3B8;margin-top:4px;font-weight:700;">'+k.l+'</div>';
+        content2 += '</div>';
+      });
+      content2 += '</div>';
 
-  // ── BRIDGE STAGES ──────────────────────────────────────────────────
-  h+='<div style="background:#0a1628;border:1px solid rgba(88,166,255,0.3);border-radius:12px;padding:16px;margin-bottom:20px;">';
-  h+='<div style="font-size:16px;font-weight:800;color:#58A6FF;margin-bottom:14px;">🌉 Bridge Progress</div>';
-  h+='<table style="width:100%;border-collapse:collapse;font-size:12px;">';
-  h+='<thead><tr style="border-bottom:1px solid rgba(255,255,255,0.1);">';
-  ['Bridge','Pier','Stage','Status','Date'].forEach(function(col){
-    h+='<th style="text-align:left;padding:8px 10px;color:#94A3B8;font-weight:700;font-size:11px;letter-spacing:0.5px;">'+col+'</th>';
-  });
-  h+='</tr></thead><tbody>';
+      // Today's photos section
+      if(photoList.length > 0){
+        content2 += '<div style="font-size:13px;font-weight:800;color:#58A6FF;margin-bottom:12px;">📸 Todays Site Photos ('+photoList.length+')</div>';
+        content2 += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-bottom:20px;">';
+        photoList.forEach(function(p){
+          var pierCol='#58A6FF';
+          for(var b=0;b<BRIDGES.length;b++) if(BRIDGES[b].piers.indexOf(p.pier)>-1){pierCol={A:'#58A6FF',B:'#06D6A0',C:'#CE93D8',D:'#FF9F1C',E:'#FB923C',G:'#34D399'}[BRIDGES[b].id]||'#58A6FF';break;}
+          var statusCol=p.status==='Complete'?'#06D6A0':p.status==='In Progress'?'#D4A843':'#E63946';
+          var timeStr = p.ts ? new Date(p.ts).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : '';
 
-  var pierRows=[];
-  PIERS.forEach(function(p){
-    var brId='?';
-    for(var i=0;i<BRIDGES.length;i++) if(BRIDGES[i].piers.indexOf(p.name)>-1){brId=BRIDGES[i].id;break;}
-    var stages=PS[p.name]||{};
-    STAGES.forEach(function(s){
-      var st=stages[s.id]||'Not Started';
-      if(st!=='Not Started'){
-        // Find photo date for this stage
-        var photo=photos.find(function(ph){ return ph.pier===p.name && ph.stage===s.id; });
-        pierRows.push({br:brId,pier:p.name,stage:s.label,status:st,date:photo?photo.date:'-'});
+          content2 += '<div style="background:#1e293b;border:1px solid rgba(255,255,255,0.08);border-radius:10px;overflow:hidden;">';
+          content2 += '<img src="'+p.url+'" style="width:100%;height:140px;object-fit:cover;" loading="lazy">';
+          content2 += '<div style="padding:10px;">';
+          content2 += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">';
+          content2 += '<span style="font-family:Rajdhani,sans-serif;font-size:16px;font-weight:900;color:'+pierCol+';">'+(p.pier||'—')+'</span>';
+          content2 += '<span style="font-size:10px;color:#94A3B8;">⏱ '+timeStr+'</span>';
+          content2 += '</div>';
+          content2 += '<div style="font-size:12px;font-weight:700;color:'+statusCol+';margin-bottom:3px;">'+(p.stage||'')+'  →  '+(p.status||'')+'</div>';
+          if(p.note) content2 += '<div style="font-size:11px;color:#CBD5E1;background:rgba(255,255,255,0.05);padding:5px 7px;border-radius:6px;border-left:2px solid '+pierCol+';">'+p.note+'</div>';
+          content2 += '</div></div>';
+        });
+        content2 += '</div>';
+      } else {
+        content2 += '<div style="background:#1e293b;border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:20px;text-align:center;color:#64748B;margin-bottom:18px;">No photos taken today yet</div>';
       }
-    });
-  });
 
-  if(pierRows.length===0){
-    h+='<tr><td colspan="5" style="padding:16px;text-align:center;color:#64748B;">No bridge activity recorded</td></tr>';
-  } else {
-    pierRows.forEach(function(r,i){
-      var stCol=r.status==='Complete'||r.status==='Inspected'?'#06D6A0':r.status==='In Progress'?'#D4A843':'#E63946';
-      h+='<tr style="border-bottom:1px solid rgba(255,255,255,0.04);background:'+(i%2===0?'transparent':'rgba(255,255,255,0.01)')+'">';
-      h+='<td style="padding:8px 10px;"><span style="background:#58A6FF22;color:#58A6FF;padding:2px 8px;border-radius:5px;font-weight:700;">'+r.br+'</span></td>';
-      h+='<td style="padding:8px 10px;color:#f1f5f9;font-weight:600;">'+r.pier+'</td>';
-      h+='<td style="padding:8px 10px;color:#94A3B8;">'+r.stage+'</td>';
-      h+='<td style="padding:8px 10px;"><span style="color:'+stCol+';font-weight:700;">'+r.status+'</span></td>';
-      h+='<td style="padding:8px 10px;color:#64748B;">'+r.date+'</td>';
-      h+='</tr>';
-    });
-  }
-  h+='</tbody></table></div>';
-
-  // ── EMBANKMENT ─────────────────────────────────────────────────────
-  h+='<div style="background:#0a1628;border:1px solid rgba(212,168,67,0.3);border-radius:12px;padding:16px;margin-bottom:20px;">';
-  h+='<div style="font-size:16px;font-weight:800;color:#D4A843;margin-bottom:14px;">🏔️ KKR Embankment</div>';
-  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">';
-  [{side:'L',label:'Left (West)',stns:typeof EMB_STATIONS!=='undefined'?EMB_STATIONS:[]},
-   {side:'R',label:'Right (East)',stns:typeof EMB_STATIONS_R!=='undefined'?EMB_STATIONS_R:[]}].forEach(function(sd){
-    h+='<div>';
-    h+='<div style="font-size:12px;font-weight:700;color:#D4A843;margin-bottom:8px;">'+sd.label+'</div>';
-    h+='<table style="width:100%;border-collapse:collapse;font-size:11px;">';
-    h+='<tr style="border-bottom:1px solid rgba(255,255,255,0.08);"><th style="text-align:left;padding:5px 6px;color:#64748B;">Station</th><th style="text-align:center;padding:5px 6px;color:#64748B;">Layers</th><th style="text-align:center;padding:5px 6px;color:#64748B;">%</th></tr>';
-    var hasData=false;
-    sd.stns.forEach(function(s){
-      var ch=s.ch, fk='KKR_Emb_'+sd.side+'_'+Math.floor(ch/1000)+'_'+String(ch%1000).padStart(3,'0');
-      var done=parseInt(_ed[fk]||0);
-      if(done>0){
-        hasData=true;
-        var pct=Math.round(done/nL*100);
-        var barCol=pct===100?'#06D6A0':pct>50?'#D4A843':'#F59E0B';
-        h+='<tr style="border-bottom:1px solid rgba(255,255,255,0.03);">';
-        h+='<td style="padding:5px 6px;color:#f1f5f9;">'+Math.floor(ch/1000)+'+'+String(ch%1000).padStart(3,'0')+'</td>';
-        h+='<td style="padding:5px 6px;text-align:center;color:'+barCol+';font-weight:700;">'+done+'/'+nL+'</td>';
-        h+='<td style="padding:5px 6px;text-align:center;"><span style="color:'+barCol+';font-weight:700;">'+pct+'%</span></td>';
-        h+='</tr>';
+      // New reports section
+      if(reportList.length > 0){
+        content2 += '<div style="font-size:13px;font-weight:800;color:#E63946;margin-bottom:12px;">🚨 New Items Reported Today ('+reportList.length+')</div>';
+        content2 += '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px;">';
+        reportList.forEach(function(r){
+          content2 += '<div style="background:#1e293b;border:1px solid rgba(231,76,60,0.3);border-left:3px solid #E63946;border-radius:10px;padding:12px;display:flex;gap:12px;">';
+          if(r.url) content2 += '<img src="'+r.url+'" style="width:80px;height:80px;object-fit:cover;border-radius:8px;flex-shrink:0;">';
+          content2 += '<div><div style="font-size:13px;font-weight:800;color:#E63946;margin-bottom:4px;">'+(r.categoryLabel||r.category||'Report')+'</div>';
+          if(r.description) content2 += '<div style="font-size:12px;color:#CBD5E1;margin-bottom:4px;">'+r.description+'</div>';
+          if(r.gps) content2 += '<div style="font-size:10px;color:#64748B;">📍 N:'+Math.round(r.gps.n)+' E:'+Math.round(r.gps.e)+'</div>';
+          content2 += '</div></div>';
+        });
+        content2 += '</div>';
       }
+
+      // Signature block
+      content2 += '<div style="background:#1e293b;border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:16px;display:flex;justify-content:space-between;">';
+      content2 += '<div><div style="font-size:11px;color:#94A3B8;margin-bottom:20px;">Prepared by:</div>';
+      content2 += '<div style="font-size:13px;font-weight:700;color:#f1f5f9;">K. Dimachkie</div>';
+      content2 += '<div style="font-size:11px;color:#94A3B8;">Head of Surveying — Khatib & Alami</div></div>';
+      content2 += '<div style="text-align:right;"><div style="font-size:11px;color:#94A3B8;margin-bottom:20px;">Reviewed by:</div>';
+      content2 += '<div style="width:150px;border-top:1px solid rgba(255,255,255,0.2);margin-top:20px;"></div></div>';
+      content2 += '</div>';
+
+      el.innerHTML = content2;
     });
-    if(!hasData) h+='<tr><td colspan="3" style="padding:10px;text-align:center;color:#64748B;">No data</td></tr>';
-    h+='</table></div>';
   });
-  h+='</div></div>';
-
-  // ── ROADS ──────────────────────────────────────────────────────────
-  h+='<div style="background:#0a1628;border:1px solid rgba(52,211,153,0.3);border-radius:12px;padding:16px;margin-bottom:20px;">';
-  h+='<div style="font-size:16px;font-weight:800;color:#34D399;margin-bottom:14px;">🛣️ Road Layers</div>';
-  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">';
-  [{key:'ibn',label:'Ibn Saud',col:'#34D399',stns:typeof IBN_STATIONS!=='undefined'?IBN_STATIONS:[]},
-   {key:'sattam',label:'Sattam',col:'#A78BFA',stns:typeof SAT_STATIONS!=='undefined'?SAT_STATIONS:[]}].forEach(function(rd){
-    h+='<div>';
-    h+='<div style="font-size:12px;font-weight:700;color:'+rd.col+';margin-bottom:8px;">'+rd.label+'</div>';
-    h+='<table style="width:100%;border-collapse:collapse;font-size:11px;">';
-    h+='<tr style="border-bottom:1px solid rgba(255,255,255,0.08);"><th style="text-align:left;padding:5px 6px;color:#64748B;">Station</th><th style="text-align:left;padding:5px 6px;color:#64748B;">Layers Done</th></tr>';
-    var rdData=(_rd[rd.key]||{});
-    var hasData=false;
-    rd.stns.forEach(function(s){
-      var ak=s.name.replace(/[^a-zA-Z0-9]/g,'_');
-      var doneLayers=(typeof ROAD_LAYERS!=='undefined'?ROAD_LAYERS:[]).filter(function(l){return rdData[ak+'_'+l.id]==='Complete';}).map(function(l){return l.label;});
-      if(doneLayers.length>0){
-        hasData=true;
-        h+='<tr style="border-bottom:1px solid rgba(255,255,255,0.03);">';
-        h+='<td style="padding:5px 6px;color:#f1f5f9;">'+s.name.split(' ').pop()+'</td>';
-        h+='<td style="padding:5px 6px;color:'+rd.col+';">'+doneLayers.join(', ')+'</td>';
-        h+='</tr>';
-      }
-    });
-    if(!hasData) h+='<tr><td colspan="2" style="padding:10px;text-align:center;color:#64748B;">No data</td></tr>';
-    h+='</table></div>';
-  });
-  h+='</div></div>';
-
-  // ── PHOTOS ─────────────────────────────────────────────────────────
-  if(photos.length>0){
-    h+='<div style="background:#0a1628;border:1px solid rgba(99,102,241,0.3);border-radius:12px;padding:16px;margin-bottom:20px;">';
-    h+='<div style="font-size:16px;font-weight:800;color:#818CF8;margin-bottom:14px;">📸 Site Photos ('+photos.length+')</div>';
-    h+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">';
-    photos.forEach(function(p){
-      var stCol=p.status==='Complete'?'#06D6A0':p.status==='In Progress'?'#D4A843':'#94A3B8';
-      h+='<div style="background:#1e293b;border:1px solid rgba(255,255,255,0.06);border-radius:8px;overflow:hidden;">';
-      h+='<img src="'+p.url+'" style="width:100%;height:120px;object-fit:cover;display:block;" loading="lazy">';
-      h+='<div style="padding:8px;">';
-      h+='<div style="font-size:11px;font-weight:700;color:#f1f5f9;margin-bottom:2px;">'+(p.pier||p.sectionId||'')+'</div>';
-      h+='<div style="font-size:10px;color:'+stCol+';">'+(p.stage||p.status||'')+'</div>';
-      h+='<div style="font-size:10px;color:#64748B;margin-top:2px;">'+( p.date||'')+'</div>';
-      h+='</div></div>';
-    });
-    h+='</div></div>';
-  } else {
-    h+='<div style="background:#0a1628;border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:20px;margin-bottom:20px;text-align:center;color:#64748B;">No photos taken in this period</div>';
-  }
-
-  h+='</div>'; // end rpt-body
-
-  el.innerHTML=h;
-  document.getElementById('rpt-download-btn').style.display='block';
 }
-
-function downloadReportPDF(){
-  window.print();
-}
-
 
 function printDailyReport(){
   window.print();
@@ -4036,5 +3755,470 @@ window.addEventListener('load',function(){
     <div id="summary-content"></div>
   </div>
 </div>
+
+<div id="week-story-overlay" style="display:none;position:fixed;inset:0;z-index:99999;background:#000;flex-direction:column;">
+  <div id="story-stage" style="flex:1;position:relative;overflow:hidden;background:#000;">
+    <div id="story-bg" style="position:absolute;inset:-40px;background-size:cover;background-position:center;filter:blur(30px) brightness(0.3);transform:scale(1.15);transition:background-image 1.2s;"></div>
+    <img id="story-img" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;transition:opacity 0.8s,transform 6s;transform:scale(1.04);" src="">
+    <div style="position:absolute;top:0;left:0;right:0;padding:20px 28px;background:linear-gradient(to bottom,rgba(0,0,0,0.8),transparent);display:flex;justify-content:space-between;align-items:center;">
+      <div><div style="font-size:13px;font-weight:700;color:rgba(255,255,255,0.5);letter-spacing:3px;">IC1 ROAD IMPROVEMENTS</div><div id="story-week-label" style="font-size:20px;font-weight:900;color:#D4A843;"></div></div>
+      <div style="display:flex;align-items:center;gap:16px;"><span id="story-counter" style="font-size:13px;color:rgba(255,255,255,0.4);font-family:monospace;"></span><button onclick="closeWeekStory()" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">✕ Close</button></div>
+    </div>
+    <div style="position:absolute;top:0;left:0;right:0;height:3px;background:rgba(255,255,255,0.1);"><div id="story-progress" style="height:100%;background:#D4A843;width:0%;transition:width linear;"></div></div>
+    <div style="position:absolute;bottom:0;left:0;right:0;padding:40px 48px 90px;background:linear-gradient(to top,rgba(0,0,0,0.9),rgba(0,0,0,0.6) 60%,transparent);">
+      <div id="story-pier-name" style="font-family:Rajdhani,sans-serif;font-size:68px;font-weight:900;color:#fff;line-height:0.9;transform:translateY(20px);opacity:0;transition:transform 0.7s,opacity 0.7s;"></div>
+      <div id="story-stage-name" style="font-size:20px;font-weight:700;color:#D4A843;margin-top:8px;transform:translateY(20px);opacity:0;transition:transform 0.7s 0.15s,opacity 0.7s 0.15s;"></div>
+      <div id="story-story-text" style="font-size:14px;color:rgba(255,255,255,0.65);margin-top:10px;max-width:600px;line-height:1.6;transform:translateY(20px);opacity:0;transition:transform 0.7s 0.3s,opacity 0.7s 0.3s;"></div>
+      <div id="story-meta" style="font-size:12px;color:rgba(255,255,255,0.35);margin-top:14px;transform:translateY(20px);opacity:0;transition:transform 0.7s 0.45s,opacity 0.7s 0.45s;"></div>
+    </div>
+    <button onclick="storyNav(-1)" style="position:absolute;left:16px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:#fff;width:48px;height:48px;border-radius:50%;font-size:20px;cursor:pointer;">‹</button>
+    <button onclick="storyNav(1)" style="position:absolute;right:16px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:#fff;width:48px;height:48px;border-radius:50%;font-size:20px;cursor:pointer;">›</button>
+    <button id="story-play-btn" onclick="storyTogglePlay()" style="position:absolute;bottom:20px;right:20px;background:rgba(212,168,67,0.15);border:1px solid rgba(212,168,67,0.4);color:#D4A843;padding:10px 20px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">⏸ Pause</button>
+  </div>
+  <div id="story-thumbs" style="height:72px;background:rgba(0,0,0,0.9);border-top:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:4px;overflow-x:auto;padding:4px 12px;flex-shrink:0;"></div>
+</div>
+
+<script>
+var STORY={photos:[],idx:0,playing:true,timer:null,duration:5000};
+var STORY_TEXTS={'PIL':'Piling works progressing — the foundation of every great bridge starts underground.','EXC':'Excavation prepares the ground for concrete and steel.','BLD':'Blinding concrete laid.','FRB':'Foundation rebar assembled — the steel skeleton takes shape.','FRC':'Foundation concrete poured.','STR':'Pier structure rising toward the sky.','BRG':'Bearings installed.','GRD':'Girders delivered to site.','ERE':'Girder erection underway — bridging the span in one lift.','BH':'Borehole drilling complete.','PRB':'Probing and investigation complete.'};
+function getStoryText(p){ return STORY_TEXTS[p.stage]||'Construction progresses — every photo tells a story of dedication.'+(p.note?' Note: '+p.note:''); }
+function launchWeekStory(){
+  var now=new Date(),wa=new Date(now-7*24*60*60*1000);
+  var ws=wa.toISOString().slice(0,10),ts=now.toISOString().slice(0,10);
+  if(!PHOTO_WALL||Object.keys(PHOTO_WALL).length===0){ if(FB_DB){FB_DB.ref('ic1_bridges/PHOTO_WALL').once('value',function(snap){PHOTO_WALL=snap.val()||{};launchWeekStory();});return;} alert('No photos');return; }
+  var all=Object.values(PHOTO_WALL).filter(function(p){return p.date>=ws&&p.date<=ts&&p.url;});
+  all.sort(function(a,b){return(a.ts||0)-(b.ts||0);});
+  if(all.length===0){alert('No photos this week');return;}
+  STORY.photos=all;STORY.idx=0;STORY.playing=true;
+  var wl=document.getElementById('story-week-label');
+  if(wl) wl.textContent='Week of '+wa.toLocaleDateString('en-US',{month:'long',day:'numeric'})+' – '+now.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  var te=document.getElementById('story-thumbs');
+  if(te){te.innerHTML='';all.forEach(function(p,i){var t=document.createElement('div');t.style.cssText='width:100px;height:64px;flex-shrink:0;border-radius:6px;overflow:hidden;cursor:pointer;border:2px solid transparent;';t.id='story-thumb-'+i;t.onclick=(function(x){return function(){storyGoTo(x);};})(i);var img=document.createElement('img');img.src=p.url;img.style.cssText='width:100%;height:100%;object-fit:cover;';t.appendChild(img);te.appendChild(t);});}
+  document.getElementById('week-story-overlay').style.display='flex';
+  storyGoTo(0);
+}
+function storyGoTo(idx){
+  if(STORY.timer)clearTimeout(STORY.timer);
+  STORY.idx=Math.max(0,Math.min(STORY.photos.length-1,idx));
+  var p=STORY.photos[STORY.idx];
+  ['story-pier-name','story-stage-name','story-story-text','story-meta'].forEach(function(id){var e=document.getElementById(id);if(e){e.style.opacity='0';e.style.transform='translateY(20px)';}});
+  var img=document.getElementById('story-img'); img.style.opacity='0'; img.style.transform='scale(1.04)';
+  setTimeout(function(){img.src=p.url;img.onload=function(){img.style.opacity='1';img.style.transform='scale(1.08)';};},200);
+  document.getElementById('story-bg').style.backgroundImage='url('+p.url+')';
+  setTimeout(function(){
+    document.getElementById('story-pier-name').textContent=p.pier?'Pier '+p.pier:(p.sectionId||'IC1 Site');
+    var sn='';if(typeof STAGES!=='undefined')STAGES.forEach(function(s){if(s.id===p.stage)sn=s.label;});if(!sn)sn=p.stage||'Site Activity';
+    document.getElementById('story-stage-name').textContent=sn;
+    document.getElementById('story-story-text').textContent=getStoryText(p);
+    document.getElementById('story-meta').textContent='📅 '+(p.date||'—')+'  ·  👷 '+(p.by||'Field')+'  ·  '+(p.status||'');
+    ['story-pier-name','story-stage-name','story-story-text','story-meta'].forEach(function(id){var e=document.getElementById(id);if(e){e.style.opacity='1';e.style.transform='translateY(0)';}});
+  },400);
+  document.getElementById('story-counter').textContent=(STORY.idx+1)+' / '+STORY.photos.length;
+  STORY.photos.forEach(function(_,i){var t=document.getElementById('story-thumb-'+i);if(t)t.style.borderColor=i===STORY.idx?'#D4A843':'transparent';});
+  var at=document.getElementById('story-thumb-'+STORY.idx);if(at)at.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+  var prog=document.getElementById('story-progress');if(prog){prog.style.transition='none';prog.style.width='0%';setTimeout(function(){prog.style.transition='width '+STORY.duration+'ms linear';prog.style.width='100%';},50);}
+  if(STORY.playing)STORY.timer=setTimeout(function(){storyGoTo(STORY.idx<STORY.photos.length-1?STORY.idx+1:0);},STORY.duration);
+}
+function storyNav(dir){storyGoTo(STORY.idx+dir);}
+function storyTogglePlay(){STORY.playing=!STORY.playing;document.getElementById('story-play-btn').textContent=STORY.playing?'⏸ Pause':'▶ Play';if(STORY.playing)storyGoTo(STORY.idx);else if(STORY.timer){clearTimeout(STORY.timer);STORY.timer=null;}}
+function closeWeekStory(){if(STORY.timer)clearTimeout(STORY.timer);STORY.playing=false;document.getElementById('week-story-overlay').style.display='none';document.getElementById('story-img').src='';}
+document.addEventListener('keydown',function(e){if(document.getElementById('week-story-overlay').style.display==='none')return;if(e.key==='ArrowRight')storyNav(1);else if(e.key==='ArrowLeft')storyNav(-1);else if(e.key===' '){e.preventDefault();storyTogglePlay();}else if(e.key==='Escape')closeWeekStory();});
+
+// ═══ EXPORT VIDEO ═══════════════════════════════════════════════
+var EV_recording = false;
+
+function openExportVideo(){
+  if(!PHOTO_WALL||Object.keys(PHOTO_WALL).length===0){
+    if(FB_DB){FB_DB.ref('ic1_bridges/PHOTO_WALL').once('value',function(s){PHOTO_WALL=s.val()||{};openExportVideo();});return;}
+    alert('No photos yet');return;
+  }
+  var ov=document.getElementById('export-video-overlay');
+  if(ov){ ov.style.display='flex'; }
+  var today=new Date().toISOString().slice(0,10);
+  var weekAgo=new Date(Date.now()-7*24*60*60*1000).toISOString().slice(0,10);
+  var fd=document.getElementById('ev-from-date'),td=document.getElementById('ev-to-date');
+  if(fd) fd.value=weekAgo;
+  if(td) td.value=today;
+  var pa=document.getElementById('ev-progress-area'),gb=document.getElementById('ev-generate-btn');
+  if(pa) pa.style.display='none';
+  if(gb) gb.style.display='block';
+  evUpdateCount();
+  document.querySelectorAll('input[name="ev-range"]').forEach(function(r){r.onchange=evUpdateCount;});
+  document.querySelectorAll('input[name="ev-range"]').forEach(function(r){r.onchange=function(){
+    var cd=document.getElementById('ev-custom-dates');
+    if(cd) cd.style.display=this.value==='custom'?'flex':'none';
+    evUpdateCount();
+  };});
+}
+
+function closeExportVideo(){
+  var ov=document.getElementById('export-video-overlay');
+  if(ov) ov.style.display='none';
+  EV_recording=false;
+}
+
+
+// ═══ AI STORY NARRATION ═══════════════════════════════════════
+function buildAINarration(photos, callback){
+  // Gather stats for Claude
+  var brActivity = {}, stageActivity = {}, dateSet = new Set();
+  var totalPhotos = photos.length;
+
+  photos.forEach(function(p){
+    if(p.pier && p.pier!=='MISC'){
+      var br = typeof getBrId==='function'?getBrId(p.pier):'?';
+      brActivity[br] = (brActivity[br]||0)+1;
+    }
+    if(p.stage && p.stage!=='Miscellaneous'){
+      var sLabel = p.stage;
+      if(typeof STAGES!=='undefined') STAGES.forEach(function(s){if(s.id===p.stage) sLabel=s.label;});
+      stageActivity[sLabel] = (stageActivity[sLabel]||0)+1;
+    }
+    if(p.date) dateSet.add(p.date);
+  });
+
+  // Overall progress
+  var totalW=0,doneW=0;
+  if(typeof PIERS!=='undefined' && typeof STAGES!=='undefined'){
+    PIERS.forEach(function(p){
+      STAGES.forEach(function(s){
+        totalW+=s.w;
+        var v=(PS[p.name]||{})[s.id]||'Not Started';
+        if(v==='Complete'||v==='Inspected') doneW+=s.w;
+        else if(v==='In Progress') doneW+=s.w*0.5;
+      });
+    });
+  }
+  var overallPct = PIERS&&PIERS.length>0?Math.round(doneW/PIERS.length*10)/10:0;
+
+  var brList = Object.keys(brActivity).map(function(b){return 'Bridge '+b+' ('+brActivity[b]+' photos)';}).join(', ');
+  var stList = Object.keys(stageActivity).map(function(s){return stageActivity[s]+'x '+s;}).join(', ');
+  var dateArr = Array.from(dateSet).sort();
+  var dateRange = dateArr.length>1 ? dateArr[0]+' to '+dateArr[dateArr.length-1] : (dateArr[0]||'this week');
+
+  // Notes from photos
+  var notes = photos.filter(function(p){return p.note;}).map(function(p){return p.note;}).slice(0,5).join('; ');
+
+  var prompt = "Write a 100-word cinematic narration for an IC1 Road Improvements construction video in Diriyah, Riyadh. Period: "+dateRange+". "+totalPhotos+" photos taken. Bridges active: "+(brList||"various")+". Work completed: "+(stList||"various stages")+". Overall progress: "+overallPct+"%. "+(notes?"Notes: "+notes+". ":"")+"Write 3 parts: powerful opening, weekly summary, motivational closing. Documentary narrator style. Plain text only.";
+
+  // Call Claude API
+  fetch('https://api.anthropic.com/v1/messages', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      model:'claude-sonnet-4-20250514',
+      max_tokens:300,
+      messages:[{role:'user',content:prompt}]
+    })
+  })
+  .then(function(r){return r.json();})
+  .then(function(data){
+    var script = '';
+    if(data.content && data.content[0] && data.content[0].text){
+      script = data.content[0].text.trim();
+    }
+    if(!script) script = evDefaultNarration(overallPct, totalPhotos, dateRange);
+    callback(script);
+  })
+  .catch(function(){
+    // Fallback narration if API fails
+    callback(evDefaultNarration(overallPct, totalPhotos, dateRange));
+  });
+}
+
+function evDefaultNarration(pct, photoCount, dateRange){
+  return 'IC1 Road Improvements. Diriyah, Riyadh. ' +
+    'This week, '+photoCount+' moments captured from the field tell the story of steady progress. ' +
+    'From the deep foundations to the rising piers, every photo marks a milestone. ' +
+    'With overall completion now at '+pct+' percent, the team moves forward with purpose. ' +
+    'The road to completion is being built, one pier at a time.';
+}
+
+function evSpeakNarration(script, onDone){
+  if(!window.speechSynthesis){ onDone(); return; }
+  window.speechSynthesis.cancel();
+  var u = new SpeechSynthesisUtterance(script);
+  u.lang = 'en-US';
+  u.rate = 0.85;
+  u.pitch = 1.0;
+  u.volume = 1.0;
+  // Pick best available voice
+  var voices = window.speechSynthesis.getVoices();
+  var preferred = voices.find(function(v){
+    return /Google|Daniel|Karen|Samantha/i.test(v.name) && v.lang.startsWith('en');
+  }) || voices.find(function(v){ return v.lang.startsWith('en'); });
+  if(preferred) u.voice = preferred;
+  u.onend = onDone;
+  u.onerror = onDone;
+  window.speechSynthesis.speak(u);
+}
+
+function evGetPhotos(){
+  var el=document.querySelector('input[name="ev-range"]:checked');
+  var range=el?el.value:'week';
+  var today=new Date().toISOString().slice(0,10);
+  var weekAgo=new Date(Date.now()-7*24*60*60*1000).toISOString().slice(0,10);
+  var all=Object.values(PHOTO_WALL||{}).filter(function(p){return p.url;});
+  all.sort(function(a,b){return(a.ts||0)-(b.ts||0);});
+  if(range==='week') return all.filter(function(p){return p.date>=weekAgo&&p.date<=today;});
+  if(range==='today') return all.filter(function(p){return p.date===today;});
+  if(range==='all') return all;
+  if(range==='custom'){
+    var f=document.getElementById('ev-from-date').value;
+    var t=document.getElementById('ev-to-date').value;
+    return all.filter(function(p){return p.date>=f&&p.date<=t;});
+  }
+  return all;
+}
+
+function evUpdateCount(){
+  var photos=evGetPhotos();
+  var dur=photos.length*4;
+  var el=document.getElementById('ev-count-preview');
+  if(el) el.textContent='📸 '+photos.length+' photos · ~'+Math.floor(dur/60)+'m '+( dur%60)+'s video';
+}
+
+function startExportVideo(){
+  var photos=evGetPhotos();
+  if(photos.length===0){alert('No photos in selected range');return;}
+  if(!window.MediaRecorder){alert('Video export requires Chrome or Edge browser.');return;}
+
+  var qEl=document.querySelector('input[name="ev-quality"]:checked');
+  var quality=qEl?qEl.value:'hd';
+  var W=quality==='fhd'?1920:1280, H=quality==='fhd'?1080:720, FPS=25;
+  var PHOTO_FRAMES=FPS*4, FADE=Math.floor(FPS*0.4), TITLE_FRAMES=FPS*2;
+
+  var canvas=document.getElementById('ev-canvas');
+  canvas.width=W; canvas.height=H;
+  var ctx=canvas.getContext('2d');
+
+  var gb=document.getElementById('ev-generate-btn');
+  var pa=document.getElementById('ev-progress-area');
+  if(gb) gb.style.display='none';
+  if(pa) pa.style.display='block';
+
+  var mimeType=MediaRecorder.isTypeSupported('video/webm;codecs=vp9')?'video/webm;codecs=vp9':'video/webm';
+  var stream=canvas.captureStream(FPS);
+  var recorder=new MediaRecorder(stream,{mimeType:mimeType,videoBitsPerSecond:quality==='fhd'?8000000:4000000});
+  var chunks=[];
+  recorder.ondataavailable=function(e){if(e.data.size>0)chunks.push(e.data);};
+  recorder.onstop=function(){
+    var blob=new Blob(chunks,{type:mimeType});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a'); a.href=url; a.download='SiteSync_IC1_'+new Date().toISOString().slice(0,10)+'.webm'; a.click();
+    URL.revokeObjectURL(url);
+    var pl=document.getElementById('ev-progress-label'); if(pl) pl.textContent='✅ Video downloaded!';
+    setTimeout(function(){closeExportVideo();if(gb)gb.style.display='block';},2500);
+  };
+
+  EV_recording=true;
+  EV={_narrated:false};
+  recorder.start();
+
+  var STORY_TEXTS={'PIL':'Piling — the foundation of every great bridge starts underground.','EXC':'Excavation prepares the ground.','BLD':'Blinding concrete laid.','FRB':'Foundation rebar assembled.','FRC':'Foundation concrete poured.','STR':'Pier structure rising toward the sky.','BRG':'Bearings installed.','GRD':'Girders delivered to site.','ERE':'Girder erection — bridging the span in one lift.','BH':'Borehole drilling complete.','PRB':'Probing and investigation complete.'};
+
+  // Preload images
+  var loaded=0;
+  photos.forEach(function(p){
+    var img=new Image(); img.crossOrigin='anonymous';
+    img.onload=function(){p._img=img;loaded++;};
+    img.onerror=function(){loaded++;};
+    img.src=p.url;
+  });
+
+  function waitLoad(cb){ if(loaded>=photos.length)cb(); else setTimeout(function(){waitLoad(cb);},200); }
+
+  // ── Build AI story then start video ─────────────────────────
+  buildAINarration(photos, function(narration){
+    var pl3=document.getElementById('ev-progress-label');
+    if(pl3) pl3.textContent='🎬 Rendering video...';
+    startVideoRender(photos, W, H, FPS, PHOTO_FRAMES, FADE_FRAMES, TITLE_FRAMES, recorder, narration);
+  });
+}
+
+function startVideoRender(photos, W, H, FPS, PHOTO_FRAMES, FADE_FRAMES, TITLE_FRAMES, recorder, narration){
+  waitLoad(function(){
+    var frame=0, curPhoto=0, startTime=Date.now();
+    var totalFrames=TITLE_FRAMES+photos.length*PHOTO_FRAMES;
+
+    function drawFrame(){
+      if(!EV_recording){recorder.stop();return;}
+      // Progress
+      var pct=Math.round(frame/totalFrames*100);
+      var pb=document.getElementById('ev-progress-bar'),pp=document.getElementById('ev-progress-pct'),pl=document.getElementById('ev-progress-label'),et=document.getElementById('ev-eta');
+      if(pb) pb.style.width=pct+'%';
+      if(pp) pp.textContent=pct+'%';
+      if(pl) pl.textContent='Photo '+(curPhoto+1)+' of '+photos.length;
+      if(et&&pct>5){var elapsed=(Date.now()-startTime)/1000;if(et) et.textContent='~'+Math.round(elapsed/pct*(100-pct))+'s remaining';}
+
+      ctx.fillStyle='#07090d'; ctx.fillRect(0,0,W,H);
+
+      if(frame<TITLE_FRAMES){
+        // Speak narration at frame 5 (after title fades in)
+        if(frame===5 && narration && !EV._narrated){
+          EV._narrated = true;
+          evSpeakNarration(narration, function(){});
+        }
+        // Title card
+        var ta=Math.min(1,frame/12);
+        ctx.globalAlpha=ta;
+        ctx.font='bold '+(W/52)+'px sans-serif'; ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.textAlign='center';
+        ctx.fillText('IC1 ROAD IMPROVEMENTS — DIRIYAH GATE',W/2,H*0.38);
+        ctx.font='bold '+(W/8)+'px sans-serif'; ctx.fillStyle='#D4A843';
+        ctx.shadowColor='rgba(212,168,67,0.4)'; ctx.shadowBlur=30;
+        ctx.fillText('SiteSync',W/2,H*0.54); ctx.shadowBlur=0;
+        ctx.font='bold '+(W/40)+'px sans-serif'; ctx.fillStyle='rgba(255,255,255,0.5)';
+        ctx.fillText(photos.length+' photos',W/2,H*0.66);
+        // Show narration text at bottom
+        if(narration && ta>0.5){
+          ctx.font=(W/72)+'px sans-serif'; ctx.fillStyle='rgba(255,255,255,0.3)';
+          var words=narration.split(' '),nLine='',nLines=[],nMaxW=W*0.8;
+          words.forEach(function(w){var tl=nLine+w+' ';if(ctx.measureText(tl).width>nMaxW&&nLine){nLines.push(nLine);nLine=w+' ';}else nLine=tl;}); nLines.push(nLine);
+          nLines.slice(0,3).forEach(function(l,li){ctx.fillText(l.trim(),W/2,H*0.76+(W/60)*li*1.4);});
+        }
+        ctx.textAlign='left'; ctx.globalAlpha=1;
+      } else {
+        curPhoto=Math.floor((frame-TITLE_FRAMES)/PHOTO_FRAMES);
+        if(curPhoto>=photos.length){recorder.stop();return;}
+        var fi=(frame-TITLE_FRAMES)%PHOTO_FRAMES;
+        var alpha=fi<FADE?(fi/FADE):fi>PHOTO_FRAMES-FADE?((PHOTO_FRAMES-fi)/FADE):1;
+        var p=photos[curPhoto];
+        if(p&&p._img&&p._img.naturalWidth){
+          var img=p._img, iw=img.naturalWidth, ih=img.naturalHeight;
+          var ks=1.04+(fi/PHOTO_FRAMES)*0.06;
+          // Blur bg
+          ctx.save(); ctx.filter='blur(35px) brightness(0.25)';
+          var bs=Math.max(W/iw,H/ih)*1.3;
+          ctx.drawImage(img,(W-iw*bs)/2,(H-ih*bs)/2,iw*bs,ih*bs);
+          ctx.restore();
+          // Main photo
+          var s=Math.min(W/iw,H/ih)*ks;
+          ctx.globalAlpha=alpha;
+          ctx.drawImage(img,(W-iw*s)/2,(H-ih*s)/2,iw*s,ih*s);
+          ctx.globalAlpha=1;
+        }
+        // Gradient
+        var gr=ctx.createLinearGradient(0,H*0.45,0,H);
+        gr.addColorStop(0,'rgba(0,0,0,0)'); gr.addColorStop(1,'rgba(0,0,0,0.9)');
+        ctx.fillStyle=gr; ctx.fillRect(0,0,W,H);
+
+        var ta=Math.min(1,Math.max(0,(fi-8)/12))*alpha;
+        ctx.globalAlpha=ta;
+        // Big name
+        var nm=p.pier?'Bridge '+(typeof getBrId==='function'?getBrId(p.pier):'')+' — Pier '+p.pier:(p.sectionId||'IC1 Site');
+        ctx.font='bold '+(W/13)+'px sans-serif'; ctx.fillStyle='#fff';
+        ctx.shadowColor='rgba(0,0,0,0.9)'; ctx.shadowBlur=24;
+        ctx.fillText(nm,W*0.05,H*0.73); ctx.shadowBlur=0;
+        // Stage
+        var sn=p.stage||''; if(typeof STAGES!=='undefined') STAGES.forEach(function(s){if(s.id===p.stage)sn=s.label;});
+        ctx.font='bold '+(W/34)+'px sans-serif'; ctx.fillStyle='#D4A843';
+        ctx.fillText(sn,W*0.05,H*0.73+W/11);
+        // Story
+        var st=(STORY_TEXTS[p.stage]||'Construction progresses.')+(p.note?' "'+p.note+'"':'');
+        ctx.font=(W/50)+'px sans-serif'; ctx.fillStyle='rgba(255,255,255,0.6)';
+        var words=st.split(' '),line='',lines2=[],mxW=W*0.72;
+        words.forEach(function(w){var tl=line+w+' ';if(ctx.measureText(tl).width>mxW&&line){lines2.push(line);line=w+' ';}else line=tl;}); lines2.push(line);
+        lines2.forEach(function(l,li){ctx.fillText(l,W*0.05,H*0.73+W/11+(W/34)*(1.5+li*1.5));});
+        // Date
+        ctx.font=(W/68)+'px sans-serif'; ctx.fillStyle='rgba(255,255,255,0.35)';
+        ctx.fillText('📅 '+(p.date||'—')+'   👷 '+(p.by||'Field'),W*0.05,H*0.96);
+        ctx.globalAlpha=alpha;
+        // Top bar
+        ctx.fillStyle='rgba(255,255,255,0.1)'; ctx.fillRect(0,0,W,5);
+        ctx.fillStyle='#D4A843'; ctx.fillRect(0,0,W*((curPhoto+fi/PHOTO_FRAMES)/photos.length),5);
+        // Counter
+        ctx.font='bold '+(W/60)+'px monospace'; ctx.fillStyle='rgba(255,255,255,0.4)';
+        ctx.textAlign='right'; ctx.fillText((curPhoto+1)+'/'+photos.length,W*0.97,H*0.06);
+        ctx.textAlign='left'; ctx.globalAlpha=1;
+      }
+      frame++;
+      requestAnimationFrame(drawFrame);
+    }
+    drawFrame();
+  });
+}
+
+</script>
+
+
+<!-- ═══ EXPORT VIDEO OVERLAY ═══ -->
+<div id="export-video-overlay" style="display:none;position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,0.92);display:none;align-items:center;justify-content:center;font-family:Inter,sans-serif;">
+  <div style="background:#0a1628;border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:28px;width:90%;max-width:480px;">
+
+    <!-- Header -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <div>
+        <div style="font-family:Rajdhani,sans-serif;font-size:24px;font-weight:900;color:#06D6A0;">⬇️ Export Video</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.35);margin-top:2px;">Generate a shareable video of site photos</div>
+      </div>
+      <button onclick="closeExportVideo()" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:#fff;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">✕</button>
+    </div>
+
+    <!-- Photo range -->
+    <div style="margin-bottom:16px;">
+      <div style="font-size:10px;color:rgba(255,255,255,0.4);font-weight:700;letter-spacing:1px;margin-bottom:8px;">📅 PHOTO RANGE</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);">
+          <input type="radio" name="ev-range" value="week" checked style="accent-color:#06D6A0;">
+          <span style="font-size:13px;color:#fff;font-weight:600;">This week <span style="color:rgba(255,255,255,0.35);font-weight:400;">(last 7 days)</span></span>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);">
+          <input type="radio" name="ev-range" value="today" style="accent-color:#06D6A0;">
+          <span style="font-size:13px;color:#fff;font-weight:600;">Today only</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);">
+          <input type="radio" name="ev-range" value="all" style="accent-color:#06D6A0;">
+          <span style="font-size:13px;color:#fff;font-weight:600;">All photos</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);" id="ev-custom-label">
+          <input type="radio" name="ev-range" value="custom" style="accent-color:#06D6A0;" onchange="document.getElementById('ev-custom-dates').style.display='flex'">
+          <span style="font-size:13px;color:#fff;font-weight:600;">Custom range</span>
+        </label>
+        <div id="ev-custom-dates" style="display:none;gap:10px;padding:0 12px;">
+          <div style="flex:1;"><div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:4px;">FROM</div><input type="date" id="ev-from-date" style="width:100%;padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:#1e293b;color:#fff;font-size:13px;outline:none;box-sizing:border-box;"></div>
+          <div style="flex:1;"><div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:4px;">TO</div><input type="date" id="ev-to-date" style="width:100%;padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:#1e293b;color:#fff;font-size:13px;outline:none;box-sizing:border-box;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quality -->
+    <div style="margin-bottom:20px;">
+      <div style="font-size:10px;color:rgba(255,255,255,0.4);font-weight:700;letter-spacing:1px;margin-bottom:8px;">🎬 QUALITY</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);">
+          <input type="radio" name="ev-quality" value="hd" checked style="accent-color:#06D6A0;">
+          <span style="font-size:13px;color:#fff;font-weight:600;">HD <span style="color:rgba(255,255,255,0.35);font-weight:400;">1280×720</span></span>
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);">
+          <input type="radio" name="ev-quality" value="fhd" style="accent-color:#06D6A0;">
+          <span style="font-size:13px;color:#fff;font-weight:600;">Full HD <span style="color:rgba(255,255,255,0.35);font-weight:400;">1920×1080</span></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Photo count preview -->
+    <div id="ev-count-preview" style="background:rgba(6,214,160,0.08);border:1px solid rgba(6,214,160,0.2);border-radius:8px;padding:10px 14px;margin-bottom:20px;font-size:13px;color:#06D6A0;font-weight:600;"></div>
+
+    <!-- Generate button -->
+    <button onclick="startExportVideo()" id="ev-generate-btn" style="width:100%;padding:14px;border-radius:10px;background:linear-gradient(135deg,#06D6A0,#0EA5E9);border:none;color:#000;font-size:15px;font-weight:900;cursor:pointer;font-family:inherit;letter-spacing:0.5px;">▶ Generate Video</button>
+
+    <!-- Progress area (hidden until generating) -->
+    <div id="ev-progress-area" style="display:none;margin-top:16px;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+        <span id="ev-progress-label" style="font-size:12px;color:rgba(255,255,255,0.6);">Rendering...</span>
+        <span id="ev-progress-pct" style="font-size:12px;color:#06D6A0;font-weight:700;">0%</span>
+      </div>
+      <div style="height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;">
+        <div id="ev-progress-bar" style="height:100%;background:#06D6A0;width:0%;transition:width 0.3s;border-radius:3px;"></div>
+      </div>
+      <div id="ev-eta" style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:4px;text-align:right;"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Hidden canvas for video rendering -->
+<canvas id="ev-canvas" style="display:none;"></canvas>
+
 </body>
 </html>
