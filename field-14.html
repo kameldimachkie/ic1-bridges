@@ -221,19 +221,24 @@ body.day #map-pier-panel{background:#f0f7ff!important;color:#0f172a!important;}
 
 
 <div id="hdr">
-  <div>
+  <div style="min-width:0;flex-shrink:1;">
     <div class="sub">IC1 ROAD IMPROVEMENTS</div>
     <div class="title">Field Entry</div>
   </div>
-  <div style="display:flex;align-items:center;gap:8px;">
-    <button onclick="document.getElementById('search-panel').style.display='block';populatePiers('');" style="background:rgba(212,168,67,0.15);border:1px solid rgba(212,168,67,0.4);color:#D4A843;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">🔍 Find</button>
-    <button onclick="toggleSummary();" style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.4);color:#818CF8;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">📊</button>
-    <button id="lists-btn" style="background:rgba(14,165,233,0.15);border:1px solid rgba(14,165,233,0.4);color:#38BDF8;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">📋 Lists</button>
-    <button onclick="centerOnMe();" style="background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.4);color:#22C55E;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">📍 Me</button>
-    <button onclick="showReportPanel();" style="background:rgba(230,57,70,0.15);border:1px solid rgba(230,57,70,0.4);color:#E63946;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">📸 Report</button>
-    <div id="sync-dot"></div>
+  <div style="display:flex;align-items:center;gap:6px;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;">
+    <button onclick="document.getElementById('search-panel').style.display='block';populatePiers('');" style="background:rgba(212,168,67,0.15);border:1px solid rgba(212,168,67,0.4);color:#D4A843;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0;white-space:nowrap;">🔍 Find</button>
+    <button id="lists-btn" style="background:rgba(14,165,233,0.15);border:1px solid rgba(14,165,233,0.4);color:#38BDF8;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0;white-space:nowrap;">📋 Lists</button>
+    <button onclick="centerOnMe();" style="background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.4);color:#22C55E;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0;white-space:nowrap;">📍 Me</button>
+    <button onclick="goHome();" title="Reset view — fit all, close panels" style="background:rgba(212,168,67,0.15);border:1px solid rgba(212,168,67,0.4);color:#D4A843;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0;white-space:nowrap;">🏠 Home</button>
+    <button onclick="showReportPanel();" style="background:rgba(230,57,70,0.15);border:1px solid rgba(230,57,70,0.4);color:#E63946;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0;white-space:nowrap;">📸 Report</button>
+    <div id="sync-dot" style="flex-shrink:0;"></div>
   </div>
 </div>
+<style>
+/* Hide scrollbar in header on webkit while keeping scroll capability */
+#hdr > div::-webkit-scrollbar { display:none; }
+#hdr { flex-wrap:nowrap; gap:10px; }
+</style>
 
 <!-- FIND PANEL -->
 <div id="search-panel" style="display:none;position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,0.85);overflow-y:auto;">
@@ -349,16 +354,75 @@ body.day #map-pier-panel{background:#f0f7ff!important;color:#0f172a!important;}
 var IMGBB_KEY = 'cbb272639a278368fc4023a27d336039';
 
 function uploadPhoto(base64, pier, stageName, onSuccess, onFail){
-  var formData = new FormData();
-  formData.append('image', base64.split(',')[1]);
-  formData.append('name', pier+'_'+stageName+'_'+Date.now());
-  fetch('https://api.imgbb.com/1/upload?key='+IMGBB_KEY, {method:'POST',body:formData})
-    .then(function(r){return r.json();})
-    .then(function(d){
-      if(d.success) onSuccess(d.data.url);
-      else onFail('Upload failed');
-    })
-    .catch(function(e){ onFail(e.message); });
+  // First compress the image (resize to max 1920px wide, re-encode as 80% JPEG).
+  // This drops typical 5-8 MB phone photos to 300-500 KB, dramatically improving
+  // upload reliability on weak mobile signal.
+  _compressImage(base64, function(compressedB64){
+    var formData = new FormData();
+    formData.append('image', compressedB64.split(',')[1]);
+    formData.append('name', pier+'_'+stageName+'_'+Date.now());
+    // 25-second timeout — if upload doesn't complete, fail with a clear message
+    var timedOut=false;
+    var timer=setTimeout(function(){
+      timedOut=true;
+      onFail('Upload timed out — check your internet signal');
+    }, 25000);
+    fetch('https://api.imgbb.com/1/upload?key='+IMGBB_KEY, {method:'POST',body:formData})
+      .then(function(r){
+        if(!r.ok) throw new Error('Server returned '+r.status);
+        return r.json();
+      })
+      .then(function(d){
+        if(timedOut) return; // already failed
+        clearTimeout(timer);
+        if(d && d.success && d.data && d.data.url) onSuccess(d.data.url);
+        else onFail('Image host rejected the upload');
+      })
+      .catch(function(e){
+        if(timedOut) return;
+        clearTimeout(timer);
+        var msg=e && e.message ? e.message : 'Network error';
+        onFail(msg);
+      });
+  }, function(err){
+    onFail('Image processing failed: '+err);
+  });
+}
+
+// Compress a base64 image to max 1920px wide, ~80% JPEG quality.
+// Returns a smaller base64 string via callback.
+function _compressImage(base64, onDone, onErr){
+  try{
+    var img=new Image();
+    img.onload=function(){
+      try{
+        var maxW=1920;
+        var w=img.width, h=img.height;
+        if(w>maxW){
+          h=Math.round(h*(maxW/w));
+          w=maxW;
+        }
+        var canvas=document.createElement('canvas');
+        canvas.width=w; canvas.height=h;
+        var ctx=canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        var out=canvas.toDataURL('image/jpeg', 0.8);
+        onDone(out);
+      }catch(e){
+        // If canvas processing fails (memory, CORS, etc.), fall back to original
+        console.log('[compress] canvas failed, using original:', e.message);
+        onDone(base64);
+      }
+    };
+    img.onerror=function(){
+      // If image can't decode, fall back to original (still try to upload it)
+      console.log('[compress] decode failed, using original');
+      onDone(base64);
+    };
+    img.src=base64;
+  }catch(e){
+    if(onErr) onErr(e.message); else onDone(base64);
+  }
 }
 
 function savePhotoToFirebase(pier, stageName, photoUrl, note, status){
@@ -392,21 +456,25 @@ var BRIDGES = [
   {id:'C',col:'#CE93D8',piers:['AB-1C','1C','2C','3C','4C','5C-1','5C-2','6C','7C','8C','9C','10C','11C','12C','13C','14C','15C','16C','17C']},
   {id:'D',col:'#FF9F1C',piers:['AB-1D','1D','2D','3D-1','3D-2','4D','5D','6D','7D','8D','9D','10D','11D-1','11D-2','12D']},
   {id:'E',col:'#EF4444',piers:['1E','2E','3E','4E','5E','6E','7E','8E','9E','10E','11E','12E','13E','14E','15E','16E','17E']},
-  {id:'G',col:'#34D399',piers:['AB-1G','1G','2G','AB-2G']}
+  {id:'G',col:'#34D399',piers:['AB-1G','1G','2G','AB-2G']},
+  {id:'K',col:'#F43F5E',piers:['AB-1K','AB-2K']},
+  {id:'L',col:'#8B5CF6',piers:['AB-1L','AB-2L']},
+  {id:'M',col:'#EC4899',piers:['AB-1M','1M-L','1M-R','AB-2M']},
+  {id:'N',col:'#14B8A6',piers:['AB-1N','AB-2N']}
 ];
 
 var STAGES = [
-  {id:'BH', label:'Borehole',          w:0.196, col:'#10B981'},
-  {id:'PRB',label:'Probing',           w:1.958, col:'#CE93D8'},
-  {id:'PIL',label:'Piling',            w:17.626,col:'#60A5FA'},
-  {id:'EXC',label:'Excavation',        w:4.896, col:'#FBBF24'},
-  {id:'BLD',label:'Blinding',          w:2.938, col:'#94A3B8'},
-  {id:'FRB',label:'Foundation Rebar',  w:7.834, col:'#F87171'},
-  {id:'FRC',label:'Foundation Conc.',  w:9.792, col:'#FB923C'},
-  {id:'STR',label:'Pier Structure',    w:21.543,col:'#A78BFA'},
-  {id:'BRG',label:'Bearings',          w:4.896, col:'#34D399'},
-  {id:'GRD',label:'Girder Supply',     w:13.709,col:'#38BDF8'},
-  {id:'ERE',label:'Girder Erection',   w:8.813, col:'#F472B6'}
+  {id:'BH', label:'Borehole',          w:0.208, col:'#10B981'},
+  {id:'PRB',label:'Probing',           w:2.079, col:'#CE93D8'},
+  {id:'PIL',label:'Piling',            w:18.711,col:'#60A5FA'},
+  {id:'EXC',label:'Excavation',        w:5.197, col:'#FBBF24'},
+  {id:'BLD',label:'Blinding',          w:3.119, col:'#94A3B8'},
+  {id:'FRB',label:'Foundation Rebar',  w:8.316, col:'#F87171'},
+  {id:'FRC',label:'Foundation Conc.',  w:10.395,col:'#FB923C'},
+  {id:'STR',label:'Pier Structure',    w:22.869,col:'#A78BFA'},
+  {id:'BRG',label:'Bearings',          w:5.197, col:'#34D399'},
+  {id:'GRD',label:'Girder Supply',     w:14.553,col:'#38BDF8'},
+  {id:'ERE',label:'Girder Erection',   w:9.356, col:'#F472B6'}
 ];
 
 var ROAD_ACTS = [
@@ -549,6 +617,7 @@ var ROAD_LAYERS = [
 ];
 
 var ROAD_DATA = {ibn:{},sattam:{}};
+var EMB_DATA = {};
 
 // ── FIREBASE ──────────────────────────────────────────
 function startFirebase(){
@@ -563,8 +632,11 @@ function startFirebase(){
     }, function(){
       if(dot){dot.style.background='#E63946';dot.style.boxShadow='0 0 6px #E63946';}
     });
-    DB.ref('ic1_bridges/ROAD_ACTS_DATA').once('value').then(function(snap){
-      var d=snap.val(); if(d) ROAD_DATA=d; renderAll();
+    DB.ref('ic1_bridges/ROAD_ACTS_DATA').on('value', function(snap){
+      var d=snap.val(); if(d) ROAD_DATA=d;
+    });
+    DB.ref('ic1_bridges/EMB_DATA').on('value', function(snap){
+      var d=snap.val(); if(d) EMB_DATA=d;
     });
     // Load photo count from Firebase
     DB.ref('ic1_bridges/PHOTO_WALL').on('value', function(snap){
@@ -730,8 +802,13 @@ function togglePier(pier){
 
 function setStage(pier, sid, status){
   if(!PS[pier])PS[pier]={};
+  var prevStatus = PS[pier][sid] || 'Not Started';
   PS[pier][sid]=status;
   pushPier(pier);
+  // Log the change to history (if it's actually different)
+  if(prevStatus !== status){
+    logHistory({type:'pier', pier:pier, stage:sid, from:prevStatus, to:status});
+  }
   var sname=''; STAGES.forEach(function(s){if(s.id===sid)sname=s.name;});
   flash(status==='Complete'?'✅ '+sname+' — Complete!':status==='In Progress'?'🔧 '+sname+' — In Progress':'📌 '+sname+' — '+status);
   // Refresh panel only
@@ -745,10 +822,32 @@ function setStage(pier, sid, status){
 
 function setRoad(key, actKey, status){
   if(!ROAD_DATA[key])ROAD_DATA[key]={};
+  var prevStatus = ROAD_DATA[key][actKey] || 'Not Started';
   ROAD_DATA[key][actKey]=status;
   pushRoad(key);
+  if(prevStatus !== status){
+    logHistory({type:'road', roadKey:key, activityKey:actKey, from:prevStatus, to:status});
+  }
   flash(status==='Complete'?'✅ Done!':'📌 '+status);
   renderAll();
+}
+
+// ═══ HISTORY LOG ══════════════════════════════════════════
+// Logs every stage change to Firebase so desktop admin can generate
+// a time-stamped activity report (daily/weekly/monthly).
+// Each entry: {ts, type, pier|roadKey|embKey, stage|activityKey|layer, from, to, by, source}
+function logHistory(entry){
+  if(!DB) return;
+  try{
+    entry.ts = Date.now();
+    entry.by = entry.by || 'Field';        // will be real name once auth is added
+    entry.source = entry.source || 'field'; // vs 'admin' when desktop-initiated
+    DB.ref('ic1_bridges/HISTORY').push(entry, function(err){
+      if(err) console.log('[history log failed]', err.message);
+    });
+  }catch(e){
+    console.log('[history log exception]', e.message);
+  }
 }
 
 function flash(msg){
@@ -804,9 +903,17 @@ function startGPS(){
 
     // Save my location for map drawing
     MY_LOC = {n: utm.N, e: utm.E};
+    checkVoiceProximity(utm.E, utm.N);
 
     // Just mark centered - no auto-zoom (user taps 📍 Me button)
     MY_LOC_CENTERED = true;
+
+    // If the user tapped 📍 Me before GPS was ready, complete the action now
+    if(typeof CENTER_PENDING!=='undefined'&&CENTER_PENDING){
+      CENTER_PENDING=false;
+      if(typeof hideGpsWaitBanner==='function')hideGpsWaitBanner();
+      if(typeof centerOnMeNow==='function'&&centerOnMeNow()) flash('📍 Centered on your location');
+    }
 
     // Nearest pier for header bar
     var np = nearestFrom(PIER_COORDS, utm.E, utm.N);
@@ -1326,6 +1433,26 @@ function mapDraw(){
   if(MY_LOC){
     var myPos = toMap(MY_LOC.n, MY_LOC.e);
 
+    // Center-on-me confirmation pulse (bright expanding ring for 2.5s after tap)
+    if(typeof CENTER_PULSE_UNTIL!=='undefined' && Date.now() < CENTER_PULSE_UNTIL){
+      var _remain = CENTER_PULSE_UNTIL - Date.now();  // 0..2500
+      var _t = 1 - (_remain / 2500);                  // 0..1 progress
+      // Two overlapping expanding rings for visual richness
+      for(var _ri=0; _ri<2; _ri++){
+        var _p = (_t + _ri*0.5) % 1;                  // staggered rings
+        var _rad = 12 + _p * 90;
+        var _a = (1 - _p) * 0.75;
+        MX.strokeStyle = 'rgba(34,197,94,'+_a+')';
+        MX.lineWidth = 3;
+        MX.shadowColor = '#22C55E';
+        MX.shadowBlur = 12 * (1 - _p);
+        MX.beginPath();
+        MX.arc(myPos.x, myPos.y, _rad, 0, Math.PI*2);
+        MX.stroke();
+        MX.shadowBlur = 0;
+      }
+    }
+
     // Accuracy pulse ring
     MX.beginPath();
     MX.arc(myPos.x, myPos.y, 18, 0, Math.PI*2);
@@ -1615,14 +1742,26 @@ function mapDraw(){
     MX.fillStyle=col; MX.strokeStyle=brCol; MX.lineWidth=1.5;
     MX.beginPath(); MX.arc(pos.x,pos.y,r,0,Math.PI*2); MX.fill(); MX.stroke();
     MX.shadowBlur=0;
-    MX.fillStyle='rgba(0,0,0,0.8)';
-    MX.font='bold '+(r*0.85)+'px sans-serif';
+    MX.fillStyle='rgba(0,0,0,0.9)';
+    MX.font='bold '+(r*1.0)+'px sans-serif';
     MX.textAlign='center'; MX.textBaseline='middle';
     MX.fillText(brId,pos.x,pos.y);
-    MX.fillStyle=isSel?'#D4A843':isActive?'#f1f5f9':'rgba(255,255,255,0.35)';
-    MX.font=(isSel?'bold ':'')+'9px sans-serif';
-    MX.textBaseline='alphabetic';
-    MX.fillText(p.name,pos.x,pos.y+r+9);
+    // Pier name label — larger, with dark background pill
+    var lFontSize = isSel ? 12 : 11;
+    var lText = p.name;
+    MX.font = 'bold '+lFontSize+'px sans-serif';
+    MX.textAlign = 'center';
+    MX.textBaseline = 'alphabetic';
+    var lW = MX.measureText(lText).width;
+    var lX = pos.x, lY = pos.y + r + 14;
+    // Dark pill background
+    MX.fillStyle = 'rgba(7,9,13,0.82)';
+    MX.beginPath();
+    MX.roundRect(lX - lW/2 - 3, lY - lFontSize - 1, lW + 6, lFontSize + 4, 3);
+    MX.fill();
+    // Label text
+    MX.fillStyle = isSel ? '#D4A843' : isActive ? '#f1f5f9' : 'rgba(255,255,255,0.55)';
+    MX.fillText(lText, lX, lY);
   });
 
   // ── Zone Labels ─────────────────────────────────────
@@ -1887,32 +2026,104 @@ function handleMapTap(cx,cy){
 }
 
 function showMapPierPanel(pier){
-  var panel=document.getElementById('map-pier-panel');
-  var brId='A'; var brCol='#58A6FF';
-  var brColors={A:'#58A6FF',B:'#06D6A0',C:'#CE93D8',D:'#FF9F1C',E:'#FB923C',G:'#34D399'};
-  for(var i=0;i<BRIDGES.length;i++) if(BRIDGES[i].piers.indexOf(pier)>-1){brId=BRIDGES[i].id;brCol=brColors[brId];break;}
-  var stages=PS[pier]||{};
-  var h='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">';
-  h+='<div style="font-size:16px;font-weight:900;color:'+brCol+';">📍 '+pier+'</div>';
-  h+='<button onclick="closeMapPanel();" style="background:none;border:none;color:rgba(255,255,255,0.4);font-size:18px;cursor:pointer;">✕</button>';
-  h+='</div>';
+  var panel = document.getElementById('map-pier-panel');
+  panel.innerHTML = '';
+  panel.style.display = 'block';
+
+  var brId='?', brCol='#58A6FF';
+  var brColors={A:'#58A6FF',B:'#06D6A0',C:'#CE93D8',D:'#FF9F1C',E:'#FB923C',G:'#34D399',K:'#F43F5E',L:'#8B5CF6',M:'#EC4899',N:'#14B8A6'};
+  for(var i=0;i<BRIDGES.length;i++) if(BRIDGES[i].piers.indexOf(pier)>-1){brId=BRIDGES[i].id;brCol=brColors[brId]||'#58A6FF';break;}
+
+  var stages = PS[pier]||{};
+
+  // Calculate weighted progress
+  var totalW=0, doneW=0, wipW=0;
   STAGES.forEach(function(s){
-    var cur=stages[s.id]||'Not Started';
-    var curSt=STATUSES[0]; for(var i=0;i<STATUSES.length;i++) if(STATUSES[i].id===cur){curSt=STATUSES[i];break;}
-    h+='<div style="margin-bottom:8px;">';
-    h+='<div style="display:flex;justify-content:space-between;margin-bottom:5px;">';
-    h+='<span style="font-size:12px;font-weight:600;color:#f1f5f9;">'+s.label+'</span>';
-    h+='<span style="font-size:10px;font-weight:700;color:'+curSt.bg+';">'+cur+'</span>';
-    h+='</div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px;">';
-    STATUSES.forEach(function(st){
-      var isOn=cur===st.id;
-      h+='<button onclick="mapSetStage(\'' +pier+ '\',\'' +s.id+ '\',\'' +st.id+ '\')" ';
-      h+='style="padding:9px 2px;border-radius:7px;border:2px solid '+(isOn?st.bg:st.bg+'44')+';background:'+(isOn?st.bg:'transparent')+';color:'+(isOn?st.col:'rgba(255,255,255,0.2)')+';font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;">'+st.label+'</button>';
-    });
-    h+='</div></div>';
+    totalW+=s.w;
+    var v=stages[s.id]||'Not Started';
+    if(v==='Complete'||v==='Inspected') doneW+=s.w;
+    else if(v==='In Progress') wipW+=s.w;
   });
-  panel.innerHTML=h;
-  panel.style.display='block';
+  var donePct = totalW>0?Math.round(doneW/totalW*100):0;
+  var wipPct  = totalW>0?Math.round(wipW/totalW*100):0;
+
+  // Find last completed stage
+  var lastDone = '';
+  STAGES.slice().reverse().forEach(function(s){
+    if(!lastDone){
+      var v=stages[s.id]||'Not Started';
+      if(v==='Complete'||v==='Inspected'||v==='In Progress') lastDone=s.label+' ('+v+')';
+    }
+  });
+
+  var d = document;
+  function mk(tag,css,txt){ var e=d.createElement(tag); if(css) e.style.cssText=css; if(txt!==undefined) e.textContent=txt; return e; }
+
+  // ── Header ──────────────────────────────────────────
+  var hdr = mk('div','display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;');
+  var hl = mk('div');
+  hl.appendChild(mk('div','font-size:11px;color:'+brCol+'99;font-weight:700;letter-spacing:1px;','BRIDGE '+brId));
+  hl.appendChild(mk('div','font-size:18px;font-weight:900;color:'+brCol+';','📍 '+pier));
+  if(lastDone) hl.appendChild(mk('div','font-size:10px;color:rgba(255,255,255,0.35);margin-top:2px;','Latest: '+lastDone));
+  var hr = mk('div','text-align:right;');
+  hr.appendChild(mk('div','font-size:26px;font-weight:900;color:'+brCol+';font-family:monospace;line-height:1;',donePct+'%'));
+  hr.appendChild(mk('div','font-size:10px;color:rgba(255,255,255,0.35);','complete'));
+  var xb = mk('button','background:none;border:none;color:rgba(255,255,255,0.4);font-size:20px;cursor:pointer;padding:0;','✕');
+  xb.onclick = closeMapPanel;
+  hdr.appendChild(hl); hdr.appendChild(hr); hdr.appendChild(xb);
+  panel.appendChild(hdr);
+
+  // ── Progress bar ────────────────────────────────────
+  var bw = mk('div','height:8px;background:rgba(255,255,255,0.08);border-radius:4px;overflow:hidden;margin-bottom:12px;position:relative;');
+  var bwip = mk('div','position:absolute;left:0;top:0;height:100%;border-radius:4px;background:rgba(212,168,67,0.5);width:'+(donePct+wipPct)+'%;');
+  var bf = mk('div','position:absolute;left:0;top:0;height:100%;border-radius:4px;background:'+brCol+';width:'+donePct+'%;');
+  bw.appendChild(bwip); bw.appendChild(bf);
+  panel.appendChild(bw);
+
+  // ── Stage rows ──────────────────────────────────────
+  panel.appendChild(mk('div','font-size:10px;color:rgba(255,255,255,0.3);letter-spacing:1px;margin-bottom:6px;','STAGES — TAP TO UPDATE'));
+
+  STAGES.forEach(function(s){
+    var cur = stages[s.id]||'Not Started';
+    var isDone = cur==='Complete'||cur==='Inspected';
+    var isWip  = cur==='In Progress';
+    var isHold = cur==='On Hold';
+
+    var row = d.createElement('div');
+    row.style.cssText = 'margin-bottom:6px;border-radius:9px;overflow:hidden;border:1px solid rgba(255,255,255,0.06);';
+    if(isDone) row.style.borderColor = brCol+'44';
+    if(isWip)  row.style.borderColor = 'rgba(212,168,67,0.3)';
+
+    // Stage label row
+    var labelRow = d.createElement('div');
+    labelRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:7px 10px;'+(isDone?'background:'+brCol+'11;':isWip?'background:rgba(212,168,67,0.08);':'');
+
+    var lbl = mk('div');
+    var icon = isDone?'✅ ':isWip?'⚡ ':isHold?'🔴 ':'⬜ ';
+    lbl.appendChild(mk('span','font-size:12px;font-weight:700;color:'+(isDone?brCol:isWip?'#D4A843':isHold?'#E63946':'rgba(255,255,255,0.5)')+';',icon+s.label));
+    var wbadge = mk('span','font-size:9px;color:rgba(255,255,255,0.25);margin-left:6px;',s.w+'%');
+    lbl.appendChild(wbadge);
+
+    var statusBadge = mk('span','font-size:10px;font-weight:700;padding:2px 8px;border-radius:8px;background:'+(isDone?brCol+'22':isWip?'rgba(212,168,67,0.15)':isHold?'rgba(231,76,60,0.15)':'rgba(255,255,255,0.04)')+';color:'+(isDone?brCol:isWip?'#D4A843':isHold?'#E63946':'rgba(255,255,255,0.3)')+';',cur);
+    labelRow.appendChild(lbl); labelRow.appendChild(statusBadge);
+    row.appendChild(labelRow);
+
+    // Action buttons row
+    var btnRow = d.createElement('div');
+    btnRow.style.cssText = 'display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:rgba(255,255,255,0.04);';
+
+    STATUSES.forEach(function(st){
+      var isOn = cur===st.id;
+      var btn = d.createElement('button');
+      btn.style.cssText = 'padding:8px 2px;border:none;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;background:'+(isOn?st.bg:'transparent')+';color:'+(isOn?st.col:'rgba(255,255,255,0.25)')+';';
+      btn.textContent = st.label;
+      btn.onclick = (function(sid,stid){ return function(){ mapSetStage(pier,sid,stid); }; })(s.id, st.id);
+      btnRow.appendChild(btn);
+    });
+
+    row.appendChild(btnRow);
+    panel.appendChild(row);
+  });
 }
 
 function closeMapPanel(){ M_SEL=null; document.getElementById('map-pier-panel').style.display='none'; }
@@ -1931,17 +2142,19 @@ function mapSetStage(pier,sid,status){
     return;
   }
 
-  // Check if same pier+stage+status was already photographed today
-  var today = new Date().toISOString().slice(0,10);
-  var dupKey = 'photo_'+pier+'_'+sid+'_'+status+'_'+today;
-  var alreadyDone = localStorage.getItem(dupKey);
-  if(alreadyDone){
-    flash('⚠️ Already reported today — no change since last update');
-    return;
+  // Only block exact duplicate if already Complete/Inspected (don't block In Progress updates)
+  if(status==='Complete'||status==='Inspected'){
+    var today = new Date().toISOString().slice(0,10);
+    var dupKey = 'photo_'+pier+'_'+sid+'_'+status+'_'+today;
+    var alreadyDone = localStorage.getItem(dupKey);
+    if(alreadyDone){
+      flash('⚠️ Already marked Complete today');
+      return;
+    }
   }
 
   // All other statuses require photo
-  var sname=''; for(var i=0;i<STAGES.length;i++) if(STAGES[i].id===sid){sname=STAGES[i].name;break;}
+  var sname=''; for(var i=0;i<STAGES.length;i++) if(STAGES[i].id===sid){sname=STAGES[i].label;break;}
   showPhotoCapture(pier,sid,status,sname);
 }
 
@@ -2048,7 +2261,7 @@ function applyStage(pier,sid,status,photoUrl){
   if(!PS[pier])PS[pier]={};
   PS[pier][sid]=status;
   pushPier(pier);
-  var sname=''; for(var i=0;i<STAGES.length;i++) if(STAGES[i].id===sid){sname=STAGES[i].name;break;}
+  var sname=''; for(var i=0;i<STAGES.length;i++) if(STAGES[i].id===sid){sname=STAGES[i].label;break;}
   // Mark this pier+stage+status+date as done to prevent duplicates
   if(photoUrl){
     var today=new Date().toISOString().slice(0,10);
@@ -2293,17 +2506,132 @@ function toggleDayMode(){
   if(btn) btn.textContent=DAY_MODE?'🌙':'☀️';
 }
 
-function centerOnMe(){
-  if(!MY_LOC){ flash('📡 GPS not ready yet...'); return; }
-  if(!MBOUNDS||!MW||!MH) return;
-  // Calculate canvas position of user
-  var x = ((MY_LOC.e - MBOUNDS.minE)/(MBOUNDS.maxE - MBOUNDS.minE)) * MW;
-  var y = MH - ((MY_LOC.n - MBOUNDS.minN)/(MBOUNDS.maxN - MBOUNDS.minN)) * MH;
-  // Zoom in to scale 4 and center
-  MS = 4;
+// ═══ CENTER ON ME — handles GPS-not-ready, retries, visual confirmation ═══
+var CENTER_PENDING=false;     // user tapped 📍 Me while GPS wasn't ready — auto-center when it arrives
+var CENTER_PULSE_UNTIL=0;     // timestamp — while current time < this, draw the confirmation pulse
+var CENTER_LAST_TAP=0;        // rate-limit repeat taps
+
+function centerOnMeNow(){
+  if(!MY_LOC||!MBOUNDS||!MW||!MH)return false;
+  var dE=MBOUNDS.maxE-MBOUNDS.minE, dN=MBOUNDS.maxN-MBOUNDS.minN;
+  if(dE<=0||dN<=0)return false; // guard against divide-by-zero / bad bounds
+  // Canvas position of user
+  var x = ((MY_LOC.e - MBOUNDS.minE)/dE) * MW;
+  var y = MH - ((MY_LOC.n - MBOUNDS.minN)/dN) * MH;
+  if(!isFinite(x)||!isFinite(y))return false;
+  // Zoom and center
+  MS = 6;
   MOX = MW/2 - x * MS;
   MOY = MH/2 - y * MS;
-  flash('📍 Centered on your location!');
+  // Trigger 2.5-second confirmation pulse (replace any previous)
+  CENTER_PULSE_UNTIL = Date.now() + 2500;
+  return true;
+}
+
+function hideGpsWaitBanner(){
+  var b=document.getElementById('gps-wait-banner');
+  if(b)b.remove();
+}
+
+function showGpsWaitBanner(){
+  hideGpsWaitBanner();
+  var b=document.createElement('div');
+  b.id='gps-wait-banner';
+  b.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(7,9,13,0.96);border:2px solid rgba(34,197,94,0.5);border-radius:16px;padding:22px 26px;box-shadow:0 8px 32px rgba(0,0,0,0.6);z-index:9800;text-align:center;max-width:84vw;';
+  b.innerHTML=''
+    +'<div style="font-size:42px;margin-bottom:10px;animation:gpsSpin 1.5s linear infinite;">📡</div>'
+    +'<div style="font-size:15px;font-weight:800;color:#22C55E;margin-bottom:6px;">Acquiring GPS…</div>'
+    +'<div style="font-size:12px;color:rgba(255,255,255,0.6);line-height:1.5;margin-bottom:14px;">This can take up to 30 seconds.<br>Make sure you are outdoors with clear sky view.</div>'
+    +'<button onclick="cancelCenterOnMe()" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.75);padding:8px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Cancel</button>';
+  document.body.appendChild(b);
+  // Inject spin keyframes once
+  if(!document.getElementById('gps-spin-style')){
+    var st=document.createElement('style');
+    st.id='gps-spin-style';
+    st.textContent='@keyframes gpsSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}';
+    document.head.appendChild(st);
+  }
+}
+
+function cancelCenterOnMe(){
+  CENTER_PENDING=false;
+  hideGpsWaitBanner();
+}
+
+function centerOnMe(){
+  // Rate-limit repeat taps (prevents GPS request pileup which can freeze Chrome on Android)
+  var now=Date.now();
+  if(now - CENTER_LAST_TAP < 800){
+    return; // ignore tap — user is double-tapping
+  }
+  CENTER_LAST_TAP=now;
+
+  if(MY_LOC){
+    // GPS ready — center immediately
+    if(centerOnMeNow()) flash('📍 Centered on your location');
+    return;
+  }
+  // If already waiting, don't stack another request — let the first one resolve
+  if(CENTER_PENDING){
+    flash('📡 Still acquiring GPS — please wait…');
+    return;
+  }
+  // GPS not yet ready — show prominent wait banner, queue auto-center
+  CENTER_PENDING=true;
+  showGpsWaitBanner();
+  // Kick a fresh one-shot GPS fix in parallel with watchPosition, so first fix happens sooner
+  if(navigator.geolocation){
+    try{
+      navigator.geolocation.getCurrentPosition(function(pos){
+        var utm=toUTM(pos.coords.latitude,pos.coords.longitude);
+        MY_LOC={n:utm.N,e:utm.E};
+        if(CENTER_PENDING){
+          hideGpsWaitBanner();
+          CENTER_PENDING=false;
+          if(centerOnMeNow()) flash('📍 Centered on your location');
+        }
+      },function(err){
+        if(CENTER_PENDING){
+          hideGpsWaitBanner();
+          CENTER_PENDING=false;
+          var msg=err&&err.code===1?'⚠️ Location permission denied. Enable GPS in browser settings.':'⚠️ GPS unavailable. Check that location is turned on.';
+          flash(msg);
+        }
+      },{enableHighAccuracy:true,timeout:20000,maximumAge:10000});
+    }catch(e){
+      CENTER_PENDING=false;
+      hideGpsWaitBanner();
+      flash('⚠️ GPS error');
+    }
+  } else {
+    // No geolocation API at all
+    CENTER_PENDING=false;
+    hideGpsWaitBanner();
+    flash('⚠️ Geolocation not supported on this device');
+  }
+}
+
+// ═══ HOME — restore map view, close all overlay panels ═══
+function goHome(){
+  // Cancel any pending GPS-wait state
+  if(typeof CENTER_PENDING!=='undefined'&&CENTER_PENDING){
+    CENTER_PENDING=false;
+    if(typeof hideGpsWaitBanner==='function') hideGpsWaitBanner();
+  }
+  // Stop confirmation pulse
+  if(typeof CENTER_PULSE_UNTIL!=='undefined') CENTER_PULSE_UNTIL=0;
+  // Reset map view to fit-all
+  if(typeof mapFit==='function') mapFit();
+  // Close any open overlay panels
+  try{
+    var panels=['search-panel','report-modal','lists-overlay','summary-overlay','map-pier-panel'];
+    panels.forEach(function(id){ var el=document.getElementById(id); if(el) el.style.display='none'; });
+  }catch(e){}
+  // Clear map selection
+  if(typeof M_SEL!=='undefined') M_SEL=null;
+  // Scroll body to top
+  try{ window.scrollTo(0,0); }catch(e){}
+  flash('🏠 View reset');
 }
 
 // Register service worker for PWA install
@@ -2558,6 +2886,9 @@ function showRoadStationPanel(roadKey, stName, n, e){
   var rdLabel = roadKey==='ibn'?'Ibn Saud Road':'Prince Sattam Road';
   var rdData = ROAD_DATA[roadKey]||{};
   var actKey = stName.replace(/[^a-zA-Z0-9]/g,'_');
+  // Current side selection (default Both)
+  if(!window._roadPanelSide) window._roadPanelSide='B';
+  var _rs=window._roadPanelSide;
 
   var h = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">';
   h += '<div>';
@@ -2568,14 +2899,35 @@ function showRoadStationPanel(roadKey, stName, n, e){
   h += '<button onclick="closeMapPanel();" style="background:none;border:none;color:rgba(255,255,255,0.4);font-size:18px;cursor:pointer;">✕</button>';
   h += '</div>';
 
+  // ── SIDE CHOOSER (L / R / B) ─────────────────────────
+  h += '<div style="font-size:10px;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Side of Median Island</div>';
+  h += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:14px;">';
+  [{id:'L',label:'◀ Left'},{id:'R',label:'Right ▶'},{id:'B',label:'◀▶ Both'}].forEach(function(sd){
+    var isOn=_rs===sd.id;
+    h += '<button onclick="setRoadPanelSide(\''+sd.id+'\',\''+roadKey+'\',\''+stName.replace(/'/g,"\\'")+'\','+n+','+e+')" '
+      + 'style="padding:8px 2px;border-radius:7px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;'
+      + 'border:2px solid '+(isOn?rdCol:rdCol+'33')+';'
+      + 'background:'+(isOn?'rgba('+(roadKey==='ibn'?'52,211,153':'167,139,250')+',0.2)':'transparent')+';'
+      + 'color:'+(isOn?rdCol:'rgba(255,255,255,0.5)')+';">'+sd.label+'</button>';
+  });
+  h += '</div>';
+
   h += '<div style="font-size:10px;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Road Activities at this Station</div>';
 
   var roadActs = typeof ROAD_ACTS!=='undefined'?ROAD_ACTS:[];
   roadActs.forEach(function(act){
     var k = act.replace(/[^a-zA-Z0-9]/g,'_');
-    // Station specific key
-    var stKey = actKey+'_'+k;
-    var cur = rdData[stKey]||rdData[k]||'Not Started';
+    // Resolve current status honoring side selection + backward-compat
+    var cur='Not Started';
+    var legacy=rdData[actKey+'_'+k];
+    if(_rs==='B'){
+      var lVal=rdData[actKey+'_L_'+k], rVal=rdData[actKey+'_R_'+k];
+      if(legacy&&legacy!=='Not Started') cur=legacy;
+      else if(lVal==='Complete'&&rVal==='Complete') cur='Complete';
+      else if(lVal||rVal) cur=(lVal==='In Progress'||rVal==='In Progress')?'In Progress':((lVal==='Complete'||rVal==='Complete')?'In Progress':(lVal||rVal));
+    } else {
+      cur = rdData[actKey+'_'+_rs+'_'+k] || legacy || 'Not Started';
+    }
     var curSt = STATUSES[0];
     for(var i=0;i<STATUSES.length;i++) if(STATUSES[i].id===cur){curSt=STATUSES[i];break;}
 
@@ -2587,8 +2939,8 @@ function showRoadStationPanel(roadKey, stName, n, e){
     STATUSES.forEach(function(st){
       var isOn=cur===st.id;
       h += '<button ';
-      h += 'data-road="'+roadKey+'" data-skey="'+stKey+'" data-aname="'+act+'" data-sid="'+st.id+'" data-stname="'+stName+'" ';
-      h += 'onclick="setRoadStation(this.dataset.road,this.dataset.skey,this.dataset.aname,this.dataset.sid,this.dataset.stname)" ';
+      h += 'data-road="'+roadKey+'" data-akey="'+actKey+'" data-lid="'+k+'" data-aname="'+act+'" data-sid="'+st.id+'" data-stname="'+stName.replace(/"/g,'&quot;')+'" data-rs="'+_rs+'" ';
+      h += 'onclick="setRoadStation(this.dataset.road,this.dataset.akey,this.dataset.lid,this.dataset.aname,this.dataset.sid,this.dataset.stname,this.dataset.rs)" ';
       h += 'style="padding:9px 2px;border-radius:7px;border:2px solid '+(isOn?st.bg:st.bg+'44')+';background:'+(isOn?st.bg:'transparent')+';color:'+(isOn?st.col:'rgba(255,255,255,0.2)')+';font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;">'+st.label+'</button>';
     });
     h += '</div></div>';
@@ -2598,21 +2950,40 @@ function showRoadStationPanel(roadKey, stName, n, e){
   panel.style.display = 'block';
 }
 
-function setRoadStation(roadKey, stKey, actName, status, stName){
+function setRoadPanelSide(side, roadKey, stName, n, e){
+  window._roadPanelSide=side;
+  showRoadStationPanel(roadKey, stName, n, e);
+}
+
+function setRoadStation(roadKey, actKey, layerId, actName, status, stName, roadSide){
+  var _rs=roadSide||'B';
+  if(!ROAD_DATA[roadKey]) ROAD_DATA[roadKey]={};
   if(status==='Not Started'){
-    if(!ROAD_DATA[roadKey]) ROAD_DATA[roadKey]={};
-    ROAD_DATA[roadKey][stKey]=status;
+    // Clear the relevant side-aware keys + legacy
+    if(_rs==='B'){
+      delete ROAD_DATA[roadKey][actKey+'_L_'+layerId];
+      delete ROAD_DATA[roadKey][actKey+'_R_'+layerId];
+    } else {
+      delete ROAD_DATA[roadKey][actKey+'_'+_rs+'_'+layerId];
+    }
+    delete ROAD_DATA[roadKey][actKey+'_'+layerId]; // legacy
     pushRoad(roadKey);
-    flash('📌 '+actName+' — '+status);
+    flash('📌 '+actName+' reset');
     showRoadStationPanel(roadKey, stName, 0, 0);
     return;
   }
-  // Require photo
-  var sname = actName+' @ '+stName;
-  showPhotoCapture(stName, stKey, status, sname);
-  // Override applyStage to save road data
-  window._pendingRoadKey = roadKey;
-  window._pendingRoadStKey = stKey;
+  // Write to new side-aware key(s)
+  if(_rs==='B'){
+    ROAD_DATA[roadKey][actKey+'_L_'+layerId]=status;
+    ROAD_DATA[roadKey][actKey+'_R_'+layerId]=status;
+  } else {
+    ROAD_DATA[roadKey][actKey+'_'+_rs+'_'+layerId]=status;
+  }
+  pushRoad(roadKey);
+  var sideLabel=_rs==='L'?'Left':_rs==='R'?'Right':'Both sides';
+  flash('✅ '+actName+' · '+sideLabel+' → '+status);
+  // Re-render panel
+  showRoadStationPanel(roadKey, stName, 0, 0);
 }
 
 function onEmbSideSelect(side){
@@ -2754,6 +3125,372 @@ function selectSearchItem(n, e, name){
   }, 200);
 }
 
+
+// ═══ VOICE ANNOUNCEMENTS ════════════════════════════════════════
+var VOICE_ON = false;
+var VOICE_LAST_PIER = null;   // last pier we announced
+var VOICE_COOLDOWN = false;   // prevent repeating too fast
+var VOICE_PROXIMITY = 25;     // metres — announce within 25m
+
+function toggleVoice(){
+  VOICE_ON = !VOICE_ON;
+  var btn = document.getElementById('voice-btn');
+  if(btn){
+    btn.textContent  = VOICE_ON ? '🔊' : '🔇';
+    btn.style.background   = VOICE_ON ? 'rgba(212,168,67,0.15)' : 'rgba(255,255,255,0.05)';
+    btn.style.borderColor  = VOICE_ON ? 'rgba(212,168,67,0.5)'  : 'rgba(255,255,255,0.15)';
+    btn.style.color        = VOICE_ON ? '#D4A843'               : 'rgba(255,255,255,0.4)';
+  }
+  if(VOICE_ON){
+    // Test speech on enable
+    speak('Voice guidance enabled');
+  }
+}
+
+function speak(text){
+  if(!window.speechSynthesis) return;
+  // Cancel any current speech
+  window.speechSynthesis.cancel();
+  var u = new SpeechSynthesisUtterance(text);
+  u.lang   = 'en-US';
+  u.rate   = 0.9;
+  u.pitch  = 1.0;
+  u.volume = 1.0;
+  window.speechSynthesis.speak(u);
+}
+
+function buildPierAnnouncement(pierName){
+  // Find bridge
+  var brId = getBrId ? getBrId(pierName) : '?';
+  var stages = PS[pierName] || {};
+
+  // Find latest active stage
+  var latestLabel = '', latestStatus = '';
+  var stageOrder = STAGES.map(function(s){ return s.id; });
+  for(var i = stageOrder.length-1; i >= 0; i--){
+    var sid = stageOrder[i];
+    var v = stages[sid] || 'Not Started';
+    if(v !== 'Not Started'){
+      STAGES.forEach(function(s){ if(s.id===sid){ latestLabel=s.label; latestStatus=v; } });
+      break;
+    }
+  }
+
+  // Build announcement
+  var msg = 'Approaching Bridge ' + brId + ', Pier ' + pierName + '. ';
+  if(latestLabel){
+    msg += 'Latest stage: ' + latestLabel + ', ' + latestStatus + '. ';
+  } else {
+    msg += 'No work recorded yet. ';
+  }
+
+  // Next pending stage
+  for(var j = 0; j < STAGES.length; j++){
+    var s = STAGES[j];
+    var v2 = stages[s.id] || 'Not Started';
+    if(v2 === 'Not Started'){
+      msg += 'Next: ' + s.label + '.';
+      break;
+    }
+  }
+  return msg;
+}
+
+function checkVoiceProximity(utmE, utmN){
+  if(!VOICE_ON || VOICE_COOLDOWN) return;
+
+  // Find nearest pier within 25m
+  var nearest = null, nearestDist = Infinity;
+  PIER_COORDS.forEach(function(p){
+    var d = Math.sqrt(Math.pow(p.n-utmN,2) + Math.pow(p.e-utmE,2));
+    if(d < nearestDist){ nearestDist = d; nearest = p; }
+  });
+
+  if(!nearest || nearestDist > VOICE_PROXIMITY) return;
+
+  // Don't repeat same pier
+  if(VOICE_LAST_PIER === nearest.name) return;
+
+  VOICE_LAST_PIER = nearest.name;
+  VOICE_COOLDOWN  = true;
+
+  // Announce
+  var msg = buildPierAnnouncement(nearest.name);
+  speak(msg);
+
+  // Cooldown 30s before announcing again
+  setTimeout(function(){ VOICE_COOLDOWN = false; }, 30000);
+  // Reset last pier after 60s so it can be re-announced if user leaves and returns
+  setTimeout(function(){
+    if(VOICE_LAST_PIER === nearest.name) VOICE_LAST_PIER = null;
+  }, 60000);
+}
+
+
+// ═══ VOICE INPUT SYSTEM ══════════════════════════════════════════
+var VI = { recognition: null, pending: null, active: false };
+
+function startVoiceInput(){
+  var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SpeechRecognition){
+    alert('Voice input requires Chrome browser.\nSafari is not supported.');
+    return;
+  }
+
+  var ov = document.getElementById('voice-overlay');
+  ov.style.display = 'flex';
+  ov.classList.add('voice-listening');
+  document.getElementById('voice-status').textContent = 'Listening...';
+  document.getElementById('voice-transcript').textContent = '';
+  document.getElementById('voice-confirm-card').style.display = 'none';
+  VI.pending = null;
+  VI.active = true;
+
+  var rec = new SpeechRecognition();
+  rec.lang = 'en-US';
+  rec.continuous = false;
+  rec.interimResults = true;
+  rec.maxAlternatives = 3;
+  VI.recognition = rec;
+
+  rec.onresult = function(e){
+    var interim = '', final = '';
+    for(var i=e.resultIndex;i<e.results.length;i++){
+      if(e.results[i].isFinal) final += e.results[i][0].transcript;
+      else interim += e.results[i][0].transcript;
+    }
+    document.getElementById('voice-transcript').textContent = final || interim;
+    if(final) viParse(final.trim().toLowerCase());
+  };
+
+  rec.onerror = function(e){
+    document.getElementById('voice-status').textContent = e.error==='no-speech' ? 'No speech detected. Try again.' : 'Error: '+e.error;
+    document.getElementById('voice-overlay').classList.remove('voice-listening');
+    VI.active = false;
+    setTimeout(voiceCancel, 2500);
+  };
+
+  rec.onend = function(){
+    document.getElementById('voice-overlay').classList.remove('voice-listening');
+    VI.active = false;
+    if(!VI.pending){
+      document.getElementById('voice-status').textContent = 'Could not understand. Try again.';
+      setTimeout(voiceCancel, 2000);
+    }
+  };
+
+  rec.start();
+}
+
+function viParse(text){
+  // Normalize text
+  text = text.replace(/pier\s+/,'pier ').replace(/bridge\s+/,'bridge ');
+
+  // ── Command: take photo ───────────────────────────────────────
+  if(/take photo|camera|photo/.test(text)){
+    VI.pending = { type:'photo' };
+    viShowConfirm('📷 Take photo → save to <b>Miscellaneous</b>');
+    return;
+  }
+
+  // ── Command: open lists ───────────────────────────────────────
+  if(/open list|lists|quick pick/.test(text)){
+    VI.pending = { type:'lists' };
+    viShowConfirm('📋 Open the Lists picker');
+    return;
+  }
+
+  // ── Command: snapshot ─────────────────────────────────────────
+  if(/snapshot|summary|progress/.test(text)){
+    VI.pending = { type:'snapshot' };
+    viShowConfirm('📊 Open Project Snapshot');
+    return;
+  }
+
+  // ── Command: pier stage status ────────────────────────────────
+  // Pattern: "pier 7C piling complete" or "7C piling in progress"
+  var pierMatch = text.match(/(?:pier\s+)?([a-z0-9]+[-]?[0-9]*[a-z0-9]*)\s+(.+)/);
+  if(pierMatch){
+    var pierRaw = pierMatch[1].toUpperCase();
+    var rest    = pierMatch[2];
+
+    // Match pier name — normalize e.g. "7c" → "7C", "ab1a" → "AB-1A"
+    var pierName = viMatchPier(pierRaw);
+
+    if(pierName){
+      // Match stage
+      var stageMatch = viMatchStage(rest);
+      if(stageMatch.stageId){
+        // Match status
+        var status = viMatchStatus(rest);
+        VI.pending = { type:'stage', pier:pierName, stageId:stageMatch.stageId, stageLabel:stageMatch.label, status:status };
+        viShowConfirm('📍 Pier <b>'+pierName+'</b><br>🔧 '+stageMatch.label+'<br>✅ '+status);
+        return;
+      }
+    }
+  }
+
+  // ── Command: embankment layer ─────────────────────────────────
+  // Pattern: "emb left layer 8" or "embankment right layer 12"
+  var embMatch = text.match(/emb(?:ankment)?\s+(left|right|l|r)\s+(?:layer\s+)?(\d+)/);
+  if(embMatch){
+    var side   = (embMatch[1]==='left'||embMatch[1]==='l') ? 'L' : 'R';
+    var layer  = parseInt(embMatch[2]);
+    if(layer>=1 && layer<=16){
+      VI.pending = { type:'emb', side:side, layer:layer };
+      viShowConfirm('🏔️ Embankment '+( side==='L'?'Left':'Right')+'<br>📐 Layer '+layer+' completed');
+      return;
+    }
+  }
+
+  // Nothing matched
+  document.getElementById('voice-status').textContent = 'Could not understand. Try again.';
+  setTimeout(startVoiceInput, 2000);
+}
+
+function viMatchPier(raw){
+  // Direct match
+  var direct = PIER_COORDS.find(function(p){ return p.name.toUpperCase()===raw; });
+  if(direct) return direct.name;
+  // Try adding dash: "AB1A" → "AB-1A"
+  var dashed = raw.replace(/([A-Z]+)([0-9])/, '$1-$2');
+  var d2 = PIER_COORDS.find(function(p){ return p.name.toUpperCase()===dashed; });
+  if(d2) return d2.name;
+  // Try "7C" → could match "7C" exactly
+  var partial = PIER_COORDS.find(function(p){ return p.name.toUpperCase().indexOf(raw)>-1; });
+  return partial ? partial.name : null;
+}
+
+function viMatchStage(text){
+  var map = {
+    'borehole':         {id:'BH',  label:'Borehole'},
+    'boring':           {id:'BH',  label:'Borehole'},
+    'probing':          {id:'PRB', label:'Probing'},
+    'piling':           {id:'PIL', label:'Piling'},
+    'pile':             {id:'PIL', label:'Piling'},
+    'excavation':       {id:'EXC', label:'Excavation'},
+    'excavating':       {id:'EXC', label:'Excavation'},
+    'blinding':         {id:'BLD', label:'Blinding'},
+    'foundation rebar': {id:'FRB', label:'Foundation Rebar'},
+    'rebar':            {id:'FRB', label:'Foundation Rebar'},
+    'foundation concrete':{id:'FRC',label:'Foundation Concrete'},
+    'concrete':         {id:'FRC', label:'Foundation Concrete'},
+    'pier structure':   {id:'STR', label:'Pier Structure'},
+    'structure':        {id:'STR', label:'Pier Structure'},
+    'bearings':         {id:'BRG', label:'Bearings'},
+    'bearing':          {id:'BRG', label:'Bearings'},
+    'girder supply':    {id:'GRD', label:'Girder Supply'},
+    'girder':           {id:'GRD', label:'Girder Supply'},
+    'girder erection':  {id:'ERE', label:'Girder Erection'},
+    'erection':         {id:'ERE', label:'Girder Erection'},
+  };
+  for(var key in map){
+    if(text.indexOf(key)>-1) return {stageId:map[key].id, label:map[key].label};
+  }
+  return {};
+}
+
+function viMatchStatus(text){
+  if(/complete|done|finish|finished/.test(text))   return 'Complete';
+  if(/in progress|progress|started|working/.test(text)) return 'In Progress';
+  if(/hold|on hold|stop|paused/.test(text))        return 'On Hold';
+  return 'Complete'; // default
+}
+
+function viShowConfirm(html){
+  var ov = document.getElementById('voice-overlay');
+  ov.classList.remove('voice-listening');
+  document.getElementById('voice-status').textContent = 'Did you mean?';
+  document.getElementById('voice-confirm-text').innerHTML = html;
+  document.getElementById('voice-confirm-card').style.display = 'block';
+  // Speak the confirmation
+  speak('Did you mean: ' + document.getElementById('voice-confirm-text').textContent + '? Say yes or no.');
+
+  // Also listen for yes/no
+  viListenYesNo();
+}
+
+function viListenYesNo(){
+  var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SpeechRecognition) return;
+  var rec2 = new SpeechRecognition();
+  rec2.lang='en-US'; rec2.continuous=false; rec2.maxAlternatives=1;
+  rec2.onresult=function(e){
+    var t=e.results[0][0].transcript.trim().toLowerCase();
+    if(/yes|yeah|confirm|ok|correct|right/.test(t)) voiceConfirm();
+    else if(/no|cancel|wrong|nope/.test(t)) voiceCancel();
+  };
+  rec2.start();
+}
+
+function voiceConfirm(){
+  if(!VI.pending){ voiceCancel(); return; }
+  var p = VI.pending;
+
+  if(p.type === 'photo'){
+    voiceCancel();
+    // Open camera
+    var inp=document.createElement('input'); inp.type='file'; inp.accept='image/*'; inp.setAttribute('capture','environment');
+    inp.onchange=function(){
+      if(inp.files&&inp.files[0]){
+        var reader=new FileReader();
+        reader.onload=function(e){
+          var pd=document.createElement('div'); pd.style.cssText='position:fixed;inset:0;z-index:10002;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;'; pd.innerHTML='<div style="color:#94A3B8;font-size:14px;font-weight:700;">⏳ Uploading...</div>'; document.body.appendChild(pd);
+          uploadPhoto(e.target.result,'MISC','Miscellaneous',function(url){
+            pd.remove();
+            var entry={pier:'MISC',stage:'Miscellaneous',status:'Complete',url:url,date:new Date().toISOString().slice(0,10),ts:Date.now(),by:'Field',note:'Voice capture'};
+            if(DB) DB.ref('ic1_bridges/PHOTO_WALL').push().set(entry);
+            if(typeof PHOTO_WALL!=='undefined') PHOTO_WALL['voice_'+Date.now()]=entry;
+            flash('📸 Misc photo saved');
+            speak('Photo saved to miscellaneous');
+          },function(){ pd.remove(); flash('❌ Upload failed'); });
+        };
+        reader.readAsDataURL(inp.files[0]);
+      }
+    };
+    inp.click();
+    return;
+  }
+
+  if(p.type === 'lists'){
+    voiceCancel();
+    openLists();
+    return;
+  }
+
+  if(p.type === 'snapshot'){
+    voiceCancel();
+    toggleSummary();
+    return;
+  }
+
+  if(p.type === 'stage'){
+    applyStage(p.pier, p.stageId, p.status, null);
+    speak('Done. '+p.stageLabel+' marked '+p.status+' for pier '+p.pier);
+    flash('🎤 '+p.pier+' — '+p.stageLabel+' → '+p.status);
+    voiceCancel();
+    return;
+  }
+
+  if(p.type === 'emb'){
+    // Apply embankment layer using nearest station or ask user to tap map
+    speak('Please tap the station on the map to confirm location.');
+    flash('🎤 Voice: tap embankment station to set Layer '+p.layer);
+    voiceCancel();
+    return;
+  }
+
+  voiceCancel();
+}
+
+function voiceCancel(){
+  if(VI.recognition){ try{ VI.recognition.stop(); }catch(e){} }
+  VI.pending = null;
+  VI.active  = false;
+  var ov = document.getElementById('voice-overlay');
+  if(ov){ ov.style.display='none'; ov.classList.remove('voice-listening'); }
+}
+
 window.onload = function(){
   // Wire Lists button
   var lb=document.getElementById('lists-btn');
@@ -2769,15 +3506,362 @@ window.onload = function(){
 // ═══ LISTS / QUICK PICK SYSTEM ═══════════════════════════════════════
 var LS = { category:null, bridge:null, pier:null, stage:null };
 
+// ═══ RECENT PIERS — 7-day rolling history ═══
+// Stored as JSON: {pierName: timestamp, ...} — pruned to 7 days on read
+var LS_RECENT_KEY='ic1_recent_piers';
+function recentLoad(){
+  try{
+    var raw=localStorage.getItem(LS_RECENT_KEY);
+    if(!raw)return {};
+    var obj=JSON.parse(raw)||{};
+    // Prune older than 7 days
+    var cutoff=Date.now()-7*24*60*60*1000;
+    var cleaned={};
+    Object.keys(obj).forEach(function(k){if(obj[k]>=cutoff)cleaned[k]=obj[k];});
+    return cleaned;
+  }catch(e){return {};}
+}
+function recentSave(obj){
+  try{localStorage.setItem(LS_RECENT_KEY,JSON.stringify(obj));}catch(e){}
+}
+function recentTouch(pierName){
+  if(!pierName)return;
+  var obj=recentLoad();
+  obj[pierName]=Date.now();
+  recentSave(obj);
+}
+function recentList(max){
+  // Returns array of pier names sorted most-recent-first
+  var obj=recentLoad();
+  var entries=Object.keys(obj).map(function(k){return {name:k,ts:obj[k]};});
+  entries.sort(function(a,b){return b.ts-a.ts;});
+  return entries.slice(0,max||8).map(function(e){return e.name;});
+}
+// Friendly time label for recent pills (now / Xm / Xh / Xd)
+function recentRelTime(ts){
+  var diff=Date.now()-ts;
+  var m=Math.floor(diff/60000);
+  if(m<1)return 'now';
+  if(m<60)return m+'m';
+  var h=Math.floor(m/60);
+  if(h<24)return h+'h';
+  var d=Math.floor(h/24);
+  return d+'d';
+}
+
+// ═══════════════════════════════════════════════════════════
+// HIERARCHICAL WIZARD (new unified flow — Session 1: Screen 1)
+// State: {step, areaType, bridge, pier, stage, status, photo}
+// 5 steps: 1=Area  2=Sub-area  3=Pier/Station  4=Stage/Layer  5=Status+Photo
+// ═══════════════════════════════════════════════════════════
+
+var WIZ_STATE = null;
+var WIZ_RECENT_KEY = 'ic1_wiz_recent';
+
 function openLists(){
-  var ov=document.getElementById('lists-overlay');
-  ov.style.display='flex';
-  LS = {category:null, bridge:null, pier:null, stage:null};
-  lsShowStep1();
+  var ov = document.getElementById('lists-overlay');
+  if(!ov) return;
+  ov.style.display = 'flex';
+  WIZ_STATE = {step:1, areaType:null, bridge:null, pier:null, stage:null, status:null, photo:null};
+  wizGoto(1);
 }
 
 function closeLists(){
-  document.getElementById('lists-overlay').style.display='none';
+  var ov = document.getElementById('lists-overlay');
+  if(ov) ov.style.display = 'none';
+  WIZ_STATE = null;
+}
+
+// Update the 5-segment progress bar so segments 1..currentStep are gold
+function wizSetProgress(step){
+  var segs = document.querySelectorAll('.wiz-seg');
+  segs.forEach(function(seg){
+    var n = parseInt(seg.dataset.step);
+    seg.style.background = (n <= step) ? '#D4A843' : 'rgba(255,255,255,0.08)';
+  });
+}
+
+// Update back button visibility + label
+function wizSetBack(visible, label){
+  var btn = document.getElementById('wiz-back-btn');
+  var lbl = document.getElementById('wiz-back-label');
+  if(!btn) return;
+  btn.style.display = visible ? 'inline-flex' : 'none';
+  if(lbl) lbl.textContent = label || 'Back';
+}
+
+function wizSetTitle(title){
+  var el = document.getElementById('wiz-title');
+  if(el) el.textContent = title;
+}
+
+// Back handler: drop one level in the WIZ_STATE and re-render
+function wizBack(){
+  if(!WIZ_STATE || WIZ_STATE.step <= 1) return;
+  var s = WIZ_STATE.step - 1;
+  WIZ_STATE.step = s;
+  // Clear selections deeper than current step
+  if(s < 2) WIZ_STATE.bridge = null;
+  if(s < 3) WIZ_STATE.pier = null;
+  if(s < 4) WIZ_STATE.stage = null;
+  if(s < 5) { WIZ_STATE.status = null; WIZ_STATE.photo = null; }
+  wizGoto(s);
+}
+
+// Router — call the right render for the current step
+function wizGoto(step){
+  WIZ_STATE.step = step;
+  wizSetProgress(step);
+  if(step === 1) wizRenderScreen1();
+  // Screens 2-5 will be added in later sessions
+  else wizRenderPlaceholder(step);
+}
+
+// Placeholder for future steps (temporary, removed in session 2+)
+function wizRenderPlaceholder(step){
+  var c = document.getElementById('lists-content');
+  wizSetBack(true, 'Previous');
+  wizSetTitle('Step ' + step + ' — coming soon');
+  c.innerHTML = '<div style="padding:40px 20px;text-align:center;color:rgba(255,255,255,0.4);">'
+    + '<div style="font-size:42px;margin-bottom:12px;">🚧</div>'
+    + '<div style="font-size:14px;font-weight:700;color:rgba(255,255,255,0.7);">Screen ' + step + ' will be built next</div>'
+    + '<div style="font-size:11px;margin-top:8px;">Current selection: ' + _wizSelectionSummary() + '</div>'
+    + '</div>';
+}
+
+function _wizSelectionSummary(){
+  if(!WIZ_STATE) return '—';
+  var parts = [];
+  if(WIZ_STATE.areaType) parts.push(WIZ_STATE.areaType);
+  if(WIZ_STATE.bridge) parts.push(WIZ_STATE.bridge);
+  if(WIZ_STATE.pier) parts.push(WIZ_STATE.pier);
+  if(WIZ_STATE.stage) parts.push(WIZ_STATE.stage);
+  return parts.join(' → ') || '—';
+}
+
+// ═════ RECENTS ═════
+// Stored as array of {type, label, areaType, bridge, pier, stationKey, side, stage, ts}
+// Max 8 entries, de-duped by (type+label).
+function wizRecentLoad(){
+  try{
+    var raw = localStorage.getItem(WIZ_RECENT_KEY);
+    return raw ? JSON.parse(raw) : [];
+  }catch(e){ return []; }
+}
+
+function wizRecentSave(list){
+  try{ localStorage.setItem(WIZ_RECENT_KEY, JSON.stringify(list.slice(0,8))); }catch(e){}
+}
+
+// Called by the save flow (Screen 5) to track a just-recorded entry
+function wizRecentTouch(entry){
+  if(!entry || !entry.label) return;
+  var list = wizRecentLoad();
+  // De-dupe: remove any existing entry with same label
+  list = list.filter(function(e){ return e.label !== entry.label; });
+  entry.ts = Date.now();
+  list.unshift(entry);
+  wizRecentSave(list);
+}
+
+// Human-readable "2 hours ago" / "Yesterday"
+function _wizRelTime(ts){
+  if(!ts) return '';
+  var diff = Date.now() - ts;
+  var m = Math.floor(diff/60000);
+  if(m < 1) return 'just now';
+  if(m < 60) return m + 'm ago';
+  var h = Math.floor(m/60);
+  if(h < 24) return h + 'h ago';
+  var d = Math.floor(h/24);
+  if(d === 1) return 'Yesterday';
+  if(d < 7) return d + ' days ago';
+  return Math.floor(d/7) + 'w ago';
+}
+
+// ═══════════════════════════════════════════════════════════
+// SCREEN 1 — AREA + BRIDGE SELECTION (landing)
+// ═══════════════════════════════════════════════════════════
+function wizRenderScreen1(){
+  var c = document.getElementById('lists-content');
+  if(!c) return;
+  wizSetBack(false);
+  wizSetTitle('Select Area');
+
+  var h = '';
+
+  // ── Section: Recent ──
+  var recents = wizRecentLoad();
+  if(recents.length > 0){
+    h += '<div style="margin-bottom:22px;">';
+    h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">';
+    h += '<div style="font-size:10px;letter-spacing:2.5px;color:#D4A843;font-weight:900;">🕐 RECENT</div>';
+    h += '<div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(212,168,67,0.3),transparent);"></div>';
+    h += '</div>';
+    recents.slice(0,8).forEach(function(r){
+      var iconCol = r.type==='pier' ? '#58A6FF' : r.type==='emb' ? '#D4A843' : '#A78BFA';
+      var icon = r.type==='pier' ? '🌉' : r.type==='emb' ? '🏗' : '🛣';
+      h += '<button onclick=\'wizJumpTo(' + JSON.stringify(r).replace(/\'/g,'&#39;') + ')\' '
+        + 'style="width:100%;display:flex;align-items:center;gap:12px;padding:12px 14px;margin-bottom:8px;'
+        + 'background:#0a1628;border:1px solid rgba(255,255,255,0.06);border-left:3px solid ' + iconCol + ';'
+        + 'border-radius:10px;cursor:pointer;font-family:inherit;text-align:left;-webkit-tap-highlight-color:transparent;">'
+        + '<div style="font-size:20px;width:28px;text-align:center;">' + icon + '</div>'
+        + '<div style="flex:1;min-width:0;">'
+        + '<div style="font-size:14px;font-weight:700;color:#f1f5f9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + r.label + '</div>'
+        + (r.detail ? '<div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:1px;">' + r.detail + '</div>' : '')
+        + '</div>'
+        + '<div style="font-size:10px;color:rgba(255,255,255,0.35);font-weight:600;">' + _wizRelTime(r.ts) + '</div>'
+        + '</button>';
+    });
+    h += '</div>';
+  }
+
+  // ── Section: Bridges ──
+  h += '<div style="margin-bottom:22px;">';
+  h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">';
+  h += '<div style="font-size:10px;letter-spacing:2.5px;color:#58A6FF;font-weight:900;">🌉 BRIDGES</div>';
+  h += '<div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(88,166,255,0.3),transparent);"></div>';
+  h += '</div>';
+  // 3 columns grid — tap targets ~100px
+  h += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">';
+  BRIDGES.forEach(function(br){
+    var pct = _wizBridgeProgress(br);
+    var pctLabel = pct > 0 ? pct + '%' : '—';
+    var pctCol = pct >= 80 ? '#06D6A0' : pct > 0 ? '#D4A843' : 'rgba(255,255,255,0.3)';
+    h += '<button onclick="wizSelectBridge(\'' + br.id + '\')" '
+      + 'style="aspect-ratio:1/1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;'
+      + 'background:linear-gradient(135deg,' + br.col + '15,' + br.col + '08);'
+      + 'border:1px solid ' + br.col + '55;border-radius:14px;cursor:pointer;font-family:inherit;'
+      + 'padding:10px;-webkit-tap-highlight-color:transparent;transition:transform 0.1s;"'
+      + 'ontouchstart="this.style.transform=\'scale(0.95)\'" ontouchend="this.style.transform=\'\'">'
+      + '<div style="font-family:Rajdhani,sans-serif;font-size:28px;font-weight:900;color:' + br.col + ';line-height:1;">' + br.id + '</div>'
+      + '<div style="font-size:10px;color:rgba(255,255,255,0.55);font-weight:600;">' + br.piers.length + ' pier' + (br.piers.length!==1?'s':'') + '</div>'
+      + '<div style="font-size:10px;font-weight:800;color:' + pctCol + ';">' + pctLabel + '</div>'
+      + '</button>';
+  });
+  h += '</div>';
+  h += '</div>';
+
+  // ── Section: Embankment ──
+  h += '<div style="margin-bottom:16px;">';
+  h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">';
+  h += '<div style="font-size:10px;letter-spacing:2.5px;color:#D4A843;font-weight:900;">🏗 EMBANKMENT</div>';
+  h += '<div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(212,168,67,0.3),transparent);"></div>';
+  h += '</div>';
+  h += '<button onclick="wizSelectArea(\'embankment\')" '
+    + 'style="width:100%;display:flex;align-items:center;gap:14px;padding:16px 18px;'
+    + 'background:linear-gradient(135deg,rgba(212,168,67,0.12),rgba(212,168,67,0.04));'
+    + 'border:1px solid rgba(212,168,67,0.4);border-radius:14px;cursor:pointer;font-family:inherit;text-align:left;'
+    + '-webkit-tap-highlight-color:transparent;">'
+    + '<div style="font-size:28px;width:36px;text-align:center;">🏗</div>'
+    + '<div style="flex:1;">'
+    + '<div style="font-size:15px;font-weight:800;color:#f1f5f9;">KKR Embankment</div>'
+    + '<div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:2px;">Left & Right sides · 16 layers</div>'
+    + '</div>'
+    + '<div style="font-size:20px;color:rgba(212,168,67,0.7);">›</div>'
+    + '</button>';
+  h += '</div>';
+
+  // ── Section: Roads ──
+  h += '<div style="margin-bottom:16px;">';
+  h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">';
+  h += '<div style="font-size:10px;letter-spacing:2.5px;color:#A78BFA;font-weight:900;">🛣 ROADS</div>';
+  h += '<div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(167,139,250,0.3),transparent);"></div>';
+  h += '</div>';
+  h += '<button onclick="wizSelectArea(\'road_ibn\')" '
+    + 'style="width:100%;display:flex;align-items:center;gap:14px;padding:14px 18px;margin-bottom:8px;'
+    + 'background:linear-gradient(135deg,rgba(52,211,153,0.12),rgba(52,211,153,0.04));'
+    + 'border:1px solid rgba(52,211,153,0.4);border-radius:14px;cursor:pointer;font-family:inherit;text-align:left;'
+    + '-webkit-tap-highlight-color:transparent;">'
+    + '<div style="font-size:26px;width:36px;text-align:center;">🛣</div>'
+    + '<div style="flex:1;">'
+    + '<div style="font-size:15px;font-weight:800;color:#f1f5f9;">Ibn Saud Road</div>'
+    + '<div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:2px;">Left & Right sides · 6 layers</div>'
+    + '</div>'
+    + '<div style="font-size:20px;color:rgba(52,211,153,0.7);">›</div>'
+    + '</button>';
+  h += '<button onclick="wizSelectArea(\'road_sattam\')" '
+    + 'style="width:100%;display:flex;align-items:center;gap:14px;padding:14px 18px;'
+    + 'background:linear-gradient(135deg,rgba(167,139,250,0.12),rgba(167,139,250,0.04));'
+    + 'border:1px solid rgba(167,139,250,0.4);border-radius:14px;cursor:pointer;font-family:inherit;text-align:left;'
+    + '-webkit-tap-highlight-color:transparent;">'
+    + '<div style="font-size:26px;width:36px;text-align:center;">🛣</div>'
+    + '<div style="flex:1;">'
+    + '<div style="font-size:15px;font-weight:800;color:#f1f5f9;">Sattam Road</div>'
+    + '<div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:2px;">Left & Right sides · 6 layers</div>'
+    + '</div>'
+    + '<div style="font-size:20px;color:rgba(167,139,250,0.7);">›</div>'
+    + '</button>';
+  h += '</div>';
+
+  c.innerHTML = h;
+}
+
+// Helper: average progress for a bridge, used on the bridge tile
+function _wizBridgeProgress(br){
+  if(typeof PS === 'undefined' || !br || !br.piers) return 0;
+  var totalW = 0;
+  STAGES.forEach(function(s){ totalW += s.w; });
+  if(totalW === 0) return 0;
+  var sum = 0;
+  br.piers.forEach(function(pn){
+    var st = PS[pn] || {};
+    var done = 0;
+    STAGES.forEach(function(s){
+      var v = st[s.id] || 'Not Started';
+      if(v === 'Complete' || v === 'Inspected') done += s.w;
+      else if(v === 'In Progress') done += s.w * 0.5;
+    });
+    sum += done / totalW * 100;
+  });
+  return Math.round(sum / br.piers.length);
+}
+
+// Selection handlers — store choice and advance to Screen 2
+function wizSelectBridge(bridgeId){
+  WIZ_STATE.areaType = 'bridge';
+  WIZ_STATE.bridge = bridgeId;
+  wizGoto(2);
+}
+
+function wizSelectArea(areaType){
+  WIZ_STATE.areaType = areaType;
+  wizGoto(2);
+}
+
+// Jump directly to a recent item's deepest known step. For now this just pre-fills
+// the area + bridge and advances to Screen 2. Session 2+ will extend this to deep-jump
+// all the way to Screen 4 (status+photo) for full one-tap resume.
+function wizJumpTo(recent){
+  if(!recent || !WIZ_STATE) return;
+  if(recent.type === 'pier'){
+    WIZ_STATE.areaType = 'bridge';
+    WIZ_STATE.bridge = recent.bridge || null;
+    WIZ_STATE.pier = recent.pier || null;
+    // Once Screen 3 is built, this should go to step 3 (stage picker). For now, step 2.
+    wizGoto(WIZ_STATE.pier ? 3 : 2);
+  } else if(recent.type === 'emb'){
+    WIZ_STATE.areaType = 'embankment';
+    wizGoto(2);
+  } else if(recent.type === 'road'){
+    WIZ_STATE.areaType = recent.areaType || 'road_ibn';
+    wizGoto(2);
+  }
+}
+
+// Jump directly to Screen 4 or 5 based on a recent entry
+function wizJumpTo(entry){
+  if(!entry) return;
+  WIZ_STATE.areaType = entry.areaType;
+  WIZ_STATE.bridge = entry.bridge || null;
+  WIZ_STATE.pier = entry.pier || null;
+  WIZ_STATE.stage = entry.stage || null;
+  // Jump to the deepest step we have data for
+  var targetStep = 2;
+  if(WIZ_STATE.pier) targetStep = 4;
+  else if(WIZ_STATE.bridge) targetStep = 3;
+  if(WIZ_STATE.stage) targetStep = 5;
+  wizGoto(targetStep);
 }
 
 function lsSetTab(active){
@@ -2804,6 +3888,7 @@ function lsShowStep1(){
     {id:'emb',     icon:'🏔️', label:'KKR Embankment',  col:'#D4A843', sub:'Left & Right sides'},
     {id:'ibn',     icon:'🛣️', label:'Ibn Saud Road',   col:'#34D399', sub:'0+000 → 0+698'},
     {id:'sattam',  icon:'🛣️', label:'Sattam Road',     col:'#A78BFA', sub:'0+000 → 0+752'},
+    {id:'misc',    icon:'📷', label:'Miscellaneous',   col:'#94A3B8', sub:'General site photos — no weight'},
   ];
 
   cats.forEach(function(cat){
@@ -2833,14 +3918,8 @@ function lsShowStep2(cat){
   c.appendChild(back);
 
   if(cat.id==='bridge'){
-    var title=document.createElement('div');
-    title.style.cssText='font-size:11px;color:rgba(255,255,255,0.4);font-weight:700;letter-spacing:1px;margin-bottom:12px;';
-    title.textContent='SELECT BRIDGE → PIER';
-    c.appendChild(title);
-
-    // Get all bridges including K,L,M,N from PIER_COORDS
+    // Build full bridge list first (needed by recents lookup below)
     var allBridges=BRIDGES.slice();
-    // Add K,L,M,N if not in BRIDGES
     var kmnIds=['K','L','M','N'];
     var kmnPiers={K:['AB-1K','AB-2K'],L:['AB-1L','AB-2L'],M:['AB-1M','1M-L','1M-R','AB-2M'],N:['AB-1N','AB-2N']};
     var kmnCols={K:'#F43F5E',L:'#8B5CF6',M:'#EC4899',N:'#14B8A6'};
@@ -2848,6 +3927,44 @@ function lsShowStep2(cat){
       if(!allBridges.find(function(b){return b.id===id;}))
         allBridges.push({id:id,col:kmnCols[id],piers:kmnPiers[id]});
     });
+
+    // ═ RECENT PIERS ROW (7-day rolling history) ═
+    var recents=recentList(8);
+    if(recents.length>0){
+      var recObj=recentLoad();
+      var rcSect=document.createElement('div');
+      rcSect.style.cssText='margin-bottom:16px;padding:12px;border-radius:12px;background:linear-gradient(135deg,rgba(212,168,67,0.08),rgba(212,168,67,0.03));border:1px solid rgba(212,168,67,0.25);';
+      var rcHdr=document.createElement('div');
+      rcHdr.style.cssText='display:flex;align-items:center;gap:8px;margin-bottom:10px;';
+      rcHdr.innerHTML='<span style="font-size:13px;">🕐</span><span style="font-size:11px;font-weight:800;color:#D4A843;letter-spacing:1.5px;">RECENT PIERS</span><span style="font-size:10px;color:rgba(255,255,255,0.4);margin-left:auto;">Last 7 days</span>';
+      rcSect.appendChild(rcHdr);
+      var pillRow=document.createElement('div');
+      pillRow.style.cssText='display:flex;flex-wrap:wrap;gap:6px;';
+      recents.forEach(function(pn){
+        // Find which bridge this pier belongs to
+        var pierBr=null;
+        for(var i=0;i<allBridges.length;i++) if(allBridges[i].piers.indexOf(pn)>-1){pierBr=allBridges[i];break;}
+        if(!pierBr)return; // pier no longer exists
+        var col=getPierCol(pn);
+        var isDone=col==='#06D6A0', isWip=col==='#D4A843', isHold=col==='#E63946';
+        var bgCol=isDone?'rgba(6,214,160,0.15)':isWip?'rgba(212,168,67,0.15)':isHold?'rgba(230,57,70,0.15)':'rgba(255,255,255,0.06)';
+        var bdCol=isDone?'rgba(6,214,160,0.5)':isWip?'rgba(212,168,67,0.55)':isHold?'rgba(230,57,70,0.5)':'rgba(255,255,255,0.15)';
+        var txtCol=isDone?'#06D6A0':isWip?'#D4A843':isHold?'#E63946':'#f1f5f9';
+        var ic=isDone?'✓':isWip?'⚡':isHold?'⚠':'';
+        var pill=document.createElement('button');
+        pill.style.cssText='padding:9px 12px;border-radius:18px;border:1px solid '+bdCol+';background:'+bgCol+';color:'+txtCol+';font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px;';
+        pill.innerHTML=(ic?'<span>'+ic+'</span>':'')+'<span>'+pn+'</span><span style="font-size:9px;font-weight:600;opacity:0.55;">'+recentRelTime(recObj[pn])+'</span>';
+        pill.onclick=(function(pName,brRef){return function(){LS.pier=pName;LS.bridge=brRef;lsShowStep3Pier(pName,brRef);};})(pn,pierBr);
+        pillRow.appendChild(pill);
+      });
+      rcSect.appendChild(pillRow);
+      c.appendChild(rcSect);
+    }
+
+    var title=document.createElement('div');
+    title.style.cssText='font-size:11px;color:rgba(255,255,255,0.4);font-weight:700;letter-spacing:1px;margin-bottom:12px;';
+    title.textContent=recents.length>0?'ALL BRIDGES & PIERS':'SELECT BRIDGE → PIER';
+    c.appendChild(title);
 
     allBridges.forEach(function(br){
       var brSect=document.createElement('div');
@@ -2879,9 +3996,130 @@ function lsShowStep2(cat){
 
   } else if(cat.id==='emb'){
     lsShowEmbStep2(c, cat);
+  } else if(cat.id==='misc'){
+    lsShowMisc(c);
   } else {
     lsShowRoadStep2(c, cat);
   }
+}
+
+
+// ── MISCELLANEOUS PHOTO ──────────────────────────────────────────
+function lsShowMisc(c){
+  lsSetTab(2);
+  if(!c) c = document.getElementById('lists-content');
+  c.innerHTML = '';
+
+  // Back
+  var back = document.createElement('button');
+  back.style.cssText = 'background:transparent;border:none;color:rgba(255,255,255,0.4);font-size:13px;cursor:pointer;margin-bottom:16px;font-family:inherit;padding:0;';
+  back.textContent = '← Back';
+  back.onclick = lsShowStep1;
+  c.appendChild(back);
+
+  // Title
+  var title = document.createElement('div');
+  title.style.cssText = 'font-size:15px;font-weight:900;color:#94A3B8;margin-bottom:6px;';
+  title.textContent = '📷 Miscellaneous Photo';
+  c.appendChild(title);
+
+  var sub = document.createElement('div');
+  sub.style.cssText = 'font-size:11px;color:rgba(255,255,255,0.3);margin-bottom:20px;line-height:1.5;';
+  sub.textContent = 'Take a general site photo. No stage or progress weight assigned.';
+  c.appendChild(sub);
+
+  // Optional note input
+  var noteLabel = document.createElement('div');
+  noteLabel.style.cssText = 'font-size:11px;color:rgba(255,255,255,0.4);font-weight:700;letter-spacing:1px;margin-bottom:6px;';
+  noteLabel.textContent = 'NOTE (optional)';
+  c.appendChild(noteLabel);
+
+  var noteInput = document.createElement('input');
+  noteInput.type = 'text';
+  noteInput.placeholder = 'e.g. Site entrance, traffic diversion...';
+  noteInput.id = 'misc-note-input';
+  noteInput.style.cssText = 'width:100%;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:#fff;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:20px;';
+  c.appendChild(noteInput);
+
+  // Take Photo button
+  var photoLabel = document.createElement('label');
+  photoLabel.style.cssText = 'display:block;cursor:pointer;margin-bottom:10px;';
+
+  var fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.accept = 'image/*';
+  fileInput.setAttribute('capture','environment');
+  fileInput.style.display = 'none';
+  fileInput.onchange = function(){
+    if(!fileInput.files||!fileInput.files[0]) return;
+    var note = document.getElementById('misc-note-input');
+    var noteVal = note ? note.value.trim() : '';
+    var reader = new FileReader();
+    reader.onload = function(e){
+      // Show uploading
+      var pd = document.createElement('div');
+      pd.style.cssText = 'position:fixed;inset:0;z-index:10002;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;';
+      pd.innerHTML = '<div style="color:#94A3B8;font-size:14px;font-weight:700;">⏳ Uploading...</div>';
+      document.body.appendChild(pd);
+
+      uploadPhoto(e.target.result, 'MISC', 'Miscellaneous', function(url){
+        pd.remove();
+        if(url){
+          // Save to PHOTO_WALL with misc tag
+          var ref = DB ? DB.ref('ic1_bridges/PHOTO_WALL').push() : null;
+          var entry = {
+            pier: 'MISC',
+            stage: 'Miscellaneous',
+            status: 'Complete',
+            url: url,
+            date: new Date().toISOString().slice(0,10),
+            ts: Date.now(),
+            by: 'Field',
+            note: noteVal || ''
+          };
+          if(ref) ref.set(entry);
+          if(typeof PHOTO_WALL !== 'undefined') PHOTO_WALL[ref ? ref.key : 'misc_'+Date.now()] = entry;
+          flash('📷 Misc photo saved');
+          closeLists();
+        }
+      }, function(){
+        pd.remove();
+        flash('❌ Upload failed');
+      });
+    };
+    reader.readAsDataURL(fileInput.files[0]);
+  };
+
+  var photoBtn = document.createElement('div');
+  photoBtn.style.cssText = 'background:rgba(148,163,184,0.15);border:2px solid rgba(148,163,184,0.4);border-radius:12px;padding:16px;text-align:center;font-size:15px;font-weight:800;color:#94A3B8;';
+  photoBtn.textContent = '📷 Take Photo';
+  photoLabel.appendChild(fileInput);
+  photoLabel.appendChild(photoBtn);
+  c.appendChild(photoLabel);
+
+  // Skip photo (no photo)
+  var skipBtn = document.createElement('button');
+  skipBtn.style.cssText = 'width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.4);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;';
+  skipBtn.textContent = '📝 Save Note Only (No Photo)';
+  skipBtn.onclick = function(){
+    var note = document.getElementById('misc-note-input');
+    var noteVal = note ? note.value.trim() : '';
+    if(!noteVal){ flash('⚠️ Enter a note or take a photo'); return; }
+    var entry = {
+      pier: 'MISC',
+      stage: 'Miscellaneous',
+      status: 'Complete',
+      url: '',
+      date: new Date().toISOString().slice(0,10),
+      ts: Date.now(),
+      by: 'Field',
+      note: noteVal
+    };
+    if(DB) DB.ref('ic1_bridges/PHOTO_WALL').push().set(entry);
+    flash('📝 Note saved');
+    closeLists();
+  };
+  c.appendChild(skipBtn);
 }
 
 function lsShowEmbStep2(c, cat){
@@ -2905,11 +4143,51 @@ function lsShowEmbStations(sd){
 }
 
 function lsShowRoadStep2(c, cat){
+  lsSetTab(2);
+  if(!c) c=document.getElementById('lists-content');
+  c.innerHTML='';
   var col=cat.id==='ibn'?'#34D399':'#A78BFA';
-  lsShowStations(cat.id, cat.id==='ibn'?'Ibn Saud Road':'Sattam Road', col);
+  var roadLabel=cat.id==='ibn'?'Ibn Saud Road':'Sattam Road';
+
+  // Back button
+  var back=document.createElement('button');
+  back.style.cssText='background:transparent;border:none;color:rgba(255,255,255,0.4);font-size:13px;cursor:pointer;margin-bottom:14px;font-family:inherit;padding:0;';
+  back.textContent='← Back';
+  back.onclick=lsShowStep1;
+  c.appendChild(back);
+
+  // Title
+  var title=document.createElement('div');
+  title.style.cssText='font-size:11px;color:rgba(255,255,255,0.4);font-weight:700;letter-spacing:1px;margin-bottom:6px;';
+  title.textContent=roadLabel.toUpperCase()+' — SELECT SIDE';
+  c.appendChild(title);
+
+  // Helper info
+  var info=document.createElement('div');
+  info.style.cssText='font-size:11px;color:rgba(255,255,255,0.35);margin-bottom:14px;line-height:1.5;';
+  info.textContent='Choose which side of the median island the layer is on. Use "Both" when a layer extends across the full width.';
+  c.appendChild(info);
+
+  // Three choice cards: Left, Right, Both
+  var sides=[
+    {id:'L',  label:'Left of Median',  icon:'◀', sub:'West / Left side only'},
+    {id:'R',  label:'Right of Median', icon:'▶', sub:'East / Right side only'},
+    {id:'B',  label:'Both Sides',      icon:'◀▶', sub:'Full-width layer — writes to L & R'}
+  ];
+  sides.forEach(function(sd){
+    var btn=document.createElement('button');
+    btn.style.cssText='width:100%;display:flex;align-items:center;gap:14px;padding:16px 16px;border-radius:12px;border:1.5px solid '+col+'44;background:rgba('+lsHex2rgb(col)+',0.06);margin-bottom:10px;cursor:pointer;font-family:inherit;text-align:left;';
+    btn.innerHTML='<div style="width:46px;height:46px;border-radius:10px;background:rgba('+lsHex2rgb(col)+',0.12);border:1px solid '+col+'66;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:'+col+';flex-shrink:0;">'+sd.icon+'</div>'+
+      '<div style="flex:1;"><div style="font-size:15px;font-weight:800;color:'+col+';">'+sd.label+'</div>'+
+      '<div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px;">'+sd.sub+'</div></div>';
+    btn.onclick=(function(side){return function(){
+      lsShowStations(cat.id, roadLabel, col, side);
+    };})(sd.id);
+    c.appendChild(btn);
+  });
 }
 
-function lsShowStations(sectionId, sectionLabel, col){
+function lsShowStations(sectionId, sectionLabel, col, roadSide){
   lsSetTab(2);
   var c=document.getElementById('lists-content');
   c.innerHTML='';
@@ -2919,13 +4197,20 @@ function lsShowStations(sectionId, sectionLabel, col){
   var back=document.createElement('button');
   back.style.cssText='background:transparent;border:none;color:rgba(255,255,255,0.4);font-size:13px;cursor:pointer;margin-bottom:12px;font-family:inherit;padding:0;';
   back.textContent='← Back';
-  back.onclick=lsShowStep1;
+  back.onclick=function(){
+    if(sectionId==='ibn'||sectionId==='sattam'){
+      lsShowRoadStep2(null,{id:sectionId,col:col});
+    } else {
+      lsShowStep1();
+    }
+  };
   c.appendChild(back);
 
   // Title
   var title=document.createElement('div');
   title.style.cssText='font-size:11px;color:rgba(255,255,255,0.4);font-weight:700;letter-spacing:1px;margin-bottom:10px;';
-  title.textContent=sectionLabel.toUpperCase()+' — SELECT STATION(S)';
+  var sideLabel=roadSide==='L'?' — LEFT SIDE':roadSide==='R'?' — RIGHT SIDE':roadSide==='B'?' — BOTH SIDES':'';
+  title.textContent=sectionLabel.toUpperCase()+sideLabel+' — SELECT STATION(S)';
   c.appendChild(title);
 
   // Mode toggle
@@ -2969,7 +4254,21 @@ function lsShowStations(sectionId, sectionLabel, col){
     } else {
       var pts=s.name.split(' '); lbl=pts[pts.length-1];
       var ak=s.name.replace(/[^a-zA-Z0-9]/g,'_');
-      if(typeof ROAD_LAYERS!=='undefined') ROAD_LAYERS.forEach(function(l){if(_rd[ak+'_'+l.id]==='Complete')done++;});
+      if(typeof ROAD_LAYERS!=='undefined') ROAD_LAYERS.forEach(function(l){
+        // Check side-aware key first; fall back to legacy un-sided key (treated as Both)
+        if(roadSide==='B'){
+          // For "Both" selector, consider done only when BOTH sides OR legacy key are complete
+          var lHas=_rd[ak+'_L_'+l.id]==='Complete';
+          var rHas=_rd[ak+'_R_'+l.id]==='Complete';
+          var legacy=_rd[ak+'_'+l.id]==='Complete';
+          if((lHas&&rHas)||legacy) done++;
+        } else {
+          // Specific side: side-aware key OR legacy key counts
+          var sideKey=ak+'_'+roadSide+'_'+l.id;
+          var legacyKey=ak+'_'+l.id;
+          if(_rd[sideKey]==='Complete'||_rd[legacyKey]==='Complete') done++;
+        }
+      });
     }
     var pct=Math.round(done/nLayers*100);
     var hw=done>0;
@@ -2979,7 +4278,7 @@ function lsShowStations(sectionId, sectionLabel, col){
       +'background:rgba('+lsHex2rgb(col)+','+(hw?'0.12':'0.03')+');'
       +'color:'+(hw?col:'rgba(255,255,255,0.45)')+';';
     btn.innerHTML=lbl+'<br><span style="font-size:9px;opacity:0.7;">'+(hw?pct+'%':'—')+'</span>';
-    btn.onclick=(function(st){return function(){ lsShowLayers([st],sectionId,sectionLabel,col,false); };})(s);
+    btn.onclick=(function(st){return function(){ lsShowLayers([st],sectionId,sectionLabel,col,false,roadSide); };})(s);
     grid.appendChild(btn);
   });
   singleArea.appendChild(grid);
@@ -3019,7 +4318,7 @@ function lsShowStations(sectionId, sectionLabel, col){
     if(ti<fi){var tmp=fi;fi=ti;ti=tmp;}
     var rangeStns=stns.slice(fi,ti+1);
     if(rangeStns.length===0){flash('⚠️ Invalid range');return;}
-    lsShowLayers(rangeStns,sectionId,sectionLabel,col,true);
+    lsShowLayers(rangeStns,sectionId,sectionLabel,col,true,roadSide);
   };
   rangeArea.appendChild(confirmBtn);
   c.appendChild(rangeArea);
@@ -3037,7 +4336,7 @@ function lsShowStations(sectionId, sectionLabel, col){
   };
 }
 
-function lsShowLayers(stations, sectionId, sectionLabel, col, isRange){
+function lsShowLayers(stations, sectionId, sectionLabel, col, isRange, roadSide){
   lsSetTab(3);
   var c=document.getElementById('lists-content');
   c.innerHTML='';
@@ -3051,7 +4350,7 @@ function lsShowLayers(stations, sectionId, sectionLabel, col, isRange){
   var back=document.createElement('button');
   back.style.cssText='background:transparent;border:none;color:rgba(255,255,255,0.4);font-size:13px;cursor:pointer;margin-bottom:10px;font-family:inherit;padding:0;';
   back.textContent='← Back';
-  back.onclick=function(){ lsShowStations(sectionId,sectionLabel,col); };
+  back.onclick=function(){ lsShowStations(sectionId,sectionLabel,col,roadSide); };
   c.appendChild(back);
 
   // Station header
@@ -3062,6 +4361,15 @@ function lsShowLayers(stations, sectionId, sectionLabel, col, isRange){
   hdr.style.cssText='font-size:14px;font-weight:900;color:'+col+';margin-bottom:12px;';
   hdr.textContent='📍 '+stLbl;
   c.appendChild(hdr);
+
+  // Side badge (road only)
+  if(!isEmb&&roadSide){
+    var sideBadge=document.createElement('div');
+    var sideText=roadSide==='L'?'◀ LEFT OF MEDIAN':roadSide==='R'?'RIGHT OF MEDIAN ▶':'◀▶ BOTH SIDES';
+    sideBadge.style.cssText='display:inline-block;padding:6px 12px;border-radius:16px;background:rgba('+lsHex2rgb(col)+',0.15);border:1px solid '+col+'66;color:'+col+';font-size:11px;font-weight:800;letter-spacing:1px;margin-bottom:14px;';
+    sideBadge.textContent=sideText;
+    c.appendChild(sideBadge);
+  }
 
   if(isEmb){
     // Embankment layers L1-L15 + Capping
@@ -3111,7 +4419,7 @@ function lsShowLayers(stations, sectionId, sectionLabel, col, isRange){
         else if(isNext){sb.style.border='2px solid #D4A843';sb.style.background='rgba(212,168,67,0.15)';sb.style.color='#D4A843';}
         else{sb.style.border='1px solid rgba(255,255,255,0.07)';sb.style.background='transparent';sb.style.color='rgba(255,255,255,0.2)';}
         sb.onclick=(function(n){return function(){
-          lsEmbSetLayer(n, fbKey, stLbl, side, station, sectionId, sectionLabel, col);
+          lsEmbSetLayer(n, stationList, side, sectionId, sectionLabel, col);
         };})(ln);
 
         var db=document.createElement('button');
@@ -3156,11 +4464,28 @@ function lsShowLayers(stations, sectionId, sectionLabel, col, isRange){
     }
 
   } else {
-    // Road layers
+    // Road layers — side-aware keys (L/R/B) with backward-compat for legacy un-sided keys
     var rdKey=sectionId;
     var _rd=(typeof ROAD_DATA!=='undefined'&&ROAD_DATA[rdKey])||{};
-    var actKey=station.name.replace(/[^a-zA-Z0-9]/g,'_'); // single station key for display
+    var actKey=station.name.replace(/[^a-zA-Z0-9]/g,'_');
     var layers=typeof ROAD_LAYERS!=='undefined'?ROAD_LAYERS:[];
+    var _rsVal=roadSide||'B'; // default to Both if missing (old calls)
+
+    // Resolve current status for a layer given the user's chosen side + backward-compat
+    function _roadLayerStatus(lid){
+      var legacy=_rd[actKey+'_'+lid]||'';
+      if(_rsVal==='B'){
+        var lStat=_rd[actKey+'_L_'+lid]||'';
+        var rStat=_rd[actKey+'_R_'+lid]||'';
+        // Both considered "done" only when both sides complete (or a legacy record exists)
+        if(legacy) return legacy;
+        if(lStat==='Complete'&&rStat==='Complete') return 'Complete';
+        if(lStat==='In Progress'||rStat==='In Progress'||lStat==='Complete'||rStat==='Complete') return 'In Progress';
+        return '';
+      }
+      // Specific side: prefer side-aware key, else fall back to legacy (still visible, not destroyed)
+      return _rd[actKey+'_'+_rsVal+'_'+lid]||legacy||'';
+    }
 
     var ch2=document.createElement('div');
     ch2.style.cssText='display:grid;grid-template-columns:1fr 60px 60px;gap:6px;margin-bottom:6px;';
@@ -3170,8 +4495,7 @@ function lsShowLayers(stations, sectionId, sectionLabel, col, isRange){
     c.appendChild(ch2);
 
     layers.forEach(function(layer){
-      var k=actKey+'_'+layer.id;
-      var status=_rd[k]||'';
+      var status=_roadLayerStatus(layer.id);
       var isDone=status==='Complete'||status==='Inspected';
       var isWip=status==='In Progress';
 
@@ -3191,9 +4515,9 @@ function lsShowLayers(stations, sectionId, sectionLabel, col, isRange){
       if(isDone){sb.style.border='1px solid rgba(6,214,160,0.3)';sb.style.background='rgba(6,214,160,0.1)';sb.style.color='#06D6A0';}
       else if(isWip){sb.style.border='1px solid rgba(212,168,67,0.3)';sb.style.background='rgba(212,168,67,0.1)';sb.style.color='#D4A843';}
       else{sb.style.border='2px solid '+col;sb.style.background='rgba('+lsHex2rgb(col)+',0.1)';sb.style.color=col;}
-      sb.onclick=(function(lid,lname){return function(){
-        lsRoadSetLayer(rdKey, stationList, lid, sectionId, sectionLabel, col);
-      };})(layer.id, layer.label);
+      sb.onclick=(function(lid){return function(){
+        lsRoadSetLayer(rdKey, stationList, lid, sectionId, sectionLabel, col, _rsVal);
+      };})(layer.id);
 
       var db=document.createElement('button');
       db.style.cssText='width:100%;padding:9px 4px;border-radius:7px;font-size:12px;font-weight:800;font-family:inherit;';
@@ -3201,10 +4525,20 @@ function lsShowLayers(stations, sectionId, sectionLabel, col, isRange){
         db.textContent='🗑'; db.style.border='1px solid rgba(231,76,60,0.3)'; db.style.background='rgba(231,76,60,0.08)'; db.style.color='#E63946'; db.style.cursor='pointer';
         db.onclick=(function(lid){return function(){
           if(!ROAD_DATA[rdKey]) ROAD_DATA[rdKey]={};
-          delete ROAD_DATA[rdKey][actKey+'_'+lid];
+          // Delete the keys for the chosen side (plus legacy key to prevent stale data resurfacing)
+          stationList.forEach(function(st){
+            var ak2=st.name.replace(/[^a-zA-Z0-9]/g,'_');
+            if(_rsVal==='B'){
+              delete ROAD_DATA[rdKey][ak2+'_L_'+lid];
+              delete ROAD_DATA[rdKey][ak2+'_R_'+lid];
+            } else {
+              delete ROAD_DATA[rdKey][ak2+'_'+_rsVal+'_'+lid];
+            }
+            delete ROAD_DATA[rdKey][ak2+'_'+lid]; // also clear legacy
+          });
           pushRoad(rdKey);
           flash('🗑️ Removed');
-          lsShowLayers(station,sectionId,sectionLabel,col);
+          lsShowLayers(stations,sectionId,sectionLabel,col,isRange,roadSide);
         };})(layer.id);
       } else {
         db.textContent='—'; db.disabled=true; db.style.border='1px solid rgba(255,255,255,0.04)'; db.style.background='transparent'; db.style.color='rgba(255,255,255,0.08)';
@@ -3221,9 +4555,14 @@ function lsEmbSetLayer(layerNum, stationList, side, sectionId, sectionLabel, col
   lsPhotoChoice(function(photoUrl){
     stationList.forEach(function(st){
       var fk='KKR_Emb_'+side+'_'+String(Math.floor(st.ch/1000))+'_'+String(st.ch%1000).padStart(3,'0');
+      var prevLayer=parseInt((EMB_DATA&&EMB_DATA[fk])||0);
       if(DB) DB.ref('ic1_bridges/EMB_DATA/'+fk).set(layerNum);
       if(typeof EMB_DATA==='undefined') window.EMB_DATA={};
       EMB_DATA[fk]=layerNum;
+      // Log the layer change to history
+      if(prevLayer !== layerNum){
+        logHistory({type:'embankment', embKey:fk, side:side, chainage:st.ch, from:prevLayer, to:layerNum});
+      }
     });
     if(photoUrl) savePhotoToFirebase('EMB_'+sLabel,'L'+layerNum,photoUrl,'','Complete');
     flash('✅ L'+layerNum+' set for '+stationList.length+' station'+(stationList.length>1?'s':''));
@@ -3231,19 +4570,126 @@ function lsEmbSetLayer(layerNum, stationList, side, sectionId, sectionLabel, col
   });
 }
 
-function lsRoadSetLayer(rdKey, stationList, layerId, sectionId, sectionLabel, col){
+function lsRoadSetLayer(rdKey, stationList, layerId, sectionId, sectionLabel, col, roadSide){
   var col=sectionId==='ibn'?'#34D399':'#A78BFA';
+  var _rs=roadSide||'B';
+  var sideLabel=_rs==='L'?'Left':_rs==='R'?'Right':'Both Sides';
   lsPhotoChoice(function(photoUrl){
     if(!ROAD_DATA[rdKey]) ROAD_DATA[rdKey]={};
     stationList.forEach(function(st){
       var ak=st.name.replace(/[^a-zA-Z0-9]/g,'_');
-      ROAD_DATA[rdKey][ak+'_'+layerId]='Complete';
+      if(_rs==='B'){
+        // "Both" writes to both L and R (so admin sees coverage on each side distinctly)
+        ROAD_DATA[rdKey][ak+'_L_'+layerId]='Complete';
+        ROAD_DATA[rdKey][ak+'_R_'+layerId]='Complete';
+      } else {
+        ROAD_DATA[rdKey][ak+'_'+_rs+'_'+layerId]='Complete';
+      }
     });
     pushRoad(rdKey);
-    if(photoUrl) savePhotoToFirebase(sectionId,layerId,photoUrl,'','Complete');
-    flash('✅ '+layerId+' set for '+stationList.length+' station'+(stationList.length>1?'s':''));
-    lsShowLayers(stationList,sectionId,sectionLabel,col,stationList.length>1);
+    if(photoUrl) savePhotoToFirebase(sectionId+' ('+sideLabel+')',layerId,photoUrl,'','Complete');
+    flash('✅ '+layerId+' · '+sideLabel+' set for '+stationList.length+' station'+(stationList.length>1?'s':''));
+    lsShowLayers(stationList,sectionId,sectionLabel,col,stationList.length>1,_rs);
   });
+}
+
+// ═══ PHOTO + STATUS FLOW (asks status first, then takes photo) ═══
+// Called from the 📷 button on a pier stage. Asks user what status this photo
+// represents — then captures photo, uploads, AND updates the stage status.
+// Default selection is "Complete" because that's the most common case (work just finished).
+function lsPhotoWithStatus(pier, sid, sname, currentStatus){
+  var ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;padding:14px;';
+  var box=document.createElement('div');
+  box.style.cssText='background:#0a1628;border:1px solid rgba(212,168,67,0.3);border-radius:16px;padding:20px;width:100%;max-width:340px;';
+
+  var hdr=document.createElement('div');
+  hdr.innerHTML='<div style="font-size:14px;font-weight:800;color:#D4A843;text-align:center;margin-bottom:6px;">📸 '+pier+' — '+sname+'</div>'
+    +'<div style="font-size:11px;color:rgba(255,255,255,0.5);text-align:center;margin-bottom:14px;line-height:1.4;">What does this photo represent?<br>Status will be updated when you submit.</div>';
+  box.appendChild(hdr);
+
+  // Three status choices — Complete is highlighted as default
+  function makeStatusBtn(label, statusValue, isDefault, color){
+    var b=document.createElement('button');
+    b.style.cssText='width:100%;padding:14px;border-radius:10px;border:'+(isDefault?'2px solid '+color:'1px solid rgba(255,255,255,0.15)')
+      +';background:'+(isDefault?color+'2a':'rgba(255,255,255,0.04)')
+      +';color:'+(isDefault?color:'rgba(255,255,255,0.8)')
+      +';font-size:14px;font-weight:'+(isDefault?'800':'700')+';cursor:pointer;font-family:inherit;margin-bottom:8px;text-align:left;display:flex;align-items:center;gap:10px;';
+    b.innerHTML='<div style="width:24px;height:24px;border-radius:50%;border:2px solid '+color+';background:'+(isDefault?color:'transparent')+';display:flex;align-items:center;justify-content:center;font-size:11px;color:'+(isDefault?'#000':color)+';font-weight:900;">'+(isDefault?'✓':'')+'</div>'
+      +'<div style="flex:1;"><div>'+label+'</div></div>';
+    b.onclick=function(){
+      ov.remove();
+      // Now capture photo with the chosen status
+      _capturePhotoForStatus(pier, sid, sname, statusValue);
+    };
+    return b;
+  }
+
+  box.appendChild(makeStatusBtn('Mark as Complete', 'Complete', true, '#06D6A0'));
+  box.appendChild(makeStatusBtn('Mark as In Progress', 'In Progress', false, '#D4A843'));
+  box.appendChild(makeStatusBtn('Photo only — no status change', null, false, '#64748B'));
+
+  // Cancel
+  var cancel=document.createElement('button');
+  cancel.style.cssText='width:100%;padding:9px;border-radius:8px;border:none;background:transparent;color:rgba(255,255,255,0.4);font-size:12px;cursor:pointer;font-family:inherit;margin-top:6px;';
+  cancel.textContent='Cancel';
+  cancel.onclick=function(){ ov.remove(); };
+  box.appendChild(cancel);
+
+  ov.appendChild(box); document.body.appendChild(ov);
+}
+
+// Photo capture once a status has been chosen. Reuses the existing reliable upload flow.
+function _capturePhotoForStatus(pier, sid, sname, newStatus){
+  // Hidden file input — triggers camera
+  var fi=document.createElement('input');
+  fi.type='file'; fi.accept='image/*'; fi.setAttribute('capture','environment');
+  fi.style.display='none';
+  fi.onchange=function(){
+    if(!fi.files||!fi.files[0]) return;
+    var reader=new FileReader();
+    reader.onload=function(e){
+      var capturedB64=e.target.result;
+      _doPhotoUploadWithRetry(capturedB64, function(photoUrl){
+        if(!photoUrl){
+          // User canceled or chose "Save without photo" from error overlay
+          if(newStatus){
+            // Apply status change anyway, no photo
+            applyStage(pier, sid, newStatus, null);
+            if(newStatus==='Complete') logHistory({type:'pier', pier:pier, stage:sid, from:(PS[pier]&&PS[pier][sid])||'Not Started', to:newStatus});
+            flash('📌 '+sname+' — '+newStatus+' (no photo)');
+          }
+          return;
+        }
+        // Save photo + (optionally) update stage
+        savePhotoToFirebase(pier, sname, photoUrl, '', newStatus||'');
+        if(newStatus){
+          var prevStatus=(PS[pier]&&PS[pier][sid])||'Not Started';
+          applyStage(pier, sid, newStatus, photoUrl);
+          if(prevStatus !== newStatus){
+            logHistory({type:'pier', pier:pier, stage:sid, from:prevStatus, to:newStatus});
+          }
+          var icon=newStatus==='Complete'?'✅':'🔧';
+          flash(icon+' '+sname+' — '+newStatus+' & photo saved!');
+          // Refresh the Lists view so user sees new state immediately
+          var brId=null; BRIDGES.forEach(function(br){if(br.piers.indexOf(pier)>-1)brId=br.id;});
+          if(brId){
+            var br=BRIDGES.find(function(b){return b.id===brId;});
+            if(br && document.getElementById('lists-overlay') && document.getElementById('lists-overlay').style.display!=='none'){
+              try{ lsShowStep3Pier(pier, br); }catch(e){}
+            }
+          }
+        } else {
+          flash('📸 Photo saved for '+sname+' (no status change)');
+        }
+      });
+    };
+    reader.readAsDataURL(fi.files[0]);
+  };
+  document.body.appendChild(fi);
+  fi.click();
+  // Clean up after a delay
+  setTimeout(function(){ try{ fi.remove(); }catch(e){} }, 60000);
 }
 
 function lsPhotoChoice(callback){
@@ -3262,8 +4708,8 @@ function lsPhotoChoice(callback){
     var reader=new FileReader();
     reader.onload=function(e){
       ov.remove();
-      var pd=document.createElement('div'); pd.style.cssText='position:fixed;inset:0;z-index:10002;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;'; pd.innerHTML='<div style="color:#D4A843;font-size:14px;font-weight:700;">⏳ Uploading...</div>'; document.body.appendChild(pd);
-      uploadPhoto(e.target.result,'LAYER','photo',function(url){ pd.remove(); callback(url); },function(){ pd.remove(); callback(null); });
+      var capturedB64 = e.target.result; // hold onto it for retries
+      _doPhotoUploadWithRetry(capturedB64, callback);
     };
     reader.readAsDataURL(fi.files[0]);
   };
@@ -3281,7 +4727,92 @@ function lsPhotoChoice(callback){
   ov.appendChild(box); document.body.appendChild(ov);
 }
 
+// Run upload with visible feedback. On failure, show Retry / Save Without Photo / Cancel.
+// The captured base64 is kept in memory between retries so user doesn't re-take the photo.
+function _doPhotoUploadWithRetry(capturedB64, callback){
+  // Loading overlay
+  var pd=document.createElement('div');
+  pd.id='_upload-spinner';
+  pd.style.cssText='position:fixed;inset:0;z-index:10002;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;';
+  pd.innerHTML='<div style="background:#0a1628;border-radius:14px;padding:24px 28px;text-align:center;border:1px solid rgba(212,168,67,0.3);">'
+    +'<div style="font-size:32px;animation:_uplPulse 1.2s infinite;">⏳</div>'
+    +'<div style="color:#D4A843;font-size:14px;font-weight:800;margin-top:10px;">Uploading photo…</div>'
+    +'<div style="color:rgba(255,255,255,0.4);font-size:11px;margin-top:4px;">Compressing and sending</div>'
+    +'</div>';
+  document.body.appendChild(pd);
+  // Inject pulse keyframes once
+  if(!document.getElementById('_upl-spin-style')){
+    var st=document.createElement('style');
+    st.id='_upl-spin-style';
+    st.textContent='@keyframes _uplPulse{0%,100%{opacity:1}50%{opacity:0.4}}';
+    document.head.appendChild(st);
+  }
+
+  uploadPhoto(capturedB64, 'LAYER', 'photo',
+    function(url){
+      // SUCCESS
+      var s=document.getElementById('_upload-spinner');
+      if(s) s.remove();
+      callback(url);
+    },
+    function(errMsg){
+      // FAILURE — show clear error overlay with options
+      var s=document.getElementById('_upload-spinner');
+      if(s) s.remove();
+      _showUploadErrorOverlay(capturedB64, errMsg, callback);
+    }
+  );
+}
+
+function _showUploadErrorOverlay(capturedB64, errMsg, callback){
+  var ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;z-index:10003;background:rgba(0,0,0,0.88);display:flex;align-items:center;justify-content:center;';
+  var box=document.createElement('div');
+  box.style.cssText='background:#0a1628;border:2px solid rgba(231,57,70,0.5);border-radius:16px;padding:22px;width:84%;max-width:340px;';
+
+  // Header
+  var hdr=document.createElement('div');
+  hdr.innerHTML='<div style="text-align:center;"><div style="font-size:36px;margin-bottom:6px;">❌</div>'
+    +'<div style="font-size:15px;font-weight:800;color:#E63946;margin-bottom:4px;">Photo upload failed</div>'
+    +'<div style="font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:14px;line-height:1.4;">'+(errMsg||'Unknown error')+'</div></div>';
+  box.appendChild(hdr);
+
+  // Photo thumbnail (so user sees the photo isn't lost)
+  var thumb=document.createElement('img');
+  thumb.src=capturedB64;
+  thumb.style.cssText='width:100%;max-height:120px;object-fit:cover;border-radius:8px;margin-bottom:14px;border:1px solid rgba(255,255,255,0.1);';
+  box.appendChild(thumb);
+
+  // Retry — most prominent
+  var retryBtn=document.createElement('button');
+  retryBtn.style.cssText='width:100%;padding:13px;border-radius:10px;background:#D4A843;border:none;color:#000;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;margin-bottom:8px;';
+  retryBtn.textContent='🔄 Retry Upload';
+  retryBtn.onclick=function(){
+    ov.remove();
+    _doPhotoUploadWithRetry(capturedB64, callback);
+  };
+  box.appendChild(retryBtn);
+
+  // Save without photo — secondary
+  var skipBtn=document.createElement('button');
+  skipBtn.style.cssText='width:100%;padding:11px;border-radius:10px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.05);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:8px;';
+  skipBtn.textContent='Save Stage Without Photo';
+  skipBtn.onclick=function(){ ov.remove(); callback(null); };
+  box.appendChild(skipBtn);
+
+  // Cancel — discard everything
+  var cancelBtn=document.createElement('button');
+  cancelBtn.style.cssText='width:100%;padding:9px;border-radius:8px;border:none;background:transparent;color:rgba(255,255,255,0.4);font-size:12px;cursor:pointer;font-family:inherit;';
+  cancelBtn.textContent='Cancel — discard photo';
+  cancelBtn.onclick=function(){ ov.remove(); /* no callback — user backs out */ };
+  box.appendChild(cancelBtn);
+
+  ov.appendChild(box);
+  document.body.appendChild(ov);
+}
+
 function lsShowStep3Pier(pierName, br){
+  recentTouch(pierName);
   lsSetTab(3);
   var c=document.getElementById('lists-content');
   c.innerHTML='';
@@ -3292,54 +4823,146 @@ function lsShowStep3Pier(pierName, br){
   back.onclick=function(){lsShowStep2({id:'bridge',icon:'🌉',label:'Bridge Piers',col:'#58A6FF',sub:''});};
   c.appendChild(back);
 
-  var title=document.createElement('div');
-  title.style.cssText='font-size:11px;color:rgba(255,255,255,0.4);font-weight:700;letter-spacing:1px;margin-bottom:8px;';
-  title.textContent='Bridge '+br.id+' — '+pierName+' — SELECT STAGE';
-  c.appendChild(title);
-
   var stages=PS[pierName]||{};
 
-  STAGES.forEach(function(s){
+  // Compute pier overall % and active stage
+  var totalW=STAGES.reduce(function(s,st){return s+st.w;},0);
+  var doneW=0;
+  STAGES.forEach(function(s){var v=stages[s.id]||'Not Started';if(v==='Complete'||v==='Inspected')doneW+=s.w;else if(v==='In Progress')doneW+=s.w*0.5;});
+  var pierPct=Math.round(doneW/totalW*100);
+  var pierStatusCol=getPierCol(pierName);
+
+  // Pier header banner
+  var hdr=document.createElement('div');
+  hdr.style.cssText='display:flex;align-items:center;gap:12px;padding:12px 14px;margin-bottom:14px;border-radius:12px;background:linear-gradient(135deg,'+br.col+'18,'+br.col+'08);border:1px solid '+br.col+'55;';
+  hdr.innerHTML='<div style="width:42px;height:42px;border-radius:10px;background:'+br.col+'2a;border:1.5px solid '+br.col+';display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:'+br.col+';">'+br.id+'</div>'+
+    '<div style="flex:1;min-width:0;"><div style="font-size:15px;font-weight:800;color:#fff;">'+pierName+'</div><div style="font-size:10px;color:rgba(255,255,255,0.5);letter-spacing:0.5px;margin-top:2px;">BRIDGE '+br.id+' · '+pierPct+'% COMPLETE</div></div>'+
+    '<div style="font-family:sans-serif;font-size:26px;font-weight:900;color:'+(pierStatusCol==='#1e293b'?'rgba(255,255,255,0.4)':pierStatusCol)+';">'+pierPct+'<span style="font-size:13px;opacity:0.6;">%</span></div>';
+  c.appendChild(hdr);
+
+  // Find active stage: first "In Progress", else first non-Complete, else null
+  var activeStage=null;
+  for(var i=0;i<STAGES.length;i++){var s=STAGES[i];var v=stages[s.id]||'Not Started';if(v==='In Progress'){activeStage=s;break;}}
+  if(!activeStage){for(var j=0;j<STAGES.length;j++){var s2=STAGES[j];var v2=stages[s2.id]||'Not Started';if(v2!=='Complete'&&v2!=='Inspected'){activeStage=s2;break;}}}
+
+  // Builds a stage row — used for both the active (large) and the collapsed list
+  function buildStageRow(s, isHero){
     var cur=stages[s.id]||'Not Started';
+    var row=document.createElement('div');
+    if(isHero){
+      row.style.cssText='margin-bottom:14px;padding:14px 16px;border-radius:14px;background:linear-gradient(135deg,'+s.col+'1a,'+s.col+'05);border:1.5px solid '+s.col+'66;box-shadow:0 4px 16px '+s.col+'22;';
+      var tag=document.createElement('div');
+      tag.style.cssText='display:flex;align-items:center;gap:6px;margin-bottom:10px;';
+      tag.innerHTML='<div style="width:7px;height:7px;border-radius:50%;background:'+s.col+';box-shadow:0 0 8px '+s.col+';"></div>'+
+        '<span style="font-size:10px;letter-spacing:2px;font-weight:800;color:'+s.col+';">CURRENT STAGE</span>';
+      row.appendChild(tag);
+      var infoHero=document.createElement('div');
+      infoHero.style.cssText='margin-bottom:12px;';
+      infoHero.innerHTML='<div style="font-size:17px;font-weight:900;color:#fff;line-height:1.1;">'+s.label+'</div>'+
+        '<div style="font-size:11px;color:rgba(255,255,255,0.55);margin-top:3px;">Weight: '+s.w+'% · Status: <b style="color:'+s.col+';">'+cur+'</b></div>';
+      row.appendChild(infoHero);
+      var btns=document.createElement('div');
+      btns.style.cssText='display:flex;gap:7px;flex-wrap:wrap;';
+      STATUSES.forEach(function(st){
+        if(st.id==='Not Started')return;
+        var isOn=cur===st.id;
+        var btn=document.createElement('button');
+        btn.style.cssText='flex:1;min-width:90px;padding:12px 10px;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;border:2px solid '+(isOn?st.bg:st.bg+'55')+';background:'+(isOn?st.bg:'transparent')+';color:'+(isOn?st.col:'rgba(255,255,255,0.75)')+';';
+        btn.textContent=st.label;
+        btn.onclick=(function(pid,sid,stid){return function(){closeLists();mapSetStage(pid,sid,stid);};})(pierName,s.id,st.id);
+        btns.appendChild(btn);
+      });
+      // Photo btn for hero
+      var photoBtn=document.createElement('button');
+      photoBtn.style.cssText='padding:12px 14px;border-radius:10px;font-size:15px;cursor:pointer;font-family:inherit;border:1.5px solid rgba(56,189,248,0.4);background:rgba(56,189,248,0.1);color:#38BDF8;flex-shrink:0;';
+      photoBtn.textContent='📷';
+      photoBtn.title='Add progress photo';
+      photoBtn.onclick=(function(pid,sid,slabel,scur){return function(){
+        lsPhotoWithStatus(pid, sid, slabel, scur);
+      };})(pierName,s.id,s.label,cur);
+      btns.appendChild(photoBtn);
+      // Reset (if not Not Started)
+      if(cur!=='Not Started'){
+        var rstBtn=document.createElement('button');
+        rstBtn.style.cssText='padding:12px 12px;border-radius:10px;font-size:13px;cursor:pointer;font-family:inherit;border:1.5px solid rgba(231,76,60,0.35);background:transparent;color:#E63946;flex-shrink:0;';
+        rstBtn.textContent='↩';
+        rstBtn.onclick=(function(pid,sid){return function(){applyStage(pid,sid,'Not Started',null);lsShowStep3Pier(pid,br);};})(pierName,s.id);
+        btns.appendChild(rstBtn);
+      }
+      row.appendChild(btns);
+      return row;
+    }
+    // Compact row (unchanged style from before)
     var isDone=cur==='Complete'||cur==='Inspected';
     var isWip=cur==='In Progress';
-    var row=document.createElement('div');
     row.style.cssText='display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;margin-bottom:6px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.02);';
-
     var info=document.createElement('div');
-    info.innerHTML='<div style="font-size:13px;font-weight:700;color:#f1f5f9;">'+s.label+'</div><div style="font-size:10px;color:rgba(255,255,255,0.3);">'+s.w+'% weight</div>';
-
+    var icon=isDone?'<span style="color:#06D6A0;">✓ </span>':isWip?'<span style="color:#D4A843;">⚡ </span>':'';
+    info.innerHTML='<div style="font-size:13px;font-weight:700;color:#f1f5f9;">'+icon+s.label+'</div><div style="font-size:10px;color:rgba(255,255,255,0.3);">'+s.w+'% weight · '+cur+'</div>';
     var statusBtns=document.createElement('div');
     statusBtns.style.cssText='display:flex;gap:5px;';
-
     STATUSES.forEach(function(st){
-      if(st.id==='Not Started') return; // skip
+      if(st.id==='Not Started')return;
       var isOn=cur===st.id;
       var btn=document.createElement('button');
       btn.style.cssText='padding:8px 10px;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;border:2px solid '+(isOn?st.bg:st.bg+'44')+';background:'+(isOn?st.bg:'transparent')+';color:'+(isOn?st.col:'rgba(255,255,255,0.3)')+';white-space:nowrap;';
       btn.textContent=st.label;
-      btn.onclick=(function(pid,sid,stid){return function(){
-        closeLists();
-        mapSetStage(pid,sid,stid);
-      };})(pierName, s.id, st.id);
+      btn.onclick=(function(pid,sid,stid){return function(){closeLists();mapSetStage(pid,sid,stid);};})(pierName,s.id,st.id);
       statusBtns.appendChild(btn);
     });
-
-    // Reset button
     if(cur!=='Not Started'){
-      var rstBtn=document.createElement('button');
-      rstBtn.style.cssText='padding:8px 8px;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;border:1px solid rgba(231,76,60,0.3);background:transparent;color:#E63946;';
-      rstBtn.textContent='↩';
-      rstBtn.onclick=(function(pid,sid){return function(){
-        applyStage(pid,sid,'Not Started',null);
-        lsShowStep3Pier(pid,br);
-      };})(pierName,s.id);
-      statusBtns.appendChild(rstBtn);
+      var rstBtn2=document.createElement('button');
+      rstBtn2.style.cssText='padding:8px 8px;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;border:1px solid rgba(231,76,60,0.3);background:transparent;color:#E63946;';
+      rstBtn2.textContent='↩';
+      rstBtn2.onclick=(function(pid,sid){return function(){applyStage(pid,sid,'Not Started',null);lsShowStep3Pier(pid,br);};})(pierName,s.id);
+      statusBtns.appendChild(rstBtn2);
     }
+    var photoBtn2=document.createElement('button');
+    photoBtn2.style.cssText='padding:8px 8px;border-radius:7px;font-size:13px;cursor:pointer;font-family:inherit;border:1px solid rgba(56,189,248,0.3);background:rgba(56,189,248,0.08);color:#38BDF8;';
+    photoBtn2.textContent='📷';
+    photoBtn2.title='Add progress photo';
+    photoBtn2.onclick=(function(pid,sid,slabel,scur){return function(){
+      lsPhotoWithStatus(pid, sid, slabel, scur);
+    };})(pierName,s.id,s.label,cur);
+    statusBtns.appendChild(photoBtn2);
+    row.appendChild(info);row.appendChild(statusBtns);
+    return row;
+  }
 
-    row.appendChild(info); row.appendChild(statusBtns);
-    c.appendChild(row);
+  // Render hero (active) stage if any
+  if(activeStage){
+    c.appendChild(buildStageRow(activeStage,true));
+  } else {
+    // All stages complete
+    var doneMsg=document.createElement('div');
+    doneMsg.style.cssText='padding:18px;margin-bottom:14px;border-radius:14px;text-align:center;background:rgba(6,214,160,0.1);border:1px solid rgba(6,214,160,0.4);';
+    doneMsg.innerHTML='<div style="font-size:32px;margin-bottom:6px;">🎉</div><div style="font-size:15px;font-weight:900;color:#06D6A0;">All stages complete</div><div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:4px;">You can still edit any stage below.</div>';
+    c.appendChild(doneMsg);
+  }
+
+  // Collapsible "All stages" section
+  var collapseBtn=document.createElement('button');
+  collapseBtn.id='ls-all-stages-toggle';
+  collapseBtn.style.cssText='width:100%;padding:10px 14px;border-radius:10px;border:1px dashed rgba(255,255,255,0.15);background:rgba(255,255,255,0.02);color:rgba(255,255,255,0.6);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:10px;text-align:center;letter-spacing:0.5px;';
+  var restCount=STAGES.length-(activeStage?1:0);
+  collapseBtn.innerHTML='▾ &nbsp;Show all '+STAGES.length+' stages'+(activeStage?' ('+restCount+' others)':'');
+  var listBox=document.createElement('div');
+  listBox.id='ls-all-stages-list';
+  listBox.style.cssText='display:none;';
+
+  // Build compact rows for every stage EXCEPT the active one (shown above as hero)
+  STAGES.forEach(function(s){
+    if(activeStage&&s.id===activeStage.id)return;
+    listBox.appendChild(buildStageRow(s,false));
   });
+
+  collapseBtn.onclick=function(){
+    var open=listBox.style.display==='block';
+    listBox.style.display=open?'none':'block';
+    collapseBtn.innerHTML=open?'▾ &nbsp;Show all '+STAGES.length+' stages'+(activeStage?' ('+restCount+' others)':''):'▴ &nbsp;Hide stages';
+  };
+  c.appendChild(collapseBtn);
+  c.appendChild(listBox);
 }
 
 function toggleSummary(){
@@ -3356,17 +4979,30 @@ function buildSummary(){
   var pwKeys=Object.keys(PHOTO_WALL||{});
   console.log('[Snapshot] PS keys:',psKeys.length, psKeys.slice(0,5));
   console.log('[Snapshot] PHOTO_WALL keys:',pwKeys.length);
+  // If PS empty, try to load from Firebase then rebuild
   if(psKeys.length===0){
-    el.innerHTML='<div style="color:#E63946;padding:20px;text-align:center;font-size:14px;font-weight:700;">⚠️ Firebase data not loaded yet.<br><br>Please wait a moment and try again.</div>';
-    // Try to reload PS directly
-    if(typeof DB!=="undefined"&&DB){
-      DB.ref("ic1_bridges/PS").once("value",function(snap){
-        PS=snap.val()||{};
-        DB.ref("ic1_bridges/PHOTO_WALL").once("value",function(snap2){
-          PHOTO_WALL=snap2.val()||{};
-          buildSummary();
-        });
-      });
+    // DB is null means Firebase still initializing — wait and retry
+    if(DB !== null){
+      el.innerHTML='<div style="padding:30px;text-align:center;">'
+        +'<div style="font-size:32px;margin-bottom:12px;">🔄</div>'
+        +'<div style="font-size:13px;color:#D4A843;font-weight:700;">Loading project data...</div>'
+        +'</div>';
+      var loaded=0, done=false;
+      function tryBuild(){ loaded++; if(loaded>=4&&!done){ done=true; buildSummary(); } }
+      // Safety: build after 4s even if some calls fail
+      setTimeout(function(){ if(!done){ done=true; buildSummary(); } }, 4000);
+      DB.ref('ic1_bridges/PS').once('value',function(snap){ PS=snap.val()||{}; tryBuild(); },function(){ tryBuild(); });
+      DB.ref('ic1_bridges/EMB_DATA').once('value',function(snap){ var d=snap.val(); if(d) EMB_DATA=d; tryBuild(); },function(){ tryBuild(); });
+      DB.ref('ic1_bridges/ROAD_ACTS_DATA').once('value',function(snap){ var d=snap.val(); if(d) ROAD_DATA=d; tryBuild(); },function(){ tryBuild(); });
+      DB.ref('ic1_bridges/PHOTO_WALL').once('value',function(snap){ PHOTO_WALL=snap.val()||{}; tryBuild(); },function(){ tryBuild(); });
+    } else {
+      // DB still null - Firebase scripts still loading, auto-retry in 1.5s
+      el.innerHTML='<div style="padding:30px;text-align:center;">'
+        +'<div style="font-size:32px;margin-bottom:12px;">⏳</div>'
+        +'<div style="font-size:13px;color:#D4A843;font-weight:700;">Connecting...</div>'
+        +'<div style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:6px;">Please wait</div>'
+        +'</div>';
+      setTimeout(buildSummary, 1500);
     }
     return;
   }
@@ -3387,11 +5023,16 @@ function buildSummary(){
   // Overall: count all done stages across all piers
   var totalStages=PIER_COORDS.length*STAGES.length,doneStages=0;
   PIER_COORDS.forEach(function(p){
-    if(PS[p.name]) Object.values(PS[p.name]).forEach(function(v){
-      if(v==='Complete'||v==='Inspected') doneStages++;
+    if(!PS[p.name]) return;
+    STAGES.forEach(function(s){
+      var v=PS[p.name][s.id]||'Not Started';
+      if(v==='Complete'||v==='Inspected') doneStages+=s.w;
+      else if(v==='In Progress') doneStages+=s.w*0.5; // 50% credit for WIP
     });
   });
-  var overallPct=totalStages>0?Math.round(doneStages/totalStages*100*10)/10:0;
+  // totalStages should use weighted sum
+  var totalWeight = PIER_COORDS.length * STAGES.reduce(function(sum,s){return sum+s.w;},0);
+  var overallPct = totalWeight>0 ? Math.round(doneStages/PIER_COORDS.length*10)/10 : 0;
   var h='';
   h+='<div style="background:#0f1e36;border:1px solid rgba(212,168,67,0.4);border-radius:12px;padding:14px;margin-bottom:12px;">';
   h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">';
@@ -3424,8 +5065,17 @@ function buildSummary(){
   h+='</div></div>';
   var embT=0,embL=0,embR=0;
   if(typeof EMB_STATIONS!=='undefined'){
-    EMB_STATIONS.forEach(function(s){embT+=EMB_TOTAL_LAYERS;if(PS&&PS['KKR_EMB_L_'+s.ch])embL+=parseInt(PS['KKR_EMB_L_'+s.ch])||0;});
-    EMB_STATIONS_R.forEach(function(s){if(PS&&PS['KKR_EMB_R_'+s.ch])embR+=parseInt(PS['KKR_EMB_R_'+s.ch])||0;});
+    var _ed=typeof EMB_DATA!=='undefined'?EMB_DATA:{};
+    EMB_STATIONS.forEach(function(s){
+      embT+=EMB_TOTAL_LAYERS;
+      var ch=s.ch, fk='KKR_Emb_L_'+Math.floor(ch/1000)+'_'+String(ch%1000).padStart(3,'0');
+      embL+=parseInt(_ed[fk]||0);
+    });
+    EMB_STATIONS_R.forEach(function(s){
+      embT+=EMB_TOTAL_LAYERS;
+      var ch=s.ch, fk='KKR_Emb_R_'+Math.floor(ch/1000)+'_'+String(ch%1000).padStart(3,'0');
+      embR+=parseInt(_ed[fk]||0);
+    });
   }
   var eLpct=embT>0?Math.round(embL/embT*100):0,eRpct=embT>0?Math.round(embR/embT*100):0;
   h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
@@ -3437,6 +5087,47 @@ function buildSummary(){
     h+='<div style="font-size:22px;font-weight:900;color:'+item[2]+';font-family:monospace;">'+item[1]+'%</div></div>';
   });
   h+='</div>';
+
+  // ── Road Layers ─────────────────────────────────────
+  var _rd2=typeof ROAD_DATA!=='undefined'?ROAD_DATA:{};
+  var rdSections=[
+    {key:'ibn',  label:'Ibn Saud', col:'#34D399', stns:typeof IBN_STATIONS!=='undefined'?IBN_STATIONS:[]},
+    {key:'sattam',label:'Sattam',  col:'#A78BFA', stns:typeof SAT_STATIONS!=='undefined'?SAT_STATIONS:[]}
+  ];
+  var rdLayers=typeof ROAD_LAYERS!=='undefined'?ROAD_LAYERS:[];
+
+  h+='<div style="margin-top:12px;">';
+  h+='<div style="font-size:10px;color:rgba(255,255,255,0.4);font-weight:700;letter-spacing:1px;margin-bottom:8px;">🛣️ ROAD LAYERS</div>';
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
+  rdSections.forEach(function(rd){
+    var rdData=_rd2[rd.key]||{};
+    var rdTotal=rd.stns.length*rdLayers.length, rdDone=0;
+    rd.stns.forEach(function(s){
+      var ak=s.name.replace(/[^a-zA-Z0-9]/g,'_');
+      rdLayers.forEach(function(l){ if(rdData[ak+'_'+l.id]==='Complete') rdDone++; });
+    });
+    var rdPct=rdTotal>0?Math.round(rdDone/rdTotal*100):0;
+    h+='<div style="background:#0f1e36;border:1px solid '+rd.col+'44;border-radius:10px;padding:10px;">';
+    h+='<div style="font-size:10px;color:rgba(255,255,255,0.5);font-weight:700;margin-bottom:4px;">'+rd.label+'</div>';
+    h+='<div style="font-size:22px;font-weight:900;color:'+rd.col+';font-family:monospace;">'+rdPct+'%</div>';
+    h+='<div style="height:4px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;margin-top:6px;">';
+    h+='<div style="height:100%;width:'+rdPct+'%;background:'+rd.col+';border-radius:2px;"></div></div>';
+    // Per layer mini bars
+    rdLayers.forEach(function(layer){
+      var lDone=0;
+      rd.stns.forEach(function(s){ var ak=s.name.replace(/[^a-zA-Z0-9]/g,'_'); if(rdData[ak+'_'+layer.id]==='Complete') lDone++; });
+      var lPct=rd.stns.length>0?Math.round(lDone/rd.stns.length*100):0;
+      h+='<div style="display:flex;align-items:center;gap:4px;margin-top:4px;">';
+      h+='<div style="width:6px;height:6px;border-radius:50%;background:'+layer.col+';flex-shrink:0;"></div>';
+      h+='<div style="flex:1;height:3px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;">';
+      h+='<div style="height:100%;width:'+lPct+'%;background:'+layer.col+';"></div></div>';
+      h+='<div style="font-size:9px;color:'+layer.col+';font-weight:700;width:24px;text-align:right;">'+lPct+'%</div>';
+      h+='</div>';
+    });
+    h+='</div>';
+  });
+  h+='</div></div>';
+
   // Bar chart section
   h+='<div style="background:#0f1e36;border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:14px;margin-top:12px;">';
   h+='<div style="font-size:10px;color:rgba(255,255,255,0.4);font-weight:700;letter-spacing:2px;margin-bottom:10px;">📊 BRIDGE PROGRESS</div>';
@@ -3651,24 +5342,75 @@ function pinCheck(){
 </div>
 
 <!-- ═══ LISTS OVERLAY ═══ -->
-<div id="lists-overlay" style="display:none;position:fixed;inset:0;z-index:9996;background:#07090d;flex-direction:column;">
+<div id="lists-overlay" style="display:none;position:fixed;inset:0;z-index:9996;background:#07090d;flex-direction:column;font-family:inherit;">
 
-  <!-- Header -->
-  <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:#0a1628;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;">
-    <div style="font-family:Rajdhani,sans-serif;font-size:20px;font-weight:900;color:#38BDF8;">📋 Quick Pick</div>
-    <button id="lists-close-btn" style="background:#374151;border:none;color:#fff;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">✕ Close</button>
+  <!-- Top header: back button + title + close -->
+  <div id="wiz-header" style="display:flex;align-items:center;gap:10px;padding:10px 12px 8px;background:#0a1628;border-bottom:1px solid rgba(255,255,255,0.06);flex-shrink:0;">
+    <button id="wiz-back-btn" onclick="wizBack()" style="display:none;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.85);padding:7px 12px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">← <span id="wiz-back-label">Back</span></button>
+    <div id="wiz-title" style="flex:1;font-family:Rajdhani,sans-serif;font-size:17px;font-weight:800;color:#f1f5f9;text-align:center;letter-spacing:0.2px;">Select Area</div>
+    <button id="lists-close-btn" style="background:rgba(231,57,70,0.15);border:1px solid rgba(231,57,70,0.35);color:#E63946;padding:7px 12px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">✕</button>
   </div>
 
-  <!-- Step tabs -->
-  <div id="lists-steps" style="display:flex;gap:0;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;">
-    <div id="lists-tab1" style="flex:1;padding:10px;text-align:center;font-size:11px;font-weight:700;color:#38BDF8;border-bottom:2px solid #38BDF8;">1 Category</div>
-    <div id="lists-tab2" style="flex:1;padding:10px;text-align:center;font-size:11px;font-weight:700;color:rgba(255,255,255,0.3);border-bottom:2px solid transparent;">2 Item</div>
-    <div id="lists-tab3" style="flex:1;padding:10px;text-align:center;font-size:11px;font-weight:700;color:rgba(255,255,255,0.3);border-bottom:2px solid transparent;">3 Action</div>
+  <!-- Unified progress bar: 5 segments, gold when active -->
+  <div id="wiz-progress" style="display:flex;gap:3px;padding:8px 14px 10px;background:#0a1628;border-bottom:1px solid rgba(255,255,255,0.06);flex-shrink:0;">
+    <div class="wiz-seg" data-step="1" style="flex:1;height:4px;background:#D4A843;border-radius:2px;transition:background 0.25s;"></div>
+    <div class="wiz-seg" data-step="2" style="flex:1;height:4px;background:rgba(255,255,255,0.08);border-radius:2px;transition:background 0.25s;"></div>
+    <div class="wiz-seg" data-step="3" style="flex:1;height:4px;background:rgba(255,255,255,0.08);border-radius:2px;transition:background 0.25s;"></div>
+    <div class="wiz-seg" data-step="4" style="flex:1;height:4px;background:rgba(255,255,255,0.08);border-radius:2px;transition:background 0.25s;"></div>
+    <div class="wiz-seg" data-step="5" style="flex:1;height:4px;background:rgba(255,255,255,0.08);border-radius:2px;transition:background 0.25s;"></div>
   </div>
 
   <!-- Content area -->
-  <div id="lists-content" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px;"></div>
+  <div id="lists-content" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 14px 30px;"></div>
 
 </div>
+
+<!-- ═══ VOICE INPUT OVERLAY ═══ -->
+<div id="voice-overlay" style="display:none;position:fixed;inset:0;z-index:9990;background:rgba(0,0,0,0.92);flex-direction:column;align-items:center;justify-content:center;font-family:inherit;">
+
+  <!-- Mic pulse animation -->
+  <div id="voice-pulse" style="position:relative;width:100px;height:100px;margin-bottom:24px;">
+    <div id="voice-ring1" style="position:absolute;inset:0;border-radius:50%;border:3px solid rgba(212,168,67,0.2);animation:none;"></div>
+    <div id="voice-ring2" style="position:absolute;inset:10px;border-radius:50%;border:3px solid rgba(212,168,67,0.3);animation:none;"></div>
+    <div style="position:absolute;inset:20px;border-radius:50%;background:rgba(212,168,67,0.15);border:2px solid #D4A843;display:flex;align-items:center;justify-content:center;">
+      <span style="font-size:26px;">🎤</span>
+    </div>
+  </div>
+
+  <!-- Status text -->
+  <div id="voice-status" style="font-size:16px;font-weight:700;color:#D4A843;margin-bottom:8px;">Listening...</div>
+  <div id="voice-transcript" style="font-size:14px;color:rgba(255,255,255,0.5);min-height:22px;margin-bottom:24px;max-width:80%;text-align:center;"></div>
+
+  <!-- Confirm card (hidden until parsed) -->
+  <div id="voice-confirm-card" style="display:none;background:#0a1628;border:1px solid rgba(212,168,67,0.4);border-radius:14px;padding:20px;width:85%;max-width:340px;margin-bottom:20px;">
+    <div style="font-size:11px;color:rgba(255,255,255,0.4);font-weight:700;letter-spacing:1px;margin-bottom:10px;">I UNDERSTOOD:</div>
+    <div id="voice-confirm-text" style="font-size:15px;font-weight:700;color:#fff;line-height:1.5;margin-bottom:14px;"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <button onclick="voiceConfirm()" style="padding:12px;border-radius:10px;background:rgba(6,214,160,0.15);border:2px solid rgba(6,214,160,0.5);color:#06D6A0;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;">✅ Yes</button>
+      <button onclick="voiceCancel()" style="padding:12px;border-radius:10px;background:rgba(231,76,60,0.1);border:2px solid rgba(231,76,60,0.4);color:#E63946;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;">❌ No</button>
+    </div>
+  </div>
+
+  <!-- Hint -->
+  <div style="font-size:11px;color:rgba(255,255,255,0.25);text-align:center;padding:0 30px;line-height:1.8;">
+    Try: <i>"Pier 7C piling complete"</i><br>
+    or: <i>"Emb left layer 8"</i><br>
+    or: <i>"Take photo"</i> · <i>"Open lists"</i>
+  </div>
+
+  <!-- Cancel -->
+  <button onclick="voiceCancel()" style="margin-top:20px;padding:10px 24px;border-radius:8px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.5);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">✕ Cancel</button>
+</div>
+
+<style>
+@keyframes voicePulse {
+  0%   { transform:scale(1);   opacity:0.6; }
+  50%  { transform:scale(1.4); opacity:0.2; }
+  100% { transform:scale(1);   opacity:0.6; }
+}
+.voice-listening #voice-ring1 { animation: voicePulse 1.2s ease-in-out infinite; }
+.voice-listening #voice-ring2 { animation: voicePulse 1.2s ease-in-out 0.3s infinite; }
+</style>
+
 </body>
 </html>
