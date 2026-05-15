@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SiteSync Bug Patcher</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#07090d; color:#f1f5f9; font-family:Inter,system-ui,sans-serif; min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px; }
+  h1 { font-family:Rajdhani,sans-serif; font-size:32px; font-weight:900; color:#D4A843; margin-bottom:8px; }
+  .sub { font-size:13px; color:rgba(255,255,255,0.5); margin-bottom:40px; }
+  .dropzone { width:100%; max-width:560px; border:2px dashed rgba(212,168,67,0.5); border-radius:16px; padding:60px 40px; text-align:center; cursor:pointer; transition:all 0.2s; background:rgba(212,168,67,0.04); }
+  .dropzone:hover, .dropzone.over { border-color:#D4A843; background:rgba(212,168,67,0.08); }
+  .dropzone-icon { font-size:48px; margin-bottom:16px; }
+  .dropzone-label { font-size:16px; font-weight:700; color:#f1f5f9; margin-bottom:6px; }
+  .dropzone-hint { font-size:12px; color:rgba(255,255,255,0.4); }
+  #file-input { display:none; }
+  .log { width:100%; max-width:560px; margin-top:24px; background:#0a1628; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:20px; display:none; }
+  .log h3 { font-size:11px; letter-spacing:2px; font-weight:800; color:#D4A843; margin-bottom:12px; }
+  .log-line { font-size:13px; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.04); display:flex; gap:10px; }
+  .log-line:last-child { border:none; }
+  .ok { color:#06D6A0; } .fail { color:#E63946; } .warn { color:#F59E0B; }
+  .dl-btn { display:none; margin-top:16px; width:100%; max-width:560px; padding:16px; background:linear-gradient(135deg,#D4A843,#F59E0B); border:none; border-radius:12px; font-family:Rajdhani,sans-serif; font-size:18px; font-weight:900; color:#000; cursor:pointer; letter-spacing:1px; }
+  .dl-btn:hover { opacity:0.9; }
+</style>
+</head>
+<body>
+<h1>🔧 SiteSync Bug Patcher</h1>
+<p class="sub">Drop your SiteSync HTML file — all 6 bugs fixed instantly, download patched version</p>
+
+<div class="dropzone" id="dropzone" onclick="document.getElementById('file-input').click()">
+  <div class="dropzone-icon">📂</div>
+  <div class="dropzone-label">Drop SiteSync HTML here</div>
+  <div class="dropzone-hint">or click to browse — file never leaves your browser</div>
+</div>
+<input type="file" id="file-input" accept=".html">
+
+<div class="log" id="log">
+  <h3>PATCH RESULTS</h3>
+  <div id="log-body"></div>
+</div>
+
+<button class="dl-btn" id="dl-btn">⬇ Download Patched File</button>
+
+<script>
+var patchedBlob = null;
+
+var FIXES = [
+  {
+    id: 1,
+    desc: "_resolveStageDatesFromPhotos: stageName → stageId",
+    severity: "HIGH",
+    find: "    stageName: stageName,",
+    replace: "    stageName: stageId,"
+  },
+  {
+    id: 2,
+    desc: "renderPhotos: remove first duplicate view-mode toggle block",
+    severity: "MEDIUM",
+    find: "    // View mode toggle (Grid / Columns)\n    var currentView = window.PHOTO_VIEW_MODE || 'grid';\n    h += '<div style=\"display:flex;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:8px;overflow:hidden;\">';\n    h += '<button onclick=\"setPhotoViewMode(\\'grid\\')\"",
+    replaceWith: "",
+    useRegex: true,
+    regex: /\/\/ View mode toggle \(Grid \/ Columns\)[\s\S]*?h \+= '<\/div>';\n/
+  },
+  {
+    id: 3,
+    desc: "setPhotoViewMode: remove first duplicate declaration",
+    severity: "LOW",
+    findStr: "function setPhotoViewMode(mode){\n  window.PHOTO_VIEW_MODE = mode;\n  renderPhotos();\n}",
+    removeFirstOccurrence: true
+  },
+  {
+    id: 4,
+    desc: "savePins: firebase.database() → FB_DB",
+    severity: "MEDIUM",
+    find: "    firebase.database().ref('ic1_bridges/USER_PINS').set(pins)",
+    replace: "    FB_DB.ref('ic1_bridges/USER_PINS').set(pins)"
+  },
+  {
+    id: 5,
+    desc: "_renderReconcile_PhotoMover: .startsWith() → .indexOf() === 0",
+    severity: "LOW-MED",
+    find: "      if(p.pier.startsWith('EMB_')) return;",
+    replace: "      if(p.pier.indexOf('EMB_') === 0) return;"
+  },
+  {
+    id: 6,
+    desc: "inspector_copyAsText: var text → var textContent (closure fix)",
+    severity: "LOW",
+    multi: [
+      { find: "  var text = lines.join('\\n');", replace: "  var textContent = lines.join('\\n');" },
+      { find: "    navigator.clipboard.writeText(text).then(function(){", replace: "    navigator.clipboard.writeText(textContent).then(function(){" },
+      { find: "      alert('Copied to clipboard (' + text.length + ' chars.');", replace: "      alert('Copied to clipboard (' + textContent.length + ' chars.');" },
+      { find: "      ta.value = text; ta.style.cssText", replace: "      ta.value = textContent; ta.style.cssText" }
+    ]
+  }
+];
+
+function applyPatches(src) {
+  var results = [];
+  var out = src;
+
+  // Fix 1 — simple string replace
+  var f1 = FIXES[0];
+  if (out.includes(f1.find)) {
+    out = out.replace(f1.find, f1.replace);
+    results.push({ id:1, ok:true, msg: f1.desc });
+  } else {
+    results.push({ id:1, ok:false, msg: f1.desc + " — NOT FOUND (may already be fixed)" });
+  }
+
+  // Fix 2 — regex to remove the first toggle block
+  var rx2 = /\/\/ View mode toggle \(Grid \/ Columns\)[\s\S]*?h \+= '<\/div>';\n/;
+  if (rx2.test(out)) {
+    out = out.replace(rx2, '');
+    results.push({ id:2, ok:true, msg: FIXES[1].desc });
+  } else {
+    results.push({ id:2, ok:false, msg: FIXES[1].desc + " — NOT FOUND (may already be fixed)" });
+  }
+
+  // Fix 3 — remove first of two identical setPhotoViewMode declarations
+  var f3str = "function setPhotoViewMode(mode){\n  window.PHOTO_VIEW_MODE = mode;\n  renderPhotos();\n}";
+  var count3 = (out.split(f3str).length - 1);
+  if (count3 >= 2) {
+    var idx3 = out.indexOf(f3str);
+    out = out.slice(0, idx3) + out.slice(idx3 + f3str.length);
+    results.push({ id:3, ok:true, msg: FIXES[2].desc + " (was " + count3 + " copies)" });
+  } else if (count3 === 1) {
+    results.push({ id:3, ok:null, msg: FIXES[2].desc + " — only 1 copy found (already fixed)" });
+  } else {
+    results.push({ id:3, ok:false, msg: FIXES[2].desc + " — NOT FOUND" });
+  }
+
+  // Fix 4 — simple string replace
+  var f4 = FIXES[3];
+  if (out.includes(f4.find)) {
+    out = out.replace(f4.find, f4.replace);
+    results.push({ id:4, ok:true, msg: f4.desc });
+  } else {
+    results.push({ id:4, ok:false, msg: f4.desc + " — NOT FOUND (may already be fixed)" });
+  }
+
+  // Fix 5 — simple string replace
+  var f5 = FIXES[4];
+  if (out.includes(f5.find)) {
+    out = out.replace(f5.find, f5.replace);
+    results.push({ id:5, ok:true, msg: f5.desc });
+  } else {
+    results.push({ id:5, ok:false, msg: f5.desc + " — NOT FOUND (may already be fixed)" });
+  }
+
+  // Fix 6 — multi-part rename
+  var f6 = FIXES[5];
+  var applied6 = false;
+  f6.multi.forEach(function(pair) {
+    if (out.includes(pair.find)) {
+      out = out.replace(pair.find, pair.replace);
+      applied6 = true;
+    }
+  });
+  if (applied6) {
+    results.push({ id:6, ok:true, msg: f6.desc });
+  } else {
+    results.push({ id:6, ok:false, msg: f6.desc + " — NOT FOUND (may already be fixed)" });
+  }
+
+  return { src: out, results: results };
+}
+
+function processFile(file) {
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var src = e.target.result;
+    var outcome = applyPatches(src);
+
+    // Show log
+    var logEl = document.getElementById('log');
+    var logBody = document.getElementById('log-body');
+    logEl.style.display = 'block';
+    logBody.innerHTML = '';
+
+    outcome.results.forEach(function(r) {
+      var cls = r.ok === true ? 'ok' : r.ok === false ? 'fail' : 'warn';
+      var icon = r.ok === true ? '✓' : r.ok === false ? '✗' : '—';
+      var sev = FIXES[r.id-1].severity || '';
+      logBody.innerHTML += '<div class="log-line"><span class="' + cls + '">' + icon + ' Fix ' + r.id + '</span><span style="color:rgba(255,255,255,0.4);font-size:11px;">[' + sev + ']</span><span>' + r.msg + '</span></div>';
+    });
+
+    // Create download
+    patchedBlob = new Blob([outcome.src], { type: 'text/html' });
+    var dlBtn = document.getElementById('dl-btn');
+    dlBtn.style.display = 'block';
+    dlBtn.onclick = function() {
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(patchedBlob);
+      a.download = file.name.replace('.html', '_PATCHED.html');
+      a.click();
+    };
+  };
+  reader.readAsText(file);
+}
+
+// Drag and drop
+var dz = document.getElementById('dropzone');
+dz.addEventListener('dragover', function(e) { e.preventDefault(); dz.classList.add('over'); });
+dz.addEventListener('dragleave', function() { dz.classList.remove('over'); });
+dz.addEventListener('drop', function(e) {
+  e.preventDefault();
+  dz.classList.remove('over');
+  var file = e.dataTransfer.files[0];
+  if (file) processFile(file);
+});
+document.getElementById('file-input').addEventListener('change', function(e) {
+  if (e.target.files[0]) processFile(e.target.files[0]);
+});
+</script>
+</body>
+</html>
