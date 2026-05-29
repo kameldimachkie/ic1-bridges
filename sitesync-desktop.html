@@ -4,22 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SiteSync Desktop — IC1 Road Improvements</title>
-<!-- App icon — used by browser tab, Chrome/Edge "Install app", iOS/Android "Add
-     to Home Screen", and desktop pinned-shortcut tiles. Relative path resolves
-     against this file's directory on GitHub Pages. -->
-<link rel="icon" type="image/png" href="DesktopIcon.png">
-<link rel="apple-touch-icon" href="DesktopIcon.png">
-<link rel="shortcut icon" type="image/png" href="DesktopIcon.png">
-<meta name="apple-mobile-web-app-title" content="SiteSync">
-<meta name="application-name" content="SiteSync">
-<meta name="theme-color" content="#0a0e1a">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<!-- Web App Manifest — enables Chrome/Edge "Install" so the app pins to the
-     desktop/taskbar with DesktopIcon.png as its icon. Embedded as a data URL
-     so no second file upload is needed. -->
-<link rel="manifest" href='data:application/manifest+json,{"name":"SiteSync%20Desktop%20%E2%80%94%20IC1","short_name":"SiteSync","description":"IC1%20Road%20Improvements%20%E2%80%94%20Diriyah%20Interchange%20construction%20tracker","start_url":".","scope":".","display":"standalone","orientation":"any","background_color":"%230a0e1a","theme_color":"%230a0e1a","icons":[{"src":"DesktopIcon.png","sizes":"any","type":"image/png","purpose":"any"},{"src":"DesktopIcon.png","sizes":"any","type":"image/png","purpose":"maskable"}]}'>
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script>
@@ -169,6 +153,7 @@ function buildSummary(){
 
 </script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <style>
   :root {
@@ -901,56 +886,78 @@ function buildSummary(){
 
 <div id="desk-lock" style="position:fixed;inset:0;z-index:99999;background:#07090d;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:Inter,sans-serif;">
   <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(88,166,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(88,166,255,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;"></div>
-  <div style="text-align:center;margin-bottom:32px;position:relative;">
-    <div style="font-family:Rajdhani,sans-serif;font-size:28px;font-weight:900;color:#fff;">SiteSync Desktop</div>
-    <div style="font-size:12px;color:rgba(255,255,255,0.3);letter-spacing:3px;margin-top:2px;">IC1 ROAD IMPROVEMENTS</div>
+  <div style="text-align:center;margin-bottom:36px;position:relative;">
+    <div style="font-size:13px;font-weight:800;letter-spacing:3px;color:#D4A843;margin-bottom:6px;">SITESYNC</div>
+    <div style="font-family:Rajdhani,sans-serif;font-size:30px;font-weight:900;color:#fff;">SiteSync Desktop</div>
+    <div style="font-size:12px;color:rgba(255,255,255,0.3);letter-spacing:3px;margin-top:4px;">IC1 ROAD IMPROVEMENTS · DIRIYAH</div>
   </div>
-  <div id="desk-pin-dots" style="display:flex;gap:14px;margin-bottom:10px;">
-    <div class="dpdot" id="dpd0"></div><div class="dpdot" id="dpd1"></div><div class="dpdot" id="dpd2"></div><div class="dpdot" id="dpd3"></div><div class="dpdot" id="dpd4"></div>
+  <div style="width:100%;max-width:360px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:28px 24px;position:relative;">
+    <div id="desk-login-error" style="display:none;background:rgba(230,57,70,0.12);border:1px solid rgba(230,57,70,0.3);border-radius:8px;padding:10px 14px;font-size:13px;color:#E63946;margin-bottom:18px;text-align:center;"></div>
+    <div style="margin-bottom:16px;">
+      <label style="display:block;font-size:11px;font-weight:700;color:rgba(255,255,255,0.4);letter-spacing:1.5px;margin-bottom:8px;">EMAIL</label>
+      <input id="desk-login-email" type="email" autocomplete="email" placeholder="name@example.com"
+        style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:13px 14px;color:#f1f5f9;font-size:15px;outline:none;font-family:inherit;"
+        onkeydown="if(event.key==='Enter')document.getElementById('desk-login-password').focus()">
+    </div>
+    <div style="margin-bottom:24px;">
+      <label style="display:block;font-size:11px;font-weight:700;color:rgba(255,255,255,0.4);letter-spacing:1.5px;margin-bottom:8px;">PASSWORD</label>
+      <input id="desk-login-password" type="password" autocomplete="current-password" placeholder="••••••••"
+        style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:13px 14px;color:#f1f5f9;font-size:15px;outline:none;font-family:inherit;"
+        onkeydown="if(event.key==='Enter')doSiteLogin()">
+    </div>
+    <button id="desk-login-btn" onclick="doSiteLogin()"
+      style="width:100%;padding:14px;background:#D4A843;border:none;border-radius:10px;color:#07090d;font-weight:800;font-size:15px;cursor:pointer;font-family:inherit;letter-spacing:0.5px;">
+      Sign In
+    </button>
   </div>
-  <div id="desk-pin-err" style="font-size:13px;color:#E63946;height:20px;margin-bottom:20px;font-weight:600;text-align:center;"></div>
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:260px;">
-    <button class="dpbtn" onclick="dpTap('1')"><span class="dpnum">1</span></button>
-    <button class="dpbtn" onclick="dpTap('2')"><span class="dpnum">2</span><span class="dpsub">ABC</span></button>
-    <button class="dpbtn" onclick="dpTap('3')"><span class="dpnum">3</span><span class="dpsub">DEF</span></button>
-    <button class="dpbtn" onclick="dpTap('4')"><span class="dpnum">4</span><span class="dpsub">GHI</span></button>
-    <button class="dpbtn" onclick="dpTap('5')"><span class="dpnum">5</span><span class="dpsub">JKL</span></button>
-    <button class="dpbtn" onclick="dpTap('6')"><span class="dpnum">6</span><span class="dpsub">MNO</span></button>
-    <button class="dpbtn" onclick="dpTap('7')"><span class="dpnum">7</span><span class="dpsub">PQRS</span></button>
-    <button class="dpbtn" onclick="dpTap('8')"><span class="dpnum">8</span><span class="dpsub">TUV</span></button>
-    <button class="dpbtn" onclick="dpTap('9')"><span class="dpnum">9</span><span class="dpsub">WXYZ</span></button>
-    <div></div>
-    <button class="dpbtn" onclick="dpTap('0')"><span class="dpnum">0</span></button>
-    <button class="dpbtn dpbtn-del" onclick="dpDel()"><svg width="24" height="18" viewBox="0 0 24 18" fill="none"><path d="M9 1H22C22.6 1 23 1.4 23 2V16C23 16.6 22.6 17 22 17H9L1 9L9 1Z" stroke="white" stroke-width="1.5" fill="rgba(255,255,255,0.08)"/><line x1="13" y1="6" x2="19" y2="12" stroke="white" stroke-width="1.8" stroke-linecap="round"/><line x1="19" y1="6" x2="13" y2="12" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg></button>
-  </div>
+  <div id="desk-login-status" style="margin-top:20px;font-size:12px;color:rgba(255,255,255,0.25);text-align:center;"></div>
 </div>
 <style>
-.dpdot{width:13px;height:13px;border-radius:50%;border:2px solid rgba(255,255,255,0.4);background:transparent;transition:background 0.15s;}
-.dpdot.filled{background:#fff;border-color:#fff;}.dpdot.success{background:#06D6A0;border-color:#06D6A0;}.dpdot.error{background:#E63946;border-color:#E63946;}
-.dpbtn{background:rgba(255,255,255,0.08);border:none;border-radius:50%;width:76px;height:76px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background 0.1s;gap:0;}
-.dpbtn:active{background:rgba(255,255,255,0.22);}.dpbtn-del{background:transparent;}
-.dpnum{font-size:30px;font-weight:300;color:#fff;line-height:1;}.dpsub{font-size:9px;font-weight:600;color:rgba(255,255,255,0.4);letter-spacing:1px;margin-top:1px;}
+#desk-login-email:focus, #desk-login-password:focus {
+  border-color: rgba(212,168,67,0.5);
+  background: rgba(255,255,255,0.09);
+}
+#desk-login-btn:active { opacity: 0.85; }
 </style>
 <script>
-var DP_CORRECT='12345',DP_ENTERED='',DP_LOCKED=false,DP_ATTEMPTS=0;
-function dpTap(d){if(DP_LOCKED||DP_ENTERED.length>=5)return;DP_ENTERED+=d;dpUpdateDots();if(DP_ENTERED.length===5)setTimeout(dpCheck,200);}
-function dpDel(){if(DP_LOCKED)return;DP_ENTERED=DP_ENTERED.slice(0,-1);dpUpdateDots();document.getElementById('desk-pin-err').textContent='';}
-function dpUpdateDots(){for(var i=0;i<5;i++){var d=document.getElementById('dpd'+i);if(!d)return;d.className='dpdot';if(i<DP_ENTERED.length)d.classList.add('filled');}}
-function dpCheck(){
-  if(DP_ENTERED===DP_CORRECT){
-    for(var i=0;i<5;i++){var d=document.getElementById('dpd'+i);if(d)d.className='dpdot success';}
-    setTimeout(function(){var l=document.getElementById('desk-lock');if(l){l.style.transition='opacity 0.4s';l.style.opacity='0';setTimeout(function(){l.style.display='none';},400);}},500);
-  } else {
-    DP_ATTEMPTS++;
-    for(var i=0;i<5;i++){var d=document.getElementById('dpd'+i);if(d)d.className='dpdot error';}
-    var dots=document.getElementById('desk-pin-dots');
-    if(dots){var sh=[10,-10,8,-8,5,0],si=0;var sv=setInterval(function(){dots.style.transform='translateX('+sh[si]+'px)';si++;if(si>=sh.length){clearInterval(sv);dots.style.transform='';}},60);}
-    document.getElementById('desk-pin-err').textContent=DP_ATTEMPTS>=5?'Too many attempts. Wait 30s.':'Incorrect PIN';
-    if(DP_ATTEMPTS>=5){DP_LOCKED=true;setTimeout(function(){DP_LOCKED=false;DP_ATTEMPTS=0;document.getElementById('desk-pin-err').textContent='';},30000);}
-    setTimeout(function(){DP_ENTERED='';dpUpdateDots();for(var i=0;i<5;i++){var d=document.getElementById('dpd'+i);if(d)d.className='dpdot';}},700);
-  }
+function _deskLoginError(msg){
+  var el=document.getElementById('desk-login-error');
+  if(!el)return; el.textContent=msg; el.style.display=msg?'block':'none';
 }
-
+function _deskLoginBusy(busy){
+  var btn=document.getElementById('desk-login-btn');
+  var em=document.getElementById('desk-login-email');
+  var pw=document.getElementById('desk-login-password');
+  if(btn){btn.disabled=busy;btn.textContent=busy?'Signing in…':'Sign In';}
+  if(em)em.disabled=busy; if(pw)pw.disabled=busy;
+}
+function _deskHideLock(){
+  var l=document.getElementById('desk-lock');
+  if(l){l.style.transition='opacity 0.4s';l.style.opacity='0';setTimeout(function(){l.style.display='none';},400);}
+}
+function _deskShowLock(){
+  var l=document.getElementById('desk-lock');
+  if(l){l.style.display='flex';l.style.opacity='1';}
+  _deskLoginError(''); _deskLoginBusy(false);
+}
+function doSiteLogin(){
+  var email=(document.getElementById('desk-login-email').value||'').trim();
+  var pw=(document.getElementById('desk-login-password').value||'');
+  _deskLoginError('');
+  if(!email||!pw){_deskLoginError('Please enter your email and password.');return;}
+  _deskLoginBusy(true);
+  firebase.auth().signInWithEmailAndPassword(email,pw)
+    .catch(function(e){
+      _deskLoginBusy(false);
+      var msg='Incorrect email or password.';
+      if(e.code==='auth/too-many-requests') msg='Too many attempts. Try again later.';
+      if(e.code==='auth/network-request-failed') msg='Network error. Check your connection.';
+      _deskLoginError(msg);
+    });
+}
+function doSiteSignOut(){
+  firebase.auth().signOut();
+}
 </script>
 
 
@@ -1247,8 +1254,6 @@ function dpCheck(){
     <!-- Bottom-center controls -->
     <div id="view3d-controls" style="position:absolute;bottom:20px;left:50%;transform:translateX(-50%);z-index:10;display:flex;gap:10px;background:rgba(7,9,13,0.8);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:10px 14px;backdrop-filter:blur(8px);">
       <button id="view3d-btn-tour" onclick="view3d_startTour()" title="Start the cinematic tour — it will loop continuously until you press STOP" style="background:linear-gradient(135deg,#D4A843,#F59E0B);border:none;color:#1a1a1a;font-family:Rajdhani,sans-serif;font-size:13px;font-weight:900;letter-spacing:1.5px;padding:8px 18px;border-radius:8px;cursor:pointer;">▶ START TOUR</button>
-      <button id="view3d-btn-pause" onclick="view3d_pauseTour()" title="Pause the tour at the current stop — keeps position so you can resume" style="display:none;background:rgba(212,168,67,0.18);border:1px solid rgba(212,168,67,0.55);color:#D4A843;font-family:Rajdhani,sans-serif;font-size:13px;font-weight:900;letter-spacing:1.5px;padding:8px 16px;border-radius:8px;cursor:pointer;">⏸ PAUSE</button>
-      <button id="view3d-btn-resume" onclick="view3d_resumeTour()" title="Resume the tour from the last stop where you paused" style="display:none;background:linear-gradient(135deg,#34D399,#059669);border:none;color:#03130d;font-family:Rajdhani,sans-serif;font-size:13px;font-weight:900;letter-spacing:1.5px;padding:8px 18px;border-radius:8px;cursor:pointer;">▶ RESUME</button>
       <button id="view3d-btn-coord" onclick="view3d_toggleTerrainQuery()" title="Click any point on the terrain to read its E / N / Z survey coordinates" style="background:rgba(15,23,42,0.85);border:1px solid #22D3EE;color:#22D3EE;font-family:Rajdhani,sans-serif;font-size:13px;font-weight:800;letter-spacing:1px;padding:8px 16px;border-radius:8px;cursor:pointer;">📍 E N Z</button>
       <button id="view3d-btn-fill" onclick="view3d_toggleFillPanel()" title="Shoulder fill volume — pick a cross-section A→B and compute fill (Method A)" style="background:rgba(15,23,42,0.85);border:1px solid #34D399;color:#34D399;font-family:Rajdhani,sans-serif;font-size:13px;font-weight:800;letter-spacing:1px;padding:8px 16px;border-radius:8px;cursor:pointer;">⛰ FILL VOL</button>
       <button id="view3d-btn-stop" onclick="view3d_stopTour()" title="Stop the tour loop and return to free view" style="display:none;background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.5);color:#EF4444;font-family:Rajdhani,sans-serif;font-size:13px;font-weight:900;letter-spacing:1.5px;padding:8px 18px;border-radius:8px;cursor:pointer;">■ STOP TOUR</button>
@@ -2870,16 +2875,10 @@ function renderAdminContent(){
     el.innerHTML = `
       <div style="text-align:center;padding:20px;">
         <div style="font-size:40px;margin-bottom:12px;">🔒</div>
-        <div style="font-size:14px;color:rgba(255,255,255,0.7);margin-bottom:16px;">Enter admin password</div>
-        <input type="password" id="admin-pw-input" placeholder="Password"
-          style="width:100%;padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:#f1f5f9;font-size:14px;text-align:center;outline:none;margin-bottom:8px;">
-        <div id="admin-pw-err" style="font-size:11px;color:#E63946;min-height:16px;margin-bottom:8px;"></div>
-        <button onclick="adminUnlock();" style="width:100%;padding:12px;background:#E74C3C;border:none;border-radius:8px;color:#fff;font-weight:700;font-size:14px;cursor:pointer;font-family:Inter,sans-serif;">Unlock Admin</button>
+        <div style="font-size:14px;color:rgba(255,255,255,0.7);margin-bottom:16px;">Admin access is restricted to authorised accounts.</div>
+        <div id="admin-pw-err" style="font-size:12px;color:#E63946;min-height:16px;margin-bottom:12px;"></div>
+        <button onclick="adminUnlock();" style="width:100%;padding:12px;background:#E74C3C;border:none;border-radius:8px;color:#fff;font-weight:700;font-size:14px;cursor:pointer;font-family:Inter,sans-serif;">Request Admin Access</button>
       </div>`;
-    setTimeout(function(){
-      var inp = document.getElementById('admin-pw-input');
-      if(inp){ inp.focus(); inp.addEventListener('keydown',function(e){ if(e.key==='Enter') adminUnlock(); }); }
-    },100);
     return;
   }
 
@@ -2989,17 +2988,21 @@ function changeAdminPw(){
 }
 
 function adminUnlock(){
-  var inp = document.getElementById('admin-pw-input');
   var err = document.getElementById('admin-pw-err');
-  var pw = inp ? inp.value : '';
-  var correct = '12345';
-  if(pw === correct){
-    _adminUnlocked = true;
-    renderAdminContent();
-  } else {
-    if(err) err.textContent = '❌ Incorrect password';
-    if(inp){ inp.value=''; inp.focus(); }
-  }
+  var user = firebase.auth().currentUser;
+  if(!user){ if(err) err.textContent = '⚠️ Not signed in.'; return; }
+  if(!FB_DB){ if(err) err.textContent = '⚠️ Not connected to server.'; return; }
+  // Check if current Firebase user is in the ADMINS node
+  FB_DB.ref('ic1_bridges/ADMINS/'+user.uid).once('value').then(function(snap){
+    if(snap.val() === true){
+      _adminUnlocked = true;
+      renderAdminContent();
+    } else {
+      if(err) err.textContent = '❌ Your account does not have admin access.';
+    }
+  }).catch(function(){
+    if(err) err.textContent = '⚠️ Could not verify admin access.';
+  });
 }
 
 // Stage weights
@@ -3503,20 +3506,6 @@ var ABUTMENTS = [
         {n:2737139.01, e:660505.79, elev:1.3, label:'Additional point'},
         {n:2736986.16, e:660573.09, elev:9.7, label:'2+ABT'},
         {n:2736982.39, e:660562.25, elev:10, label:'MC1 END'}
-      ]
-    },
-    // MC2 — right wing wall, mirror-symmetric to MC1 across the bridge axis through
-    // the abutment centroid. Same length, same tapering height profile (1m → 10m),
-    // on the opposite side of Bridge C. Computed by reflecting each MC1 point's
-    // perpendicular offset about the bridge-C axis at the abutment.
-    wallRight: {
-      id: 'MC2',
-      lengthM: 161,
-      points: [
-        {n:2737142.48, e:660512.92, elev:1,   label:'Start MC2'},
-        {n:2737136.38, e:660499.92, elev:1.3, label:'Additional point (mirror)'},
-        {n:2736981.96, e:660563.22, elev:9.7, label:'2+ABT (mirror)'},
-        {n:2736987.15, e:660573.45, elev:10,  label:'MC2 END'}
       ]
     }
   }
@@ -9014,9 +9003,10 @@ function renderDocs(){
 // FIREBASE SYNC
 // ═══════════════════════════════════════════════════════
 var FB_CONFIG = {
-  apiKey: "AIzaSyCCxumZ9b1uGUHevQpjxZyuK5PWKd5muGk",
+  apiKey: "AIzaSyCC2uwZ9b1uGUHeqVpiX9zuWQ5KWd5muGk",
+  authDomain: "valetsitetrack.firebaseapp.com",
   databaseURL: "https://valetsitetrack-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "valetisitetrack"
+  projectId: "valetsitetrack"
 };
 var FB_APP = null, FB_DB = null;
 var syncDot = null;
@@ -9024,9 +9014,29 @@ var syncDot = null;
 function fbInit(){
   try{
     if(!FB_APP) FB_APP = firebase.initializeApp(FB_CONFIG);
-    FB_DB = firebase.database(FB_APP);
-    setSyncStatus('connecting');
 
+    // Auth state gate: show/hide login screen, set up DB only when signed in.
+    firebase.auth().onAuthStateChanged(function(user){
+      if(user){
+        _deskHideLock();
+        if(!FB_DB){
+          FB_DB = firebase.database(FB_APP);
+          setSyncStatus('connecting');
+          _setupSiteDBListeners();
+        }
+      } else {
+        _deskShowLock();
+        FB_DB = null;
+      }
+    });
+
+  }catch(e){
+    setSyncStatus('error');
+    console.log('[SiteSync Desktop] Init error:', e.message);
+  }
+}
+
+function _setupSiteDBListeners(){
     // Listen to PS (pier progress) in real time
     FB_DB.ref('ic1_bridges/PS').on('value', function(snap){
       var data = snap.val();
@@ -9245,11 +9255,6 @@ function fbInit(){
         if(typeof view3d_refreshAbutments === 'function') view3d_refreshAbutments();
       } catch(e){ console.warn('[fb] post-ABUTMENTS_DATA refresh error:', e); }
     });
-
-  }catch(e){
-    setSyncStatus('error');
-    console.log('[SiteSync Desktop] Init error:', e.message);
-  }
 }
 
 function setSyncStatus(status){
@@ -17666,12 +17671,6 @@ window.view3d_buildPiers = function(layout){
   V.activePiers = [];  // names of piers actually rendered (have work)
 
   PIERS.forEach(function(p){
-    // SKIP: AB-1C is rendered as a full polygon abutment (ABT-1C) by
-    // view3d_buildAbutments, so its pier-cylinder representation would overlap
-    // inside the abutment. Keep it in the PIERS data (bridge C piers list needs
-    // it for progress tracking) but don't draw the redundant cylinder.
-    if(p.name === 'AB-1C') return;
-
     // FILTER: only render piers where at least one stage has progress.
     // Skip "all Not Started" piers entirely to reduce visual clutter
     // (95 piers → typically 20-40 active).
@@ -17779,16 +17778,16 @@ window.view3d_buildAbutments = function(layout){
 
     V.abutmentMeshes[ab.id] = { mesh: mesh, wire: wire, centroid: { x: cx, z: cz }, height: height };
 
-    // ── WALL TAPERED EXTRUSION (handles both left MC1 and right MC2 mirror) ──
-    function _buildAbutmentWall(wallDef, idSuffix){
-      if(!wallDef || !wallDef.points || wallDef.points.length < 2) return;
+    // ── WALL TAPERED EXTRUSION ────────────────────────────────────────
+    if(ab.wall && ab.wall.points && ab.wall.points.length >= 2){
       var wallPct = (typeof getWallPct === 'function') ? getWallPct(ab.id) : 0;
       var wallColHex = wallPct >= 95 ? 0x06D6A0 :
                        wallPct >= 50 ? 0xD4A843 :
                        wallPct > 0   ? 0xFB923C : 0xA78BFA;
       var wallThickness = 0.8;  // metres
 
-      var wallPtsScene = wallDef.points.map(function(pt){
+      // For each pair of consecutive wall points, build a tapered box segment
+      var wallPtsScene = ab.wall.points.map(function(pt){
         var sc = window.view3d_toScene(pt.n, pt.e, layout);
         return { x: sc.x, z: sc.z, elev: pt.elev };
       });
@@ -17807,15 +17806,20 @@ window.view3d_buildAbutments = function(layout){
         var avgElev = (p1.elev + p2.elev) / 2;
         var angle = Math.atan2(dz, dx);
 
+        // Build a thin BoxGeometry sized to the segment with avg height
         var segGeo = new THREE.BoxGeometry(segLen + 0.05, avgElev, wallThickness);
+        // Shift up so its base sits on ground
         segGeo.translate(0, avgElev / 2, 0);
 
+        // Bend the top to taper between p1.elev and p2.elev
+        // BoxGeometry has 8 vertices. Top vertices have y > 0. Adjust top y based on x position along segment.
         var posAttr = segGeo.attributes.position;
         var halfLen = segLen / 2;
         for(var v = 0; v < posAttr.count; v++){
           var vx = posAttr.getX(v);
           var vy = posAttr.getY(v);
-          if(vy > avgElev * 0.4){
+          if(vy > avgElev * 0.4){  // top vertices
+            // vx ranges from -halfLen-eps to +halfLen+eps. Normalize 0..1 along segment from p1 to p2.
             var t = (vx + halfLen) / segLen;
             t = Math.max(0, Math.min(1, t));
             var elevHere = p1.elev + (p2.elev - p1.elev) * t;
@@ -17836,6 +17840,7 @@ window.view3d_buildAbutments = function(layout){
         if(V.quality === 'high'){ segMesh.castShadow = true; segMesh.receiveShadow = true; }
         wallGroup.add(segMesh);
 
+        // Edge wireframe
         var segEdges = new THREE.EdgesGeometry(segGeo);
         var segWire = new THREE.LineSegments(segEdges, new THREE.LineBasicMaterial({
           color: wallColHex, transparent: true, opacity: 0.35
@@ -17846,13 +17851,8 @@ window.view3d_buildAbutments = function(layout){
       }
 
       V.scene.add(wallGroup);
-      V.wallMeshes[ab.id + idSuffix] = { group: wallGroup, pct: wallPct };
+      V.wallMeshes[ab.id] = { group: wallGroup, pct: wallPct };
     }
-
-    // Left wing wall (MC1) — the existing surveyed wall.
-    _buildAbutmentWall(ab.wall, '');
-    // Right wing wall (MC2) — symmetric mirror of MC1, same height profile.
-    _buildAbutmentWall(ab.wallRight, '_R');
   });
 
   console.log('[3D] Abutments built — ' + Object.keys(V.abutmentMeshes).length + ' abutment(s), ' + Object.keys(V.wallMeshes).length + ' wall(s)');
@@ -20985,10 +20985,7 @@ window.view3d_toggleFillPanel = function(){
     'background:rgba(8,15,28,0.96);border:1px solid #34D399;border-radius:12px;padding:14px 16px;' +
     'color:#E6F4EE;font-family:Rajdhani,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,0.6);';
   panel.innerHTML =
-    '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">' +
-      '<div style="font-size:15px;font-weight:900;letter-spacing:1px;color:#34D399;">⛰ SHOULDER FILL VOLUME <span style="font-size:10px;color:#9fb3ab;font-weight:400;">v30-manifest</span></div>' +
-      '<button onclick="view3d_toggleFillPanel()" title="Close" aria-label="Close" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#9fb3ab;font-size:16px;font-weight:700;line-height:1;width:26px;height:26px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;margin-left:8px;flex-shrink:0;transition:all 0.15s;" onmouseover="this.style.background=\'rgba(255,255,255,0.1)\';this.style.color=\'#fff\';this.style.borderColor=\'rgba(255,255,255,0.4)\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'#9fb3ab\';this.style.borderColor=\'rgba(255,255,255,0.2)\'">×</button>' +
-    '</div>' +
+    '<div style="font-size:15px;font-weight:900;letter-spacing:1px;color:#34D399;margin-bottom:10px;">⛰ SHOULDER FILL VOLUME <span style="font-size:10px;color:#9fb3ab;font-weight:400;">v24-exctour</span></div>' +
     '<div style="display:flex;gap:6px;margin-bottom:12px;">' +
       '<button id="fillmode-auto" onclick="view3d_fillMode(\'auto\')" style="flex:1;background:linear-gradient(135deg,#34D399,#059669);border:none;color:#03130d;font-family:Rajdhani;font-weight:800;font-size:12px;padding:7px;border-radius:7px;cursor:pointer;">Auto (stations)</button>' +
       '<button id="fillmode-manual" onclick="view3d_fillMode(\'manual\')" style="flex:1;background:rgba(52,211,153,0.12);border:1px solid rgba(52,211,153,0.5);color:#34D399;font-family:Rajdhani;font-weight:800;font-size:12px;padding:7px;border-radius:7px;cursor:pointer;">Manual A→B</button>' +
@@ -24088,34 +24085,6 @@ window.view3d_renderMiniMap = function(currentStop){
   }
 };
 
-// Layout the tour caption so it never overlaps the controls bar. Measures the
-// controls bar's actual rendered height (which varies with how many tour buttons
-// are visible, screen width, and wrapping) and seats the caption's bottom edge
-// safely above it. Re-runs on window resize so rotations / responsive shifts
-// keep the spacing correct.
-window.view3d_layoutTourCaption = function(){
-  var cap = document.getElementById('view3d-tour-caption');
-  var ctrls = document.getElementById('view3d-controls');
-  if(!cap || !ctrls) return;
-  // The controls bar uses bottom:20px. Its rendered height varies; measure it.
-  var ctrlsRect = ctrls.getBoundingClientRect();
-  var ctrlsHeight = ctrlsRect.height || 56;     // fallback if not yet rendered
-  var BOTTOM_OFFSET = 20;                       // matches controls' bottom inset
-  var SAFE_GAP = 18;                            // breathing room between
-  // Caption sits with its bottom edge at (controls top) + gap, so its content
-  // grows upward from there and never touches the controls.
-  cap.style.bottom = (BOTTOM_OFFSET + ctrlsHeight + SAFE_GAP) + 'px';
-};
-
-// Re-layout on window resize / orientation change so the caption stays clear.
-if(!window._view3d_captionResizeBound){
-  window.addEventListener('resize', function(){
-    var cap = document.getElementById('view3d-tour-caption');
-    if(cap && cap.style.display !== 'none') window.view3d_layoutTourCaption();
-  });
-  window._view3d_captionResizeBound = true;
-}
-
 window.view3d_startTour = function(){
   var V = window.VIEW3D;
   if(!V.initialized) return;
@@ -24128,10 +24097,6 @@ window.view3d_startTour = function(){
 
   document.getElementById('view3d-btn-tour').style.display = 'none';
   document.getElementById('view3d-btn-stop').style.display = 'inline-block';
-  var _bP = document.getElementById('view3d-btn-pause');  if(_bP) _bP.style.display = 'inline-block';
-  var _bR = document.getElementById('view3d-btn-resume'); if(_bR) _bR.style.display = 'none';
-  // Wait one frame so the bar reflows with the new buttons, then layout caption.
-  requestAnimationFrame(function(){ window.view3d_layoutTourCaption(); });
 
   // Show HUD overlays (top bar, mini-map, stats)
   document.getElementById('view3d-tour-topbar').style.display = 'flex';
@@ -24204,9 +24169,6 @@ window.view3d_startTour = function(){
     V._lastCaptionStop = null;
     window._voiceLastSpoken = null;
     document.getElementById('view3d-tour-caption').style.display = 'block';
-    // Position caption above the controls bar with a safe gap — prevents overlap
-    // regardless of how many tour buttons are visible or how the bar wraps.
-    window.view3d_layoutTourCaption();
 
     // Start music (will fade in over 2.5s)
     if(window.MUSIC_ON) window.tourAudio_startMusic();
@@ -24216,44 +24178,6 @@ window.view3d_startTour = function(){
     // Render mini-map (after a moment so layout is settled)
     setTimeout(window.view3d_renderMiniMap, 200);
   });
-};
-
-// PAUSE the tour at the current stop — preserves position and elapsed-within-stop
-// so RESUME continues from exactly where the user paused (not from stop start).
-window.view3d_pauseTour = function(){
-  var V = window.VIEW3D;
-  if(!V.tourActive || V.tourPaused) return;
-  V.tourPaused = true;
-  V._tourPauseTime = performance.now();      // remember when we paused
-  // Pause voice narration if speaking
-  try { if(window.speechSynthesis && window.speechSynthesis.pause) window.speechSynthesis.pause(); } catch(e){}
-  // Pause cinematic music
-  try { if(typeof tourAudio_pauseMusic === 'function') tourAudio_pauseMusic(); } catch(e){}
-  // Swap controls: hide Pause, show Resume (keep Stop visible)
-  var bP = document.getElementById('view3d-btn-pause');     if(bP) bP.style.display = 'none';
-  var bR = document.getElementById('view3d-btn-resume');    if(bR) bR.style.display = 'inline-block';
-  requestAnimationFrame(function(){ window.view3d_layoutTourCaption(); });
-};
-
-// RESUME the tour from where it was paused. Shifts tourStart forward by the time
-// spent paused so the elapsed-within-stop picks up exactly where it left off.
-window.view3d_resumeTour = function(){
-  var V = window.VIEW3D;
-  if(!V.tourActive || !V.tourPaused) return;
-  if(typeof V._tourPauseTime === 'number'){
-    var pausedFor = performance.now() - V._tourPauseTime;
-    V.tourStart += pausedFor;     // shift the stop's start so elapsed is preserved
-  }
-  V.tourPaused = false;
-  V._tourPauseTime = null;
-  // Resume voice + music
-  try { if(window.speechSynthesis && window.speechSynthesis.resume) window.speechSynthesis.resume(); } catch(e){}
-  try { if(typeof tourAudio_resumeMusic === 'function') tourAudio_resumeMusic();
-        else if(typeof tourAudio_swell === 'function') tourAudio_swell(0.7); } catch(e){}
-  // Swap controls: hide Resume, show Pause
-  var bR = document.getElementById('view3d-btn-resume');    if(bR) bR.style.display = 'none';
-  var bP = document.getElementById('view3d-btn-pause');     if(bP) bP.style.display = 'inline-block';
-  requestAnimationFrame(function(){ window.view3d_layoutTourCaption(); });
 };
 
 window.view3d_stopTour = function(){
@@ -24285,9 +24209,6 @@ window.view3d_stopTour = function(){
   }
   document.getElementById('view3d-btn-tour').style.display = 'inline-block';
   document.getElementById('view3d-btn-stop').style.display = 'none';
-  var _bP2 = document.getElementById('view3d-btn-pause');  if(_bP2) _bP2.style.display = 'none';
-  var _bR2 = document.getElementById('view3d-btn-resume'); if(_bR2) _bR2.style.display = 'none';
-  V.tourPaused = false; V._tourPauseTime = null;
   document.getElementById('view3d-tour-caption').style.display = 'none';
 
   // Hide HUD overlays
@@ -24331,7 +24252,6 @@ window.view3d_stopTour = function(){
 window.view3d_updateTour = function(now){
   var V = window.VIEW3D;
   if(!V.tourActive || V.tourCurrentStop < 0) return;
-  if(V.tourPaused) return;   // frozen at current stop; resume will unfreeze
   if(V.tourCurrentStop >= V.tourStops.length){ window.view3d_stopTour(); return; }
   var stop = V.tourStops[V.tourCurrentStop];
   var elapsed = now - V.tourStart;

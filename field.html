@@ -187,87 +187,51 @@ body.day #map-pier-panel{background:#f0f7ff!important;color:#0f172a!important;}
 </head>
 <body style="display:flex;flex-direction:column;height:100vh;">
 
-<!-- ═══ SAMSUNG A13 PIN LOGIN ═══ -->
-<div id="samsung-lock" style="position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;background:#000;font-family:-apple-system,sans-serif;">
+<!-- ═══ LOGIN SCREEN ═══ -->
+<div id="login-screen" style="position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#07090d;font-family:-apple-system,sans-serif;padding:32px 24px;">
 
-  <!-- Status bar -->
-  <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 18px 0;flex-shrink:0;">
-    <div id="lock-time" style="font-size:14px;font-weight:600;color:#fff;"></div>
-    <div style="display:flex;gap:6px;align-items:center;">
-      <svg width="16" height="12" viewBox="0 0 16 12" fill="white" opacity="0.9"><rect x="0" y="4" width="3" height="8" rx="1"/><rect x="4" y="2" width="3" height="10" rx="1"/><rect x="8" y="0" width="3" height="12" rx="1"/><rect x="12" y="0" width="3" height="12" rx="1" opacity="0.3"/></svg>
-      <svg width="16" height="12" viewBox="0 0 24 12" fill="white" opacity="0.9"><rect x="0" y="1" width="21" height="10" rx="2" stroke="white" stroke-width="1.5" fill="none"/><rect x="21" y="4" width="2" height="4" rx="1" fill="white"/><rect x="1.5" y="2.5" width="14" height="7" rx="1" fill="white"/></svg>
-    </div>
+  <!-- Logo -->
+  <div style="text-align:center;margin-bottom:40px;">
+    <div style="font-size:13px;font-weight:800;letter-spacing:3px;color:#D4A843;margin-bottom:6px;">SITESYNC</div>
+    <div style="font-size:26px;font-weight:900;color:#f1f5f9;">IC1 Field Entry</div>
+    <div style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:4px;letter-spacing:1px;">IC1 ROAD IMPROVEMENTS · DIRIYAH</div>
   </div>
 
-  <!-- Date & Time -->
-  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;padding-bottom:20px;">
-    <div id="lock-hour" style="font-size:80px;font-weight:200;color:#fff;line-height:1;letter-spacing:-2px;"></div>
-    <div id="lock-date" style="font-size:16px;color:rgba(255,255,255,0.7);margin-top:6px;font-weight:400;"></div>
-    <div style="margin-top:30px;font-size:13px;color:rgba(255,255,255,0.5);">SiteSync IC1 — Field Entry</div>
-  </div>
+  <!-- Form card -->
+  <div style="width:100%;max-width:340px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:28px 24px;">
 
-  <!-- PIN area -->
-  <div style="flex-shrink:0;padding:0 24px 30px;">
+    <div id="login-error" style="display:none;background:rgba(230,57,70,0.12);border:1px solid rgba(230,57,70,0.3);border-radius:8px;padding:10px 14px;font-size:13px;color:#E63946;margin-bottom:18px;text-align:center;"></div>
 
-    <!-- PIN label -->
-    <div style="text-align:center;font-size:14px;color:rgba(255,255,255,0.7);margin-bottom:16px;font-weight:500;">Enter PIN</div>
-
-    <!-- PIN dots -->
-    <div id="pin-dots" style="display:flex;justify-content:center;gap:14px;margin-bottom:28px;">
-      <div class="pdot" id="pd0"></div>
-      <div class="pdot" id="pd1"></div>
-      <div class="pdot" id="pd2"></div>
-      <div class="pdot" id="pd3"></div>
-      <div class="pdot" id="pd4"></div>
+    <div style="margin-bottom:16px;">
+      <label style="display:block;font-size:11px;font-weight:700;color:rgba(255,255,255,0.4);letter-spacing:1.5px;margin-bottom:8px;">EMAIL</label>
+      <input id="login-email" type="email" autocomplete="email" placeholder="name@example.com"
+        style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:13px 14px;color:#f1f5f9;font-size:15px;outline:none;font-family:inherit;"
+        onkeydown="if(event.key==='Enter')document.getElementById('login-password').focus()">
     </div>
 
-    <!-- Error message -->
-    <div id="pin-error" style="text-align:center;font-size:13px;color:#FF6B6B;margin-bottom:14px;height:18px;font-weight:500;"></div>
-
-    <!-- Keypad -->
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:300px;margin:0 auto;">
-      <button class="kbtn" onclick="pinTap('1')"><span class="knum">1</span></button>
-      <button class="kbtn" onclick="pinTap('2')"><span class="knum">2</span><span class="ksub">ABC</span></button>
-      <button class="kbtn" onclick="pinTap('3')"><span class="knum">3</span><span class="ksub">DEF</span></button>
-      <button class="kbtn" onclick="pinTap('4')"><span class="knum">4</span><span class="ksub">GHI</span></button>
-      <button class="kbtn" onclick="pinTap('5')"><span class="knum">5</span><span class="ksub">JKL</span></button>
-      <button class="kbtn" onclick="pinTap('6')"><span class="knum">6</span><span class="ksub">MNO</span></button>
-      <button class="kbtn" onclick="pinTap('7')"><span class="knum">7</span><span class="ksub">PQRS</span></button>
-      <button class="kbtn" onclick="pinTap('8')"><span class="knum">8</span><span class="ksub">TUV</span></button>
-      <button class="kbtn" onclick="pinTap('9')"><span class="knum">9</span><span class="ksub">WXYZ</span></button>
-      <div></div>
-      <button class="kbtn" onclick="pinTap('0')"><span class="knum">0</span></button>
-      <button class="kbtn kbtn-del" onclick="pinDel()"><svg width="24" height="18" viewBox="0 0 24 18" fill="none"><path d="M9 1H22C22.6 1 23 1.4 23 2V16C23 16.6 22.6 17 22 17H9L1 9L9 1Z" stroke="white" stroke-width="1.5" fill="rgba(255,255,255,0.1)"/><line x1="13" y1="6" x2="19" y2="12" stroke="white" stroke-width="1.8" stroke-linecap="round"/><line x1="19" y1="6" x2="13" y2="12" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+    <div style="margin-bottom:24px;">
+      <label style="display:block;font-size:11px;font-weight:700;color:rgba(255,255,255,0.4);letter-spacing:1.5px;margin-bottom:8px;">PASSWORD</label>
+      <input id="login-password" type="password" autocomplete="current-password" placeholder="••••••••"
+        style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:13px 14px;color:#f1f5f9;font-size:15px;outline:none;font-family:inherit;"
+        onkeydown="if(event.key==='Enter')doLogin()">
     </div>
 
+    <button onclick="doLogin()" id="login-btn"
+      style="width:100%;padding:14px;background:#D4A843;border:none;border-radius:10px;color:#07090d;font-weight:800;font-size:15px;cursor:pointer;font-family:inherit;letter-spacing:0.5px;">
+      Sign In
+    </button>
+
   </div>
+
+  <div id="login-status" style="margin-top:20px;font-size:12px;color:rgba(255,255,255,0.25);text-align:center;"></div>
 </div>
 
 <style>
-.pdot {
-  width:14px;height:14px;border-radius:50%;
-  border:2px solid rgba(255,255,255,0.6);
-  background:transparent;transition:background 0.15s;
+#login-email:focus, #login-password:focus {
+  border-color: rgba(212,168,67,0.5);
+  background: rgba(255,255,255,0.08);
 }
-.pdot.filled { background:#fff; border-color:#fff; }
-.pdot.error  { background:#FF6B6B; border-color:#FF6B6B; }
-.pdot.success{ background:#06D6A0; border-color:#06D6A0; }
-
-.kbtn {
-  background:rgba(255,255,255,0.1);
-  border:none;border-radius:50%;
-  width:72px;height:72px;
-  display:flex;flex-direction:column;
-  align-items:center;justify-content:center;
-  cursor:pointer;margin:0 auto;
-  -webkit-tap-highlight-color:transparent;
-  transition:background 0.1s;
-  gap:0;
-}
-.kbtn:active { background:rgba(255,255,255,0.25); }
-.kbtn-del { background:transparent; }
-.knum { font-size:28px;font-weight:300;color:#fff;line-height:1; }
-.ksub { font-size:9px;font-weight:600;color:rgba(255,255,255,0.5);letter-spacing:1px;margin-top:1px; }
+#login-btn:active { opacity: 0.85; }
 
 /* D-pad style nav button — replaces the simple "Lists" / "+" button.
    Custom SVG cross with subtle cyan aura, press feedback, raised look. */
@@ -579,9 +543,10 @@ function savePhotoToFirebase(pier, stageName, photoUrl, note, status, source){
 }
 
 var FB_CFG = {
-  apiKey:"AIzaSyCCxumZ9b1uGUHevQpjxZyuK5PWKd5muGk",
+  apiKey:"AIzaSyCC2uwZ9b1uGUHeqVpiX9zuWQ5KWd5muGk",
+  authDomain:"valetsitetrack.firebaseapp.com",
   databaseURL:"https://valetsitetrack-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId:"valetisitetrack"
+  projectId:"valetsitetrack"
 };
 var DB = null;
 var PS = {};
@@ -1226,58 +1191,77 @@ function closeSyncPanel(){
 function startFirebase(){
   try{
     var app = firebase.initializeApp(FB_CFG);
-    DB = firebase.database(app);
-    var dot = document.getElementById('sync-dot');
 
-    // Connection state — drives offline/online behavior of the queue
-    DB.ref('.info/connected').on('value', function(snap){
-      IS_ONLINE = snap.val() === true;
-      updateSyncIndicator();
-      if(IS_ONLINE){
-        // Auto-flush queue on reconnect
-        setTimeout(function(){ syncFlush(); }, 800);
-      }
-    });
-
-    DB.ref('ic1_bridges/PS').on('value', function(snap){
-      PS = snap.val()||{};
-      renderAll();
-      if(dot){dot.style.background='#06D6A0';dot.style.boxShadow='0 0 6px #06D6A0';}
-    }, function(){
-      if(dot){dot.style.background='#E63946';dot.style.boxShadow='0 0 6px #E63946';}
-    });
-    DB.ref('ic1_bridges/ROAD_ACTS_DATA').on('value', function(snap){
-      var d=snap.val(); if(d) ROAD_DATA=d;
-    });
-    DB.ref('ic1_bridges/EMB_DATA').on('value', function(snap){
-      var d=snap.val(); if(d) EMB_DATA=d;
-    });
-    DB.ref('ic1_bridges/EMB_FINAL').on('value', function(snap){
-      var d=snap.val(); EMB_FINAL = d || {};
-    });
-    // Load photo count from Firebase
-    DB.ref('ic1_bridges/PHOTO_WALL').on('value', function(snap){
-      PHOTO_WALL = snap.val()||{};
-    });
-    // Abutments & walls (Phase 4B)
-    DB.ref('ic1_bridges/ABUTMENTS_DATA').on('value', function(snap){
-      ABUTMENTS_DATA = snap.val() || {};
-      // Re-render if an abutment panel is currently open
-      if(typeof openAbutment !== 'undefined' && openAbutment){
-        var br = BRIDGES.find(function(b){ return b.id === getAbutmentById(openAbutment).bridgeId; });
-        if(br){
-          var panel = document.getElementById('ab-sp-' + safeid(openAbutment));
-          if(panel) panel.innerHTML = buildAbutmentPanel(openAbutment, br.col);
+    // Auth state gate: show/hide login screen, set up DB only when signed in.
+    firebase.auth().onAuthStateChanged(function(user){
+      var screen = _loginScreen();
+      if(user){
+        // Signed in — hide login, set up DB
+        if(screen){ screen.style.transition='opacity 0.35s'; screen.style.opacity='0'; setTimeout(function(){ screen.style.display='none'; }, 350); }
+        _loginSetBusy(false);
+        if(!DB){
+          DB = firebase.database(app);
+          _setupDBListeners();
         }
+      } else {
+        // Signed out — show login
+        if(screen){ screen.style.display='flex'; screen.style.opacity='1'; }
+        _loginStatus('');
+        _loginError('');
+        _loginSetBusy(false);
       }
     });
+
   }catch(e){ console.log('FB error:',e); }
+}
+
+function _setupDBListeners(){
+  var dot = document.getElementById('sync-dot');
+
+  // Connection state — drives offline/online behavior of the queue
+  DB.ref('.info/connected').on('value', function(snap){
+    IS_ONLINE = snap.val() === true;
+    updateSyncIndicator();
+    if(IS_ONLINE){
+      setTimeout(function(){ syncFlush(); }, 800);
+    }
+  });
+
+  DB.ref('ic1_bridges/PS').on('value', function(snap){
+    PS = snap.val()||{};
+    renderAll();
+    if(dot){dot.style.background='#06D6A0';dot.style.boxShadow='0 0 6px #06D6A0';}
+  }, function(){
+    if(dot){dot.style.background='#E63946';dot.style.boxShadow='0 0 6px #E63946';}
+  });
+  DB.ref('ic1_bridges/ROAD_ACTS_DATA').on('value', function(snap){
+    var d=snap.val(); if(d) ROAD_DATA=d;
+  });
+  DB.ref('ic1_bridges/EMB_DATA').on('value', function(snap){
+    var d=snap.val(); if(d) EMB_DATA=d;
+  });
+  DB.ref('ic1_bridges/EMB_FINAL').on('value', function(snap){
+    var d=snap.val(); EMB_FINAL = d || {};
+  });
+  DB.ref('ic1_bridges/PHOTO_WALL').on('value', function(snap){
+    PHOTO_WALL = snap.val()||{};
+  });
+  DB.ref('ic1_bridges/ABUTMENTS_DATA').on('value', function(snap){
+    ABUTMENTS_DATA = snap.val() || {};
+    if(typeof openAbutment !== 'undefined' && openAbutment){
+      var br = BRIDGES.find(function(b){ return b.id === getAbutmentById(openAbutment).bridgeId; });
+      if(br){
+        var panel = document.getElementById('ab-sp-' + safeid(openAbutment));
+        if(panel) panel.innerHTML = buildAbutmentPanel(openAbutment, br.col);
+      }
+    }
+  });
 }
 
 function initFB(){
   // Dynamically load Firebase then initialize
   var loaded = 0;
-  function onLoad(){ loaded++; if(loaded===2) startFirebase(); }
+  function onLoad(){ loaded++; if(loaded===3) startFirebase(); }
   function loadScript(src){
     var s=document.createElement('script');
     s.src=src; s.onload=onLoad; s.onerror=onLoad;
@@ -1285,6 +1269,7 @@ function initFB(){
   }
   loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
   loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js');
+  loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js');
 }
 
 function pushPier(pier){
@@ -8148,96 +8133,52 @@ function buildSummary(){
 }
 
 
-// ═══ SAMSUNG PIN LOGIN ═══════════════════════════════════════════
-var PIN_CORRECT = '12345';
-var PIN_ENTERED = '';
-var PIN_LOCKED  = false;
-var PIN_ATTEMPTS= 0;
-
-function pinUpdateClock(){
-  var now = new Date();
-  var h = now.getHours(), m = now.getMinutes();
-  var hEl = document.getElementById('lock-hour');
-  var dEl = document.getElementById('lock-date');
-  var tEl = document.getElementById('lock-time');
-  var days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  if(hEl) hEl.textContent = String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
-  if(dEl) dEl.textContent = days[now.getDay()]+', '+months[now.getMonth()]+' '+now.getDate();
-  if(tEl) tEl.textContent = String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
+// ═══ FIREBASE EMAIL/PASSWORD LOGIN ═══════════════════════════════
+function _loginScreen(){ return document.getElementById('login-screen'); }
+function _loginError(msg){
+  var el = document.getElementById('login-error');
+  if(!el) return;
+  el.textContent = msg;
+  el.style.display = msg ? 'block' : 'none';
 }
-setInterval(pinUpdateClock, 1000);
-pinUpdateClock();
-
-function pinTap(digit){
-  if(PIN_LOCKED) return;
-  if(PIN_ENTERED.length >= 5) return;
-  PIN_ENTERED += digit;
-  pinUpdateDots();
-  if(PIN_ENTERED.length === 5) setTimeout(pinCheck, 200);
+function _loginStatus(msg){
+  var el = document.getElementById('login-status');
+  if(el) el.textContent = msg;
+}
+function _loginSetBusy(busy){
+  var btn = document.getElementById('login-btn');
+  var em  = document.getElementById('login-email');
+  var pw  = document.getElementById('login-password');
+  if(btn){ btn.disabled = busy; btn.textContent = busy ? 'Signing in…' : 'Sign In'; }
+  if(em)  em.disabled = busy;
+  if(pw)  pw.disabled = busy;
 }
 
-function pinDel(){
-  if(PIN_LOCKED) return;
-  PIN_ENTERED = PIN_ENTERED.slice(0,-1);
-  pinUpdateDots();
-  document.getElementById('pin-error').textContent = '';
-}
-
-function pinUpdateDots(){
-  for(var i=0;i<5;i++){
-    var d = document.getElementById('pd'+i);
-    if(!d) continue;
-    d.classList.remove('filled','error','success');
-    if(i < PIN_ENTERED.length) d.classList.add('filled');
+function doLogin(){
+  var email = (document.getElementById('login-email').value || '').trim();
+  var pw    = (document.getElementById('login-password').value || '');
+  _loginError('');
+  if(!email || !pw){ _loginError('Please enter your email and password.'); return; }
+  if(typeof firebase === 'undefined' || !firebase.auth){
+    _loginStatus('Connecting to server, please wait…');
+    setTimeout(doLogin, 1500);
+    return;
   }
+  _loginSetBusy(true);
+  firebase.auth().signInWithEmailAndPassword(email, pw)
+    .catch(function(e){
+      _loginSetBusy(false);
+      var msg = 'Incorrect email or password.';
+      if(e.code === 'auth/too-many-requests') msg = 'Too many attempts. Try again later.';
+      if(e.code === 'auth/network-request-failed') msg = 'Network error. Check your connection.';
+      _loginError(msg);
+    });
+  // Success handled by onAuthStateChanged wired in startFirebase()
 }
 
-function pinCheck(){
-  if(PIN_ENTERED === PIN_CORRECT){
-    // Success — green dots then dismiss
-    for(var i=0;i<5;i++){
-      var d=document.getElementById('pd'+i);
-      if(d){d.classList.remove('filled','error');d.classList.add('success');}
-    }
-    setTimeout(function(){
-      var lock = document.getElementById('samsung-lock');
-      if(lock){
-        lock.style.transition='opacity 0.4s';
-        lock.style.opacity='0';
-        setTimeout(function(){ lock.style.display='none'; }, 400);
-      }
-    }, 500);
-  } else {
-    // Wrong — red dots, shake, clear
-    PIN_ATTEMPTS++;
-    for(var i=0;i<5;i++){
-      var d=document.getElementById('pd'+i);
-      if(d){d.classList.remove('filled');d.classList.add('error');}
-    }
-    // Shake
-    var dots = document.getElementById('pin-dots');
-    if(dots){
-      dots.style.transition='transform 0.05s';
-      var shakes=[10,-10,8,-8,5,-5,0], si=0;
-      var shk=setInterval(function(){
-        dots.style.transform='translateX('+shakes[si]+'px)';
-        si++; if(si>=shakes.length){ clearInterval(shk); dots.style.transform=''; }
-      },60);
-    }
-    var msg = PIN_ATTEMPTS>=5 ? 'Too many attempts. Try again in 30s.' : 'Incorrect PIN. Try again.';
-    document.getElementById('pin-error').textContent = msg;
-    if(PIN_ATTEMPTS>=5){
-      PIN_LOCKED=true;
-      setTimeout(function(){PIN_LOCKED=false;PIN_ATTEMPTS=0;document.getElementById('pin-error').textContent='';},30000);
-    }
-    setTimeout(function(){
-      PIN_ENTERED='';
-      for(var i=0;i<5;i++){
-        var d=document.getElementById('pd'+i);
-        if(d){d.classList.remove('error','filled');}
-      }
-    }, 700);
+function doSignOut(){
+  if(typeof firebase !== 'undefined' && firebase.auth){
+    firebase.auth().signOut();
   }
 }
 
