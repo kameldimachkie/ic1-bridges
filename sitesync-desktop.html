@@ -996,10 +996,10 @@ function doSiteSignOut(){
   </div>
   <div class="divider"></div>
   <div class="topbar-right">
-    <!-- EMERGENCY REPORT BEACON — blinks while there are unresolved field reports -->
-    <button id="emergency-beacon" onclick="openEmergencyPanel()" title="Field emergency reports awaiting review" style="display:none;align-items:center;gap:7px;background:rgba(230,57,70,0.12);border:1px solid rgba(230,57,70,0.5);border-radius:20px;padding:4px 12px 4px 8px;cursor:pointer;font-family:inherit;">
+    <!-- SAFETY OBS BEACON — blinks while there are unresolved field safety observations -->
+    <button id="emergency-beacon" onclick="openEmergencyPanel()" title="Safety observations awaiting review" style="display:none;align-items:center;gap:7px;background:rgba(230,57,70,0.12);border:1px solid rgba(230,57,70,0.5);border-radius:20px;padding:4px 12px 4px 8px;cursor:pointer;font-family:inherit;">
       <span id="emergency-light" style="width:12px;height:12px;border-radius:50%;background:#E63946;box-shadow:0 0 8px #E63946;display:inline-block;"></span>
-      <span style="font-size:11px;font-weight:800;color:#E63946;letter-spacing:0.5px;">REPORT</span>
+      <span style="font-size:11px;font-weight:800;color:#E63946;letter-spacing:0.5px;">SAFETY OBS</span>
       <span id="emergency-count" style="font-size:10px;font-weight:800;color:#fff;background:#E63946;border-radius:10px;padding:1px 7px;">0</span>
     </button>
     <div style="display:flex;align-items:center;gap:6px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:20px;padding:4px 10px;">
@@ -1546,8 +1546,8 @@ function doSiteSignOut(){
   <div style="max-width:760px;margin:40px auto;background:#0a1628;border:1px solid rgba(230,57,70,0.4);border-radius:16px;padding:24px;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
       <div>
-        <div style="font-family:Rajdhani,sans-serif;font-size:22px;font-weight:700;color:#f1f5f9;">🔴 Field Reports / Emergency</div>
-        <div style="font-size:11px;color:rgba(255,255,255,0.4);">Photos submitted from the field — review &amp; resolve</div>
+        <div style="font-family:Rajdhani,sans-serif;font-size:22px;font-weight:700;color:#f1f5f9;">🔴 Safety Observations</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.4);">Safety observations submitted from the field — review &amp; resolve</div>
       </div>
       <button onclick="closeEmergencyPanel();" style="background:rgba(255,255,255,0.08);border:none;color:rgba(255,255,255,0.5);font-size:20px;width:36px;height:36px;border-radius:50%;cursor:pointer;">✕</button>
     </div>
