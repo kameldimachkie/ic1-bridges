@@ -996,6 +996,12 @@ function doSiteSignOut(){
   </div>
   <div class="divider"></div>
   <div class="topbar-right">
+    <!-- EMERGENCY REPORT BEACON — blinks while there are unresolved field reports -->
+    <button id="emergency-beacon" onclick="openEmergencyPanel()" title="Field emergency reports awaiting review" style="display:none;align-items:center;gap:7px;background:rgba(230,57,70,0.12);border:1px solid rgba(230,57,70,0.5);border-radius:20px;padding:4px 12px 4px 8px;cursor:pointer;font-family:inherit;">
+      <span id="emergency-light" style="width:12px;height:12px;border-radius:50%;background:#E63946;box-shadow:0 0 8px #E63946;display:inline-block;"></span>
+      <span style="font-size:11px;font-weight:800;color:#E63946;letter-spacing:0.5px;">REPORT</span>
+      <span id="emergency-count" style="font-size:10px;font-weight:800;color:#fff;background:#E63946;border-radius:10px;padding:1px 7px;">0</span>
+    </button>
     <div style="display:flex;align-items:center;gap:6px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:20px;padding:4px 10px;">
       <div id="sync-dot" style="width:7px;height:7px;border-radius:50%;background:#D4A843;transition:all 0.3s;"></div>
       <span id="sync-label" style="font-size:10px;color:var(--dimL);">Connecting...</span>
@@ -1263,6 +1269,8 @@ function doSiteSignOut(){
       <button id="view3d-btn-export" onclick="view3d_exportVideo()" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.5);color:#EF4444;font-family:Rajdhani,sans-serif;font-size:13px;font-weight:900;letter-spacing:1.5px;padding:8px 14px;border-radius:8px;cursor:pointer;" title="Record the tour as a video file">&#x1F3A5; EXPORT</button>
       <button onclick="view3d_resetView()" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.85);font-family:Rajdhani,sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;padding:8px 14px;border-radius:8px;cursor:pointer;">⟲ RESET</button>
       <button id="view3d-btn-pause" onclick="view3d_togglePause()" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.85);font-family:Rajdhani,sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;padding:8px 14px;border-radius:8px;cursor:pointer;">⏸ PAUSE</button>
+      <button id="view3d-btn-tourpause" onclick="view3d_pauseTour()" title="Pause the tour at the current stop — keeps position so you can resume" style="display:none;background:rgba(212,168,67,0.18);border:1px solid rgba(212,168,67,0.55);color:#D4A843;font-family:Rajdhani,sans-serif;font-size:13px;font-weight:900;letter-spacing:1.5px;padding:8px 16px;border-radius:8px;cursor:pointer;">⏸ PAUSE</button>
+      <button id="view3d-btn-tourresume" onclick="view3d_resumeTour()" title="Resume the tour from the last stop where you paused" style="display:none;background:linear-gradient(135deg,#34D399,#059669);border:none;color:#03130d;font-family:Rajdhani,sans-serif;font-size:13px;font-weight:900;letter-spacing:1.5px;padding:8px 18px;border-radius:8px;cursor:pointer;">▶ RESUME</button>
       <button id="view3d-btn-mapsrc" onclick="view3d_toggleMapSource()" style="background:linear-gradient(135deg,rgba(88,166,255,0.18),rgba(88,166,255,0.06));border:1px solid rgba(88,166,255,0.5);color:#58A6FF;font-family:Rajdhani,sans-serif;font-size:13px;font-weight:800;letter-spacing:1px;padding:8px 14px;border-radius:8px;cursor:pointer;">MAP: SATELLITE</button>
       <button onclick="view3d_toggleQuality()" id="view3d-btn-quality" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.85);font-family:Rajdhani,sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;padding:8px 14px;border-radius:8px;cursor:pointer;">QUALITY: HIGH</button>
     </div>
@@ -1522,6 +1530,28 @@ function doSiteSignOut(){
       <span class="ticker-item">🛣 King Khalid Road · Western Ring Road · 3 Pipe Culverts</span>
       <span class="ticker-item">📐 Head of Surveying: <span>K. Dimachkie</span> · SiteSync v3.2</span>
     </div>
+  </div>
+</div>
+
+<!-- EMERGENCY REPORT BEACON ANIMATION + PANEL -->
+<style>
+@keyframes ic1-emergency-blink {
+  0%,100% { opacity: 1;   box-shadow: 0 0 10px 2px #E63946; }
+  50%     { opacity: 0.2; box-shadow: 0 0 2px 0 #E63946; }
+}
+#emergency-beacon.blinking #emergency-light { animation: ic1-emergency-blink 0.9s ease-in-out infinite; }
+#emergency-beacon.blinking { animation: ic1-emergency-blink 0.9s ease-in-out infinite; }
+</style>
+<div id="emergency-modal" style="display:none;position:fixed;inset:0;z-index:1100;background:rgba(0,0,0,0.82);backdrop-filter:blur(4px);overflow-y:auto;" onclick="if(event.target===this)closeEmergencyPanel();">
+  <div style="max-width:760px;margin:40px auto;background:#0a1628;border:1px solid rgba(230,57,70,0.4);border-radius:16px;padding:24px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <div>
+        <div style="font-family:Rajdhani,sans-serif;font-size:22px;font-weight:700;color:#f1f5f9;">🔴 Field Reports / Emergency</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.4);">Photos submitted from the field — review &amp; resolve</div>
+      </div>
+      <button onclick="closeEmergencyPanel();" style="background:rgba(255,255,255,0.08);border:none;color:rgba(255,255,255,0.5);font-size:20px;width:36px;height:36px;border-radius:50%;cursor:pointer;">✕</button>
+    </div>
+    <div id="emergency-content"></div>
   </div>
 </div>
 
@@ -3506,6 +3536,19 @@ var ABUTMENTS = [
         {n:2737139.01, e:660505.79, elev:1.3, label:'Additional point'},
         {n:2736986.16, e:660573.09, elev:9.7, label:'2+ABT'},
         {n:2736982.39, e:660562.25, elev:10, label:'MC1 END'}
+      ]
+    },
+    // MC2 — right wing wall, mirror-symmetric to MC1 across the bridge axis through
+    // the abutment centroid. Same length, same tapering height profile (1m → 10m),
+    // on the opposite side of Bridge C.
+    wallRight: {
+      id: 'MC2',
+      lengthM: 161,
+      points: [
+        {n:2737142.48, e:660512.92, elev:1,   label:'Start MC2'},
+        {n:2737136.38, e:660499.92, elev:1.3, label:'Additional point (mirror)'},
+        {n:2736981.96, e:660563.22, elev:9.7, label:'2+ABT (mirror)'},
+        {n:2736987.15, e:660573.45, elev:10,  label:'MC2 END'}
       ]
     }
   }
@@ -9255,6 +9298,18 @@ function _setupSiteDBListeners(){
         if(typeof view3d_refreshAbutments === 'function') view3d_refreshAbutments();
       } catch(e){ console.warn('[fb] post-ABUTMENTS_DATA refresh error:', e); }
     });
+
+    // ═══ FIELD REPORTS / EMERGENCY ════════════════════════════════════════
+    // Photos submitted from the field app (ic1_bridges/REPORTS). Each report
+    // has status 'New' until an admin resolves it. While any report is
+    // unresolved, the topbar beacon blinks red. Resolving stops the blink.
+    FB_DB.ref('ic1_bridges/REPORTS').on('value', function(snap){
+      window.REPORTS = snap.val() || {};
+      try { updateEmergencyBeacon(); } catch(e){ console.warn('[fb] emergency beacon error:', e); }
+      // Re-render the panel live if it's open
+      var em = document.getElementById('emergency-modal');
+      if(em && em.style.display !== 'none' && typeof renderEmergencyReports === 'function') renderEmergencyReports();
+    }, function(err){ console.warn('[fb] REPORTS listen error:', err && err.message); });
 }
 
 function setSyncStatus(status){
@@ -9266,6 +9321,119 @@ function setSyncStatus(status){
   dot.style.background = colors[status] || '#64748B';
   dot.style.boxShadow = '0 0 6px ' + (colors[status]||'#64748B');
   label.textContent = labels[status] || status;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FIELD REPORTS / EMERGENCY — desktop side
+// ═══════════════════════════════════════════════════════════════════════════
+window.REPORTS = window.REPORTS || {};
+
+// Minimal HTML escaper — report fields come from the field app (Firebase-
+// writable), so they MUST be escaped before going into innerHTML (XSS guard).
+function _escHtml(s){
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// A report is "unresolved" unless its status is exactly 'Resolved'.
+function _reportUnresolved(r){ return r && r.status !== 'Resolved'; }
+
+// Refresh the topbar beacon: blink + count while any report is unresolved.
+function updateEmergencyBeacon(){
+  var reports = window.REPORTS || {};
+  var unresolved = 0;
+  Object.keys(reports).forEach(function(k){ if(_reportUnresolved(reports[k])) unresolved++; });
+  var beacon = document.getElementById('emergency-beacon');
+  var countEl = document.getElementById('emergency-count');
+  if(!beacon) return;
+  if(unresolved > 0){
+    beacon.style.display = 'inline-flex';
+    beacon.classList.add('blinking');
+    if(countEl) countEl.textContent = unresolved;
+  } else {
+    beacon.classList.remove('blinking');
+    beacon.style.display = 'none';
+  }
+}
+
+function openEmergencyPanel(){
+  var m = document.getElementById('emergency-modal');
+  if(m){ m.style.display = 'block'; renderEmergencyReports(); }
+}
+function closeEmergencyPanel(){
+  var m = document.getElementById('emergency-modal');
+  if(m) m.style.display = 'none';
+}
+
+function renderEmergencyReports(){
+  var el = document.getElementById('emergency-content');
+  if(!el) return;
+  var reports = window.REPORTS || {};
+  // Sort newest-first; unresolved before resolved.
+  var keys = Object.keys(reports).sort(function(a,b){
+    var ra = reports[a], rb = reports[b];
+    var ua = _reportUnresolved(ra) ? 0 : 1, ub = _reportUnresolved(rb) ? 0 : 1;
+    if(ua !== ub) return ua - ub;
+    return (rb.ts || 0) - (ra.ts || 0);
+  });
+  if(!keys.length){
+    el.innerHTML = '<div style="color:rgba(255,255,255,0.45);text-align:center;padding:40px;">No field reports submitted.</div>';
+    return;
+  }
+  var isAdmin = (typeof _adminUnlocked !== 'undefined') && _adminUnlocked;
+  var h = '';
+  if(!isAdmin){
+    h += '<div style="font-size:11px;color:#D4A843;background:rgba(212,168,67,0.08);border:1px solid rgba(212,168,67,0.25);border-radius:8px;padding:8px 12px;margin-bottom:14px;">🔒 Unlock the Admin panel to mark reports as resolved.</div>';
+  }
+  keys.forEach(function(k){
+    var r = reports[k] || {};
+    var unresolved = _reportUnresolved(r);
+    var when = r.ts ? new Date(r.ts).toLocaleString('en-US',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : _escHtml(r.date||'');
+    var border = unresolved ? 'rgba(230,57,70,0.55)' : 'rgba(6,214,160,0.4)';
+    var statusBadge = unresolved
+      ? '<span style="font-size:10px;font-weight:800;color:#E63946;background:rgba(230,57,70,0.15);border:1px solid rgba(230,57,70,0.4);border-radius:10px;padding:2px 9px;">● NEW</span>'
+      : '<span style="font-size:10px;font-weight:800;color:#06D6A0;background:rgba(6,214,160,0.12);border:1px solid rgba(6,214,160,0.4);border-radius:10px;padding:2px 9px;">✓ RESOLVED</span>';
+    h += '<div style="display:flex;gap:14px;background:#0f172a;border:1px solid '+border+';border-radius:12px;padding:14px;margin-bottom:12px;">';
+    // Photo thumbnail (click to enlarge in new tab)
+    if(r.url){
+      h += '<img src="'+_escHtml(r.url)+'" onclick="window.open('+JSON.stringify(r.url)+',\'_blank\')" style="width:120px;height:120px;object-fit:cover;border-radius:8px;cursor:pointer;border:1px solid rgba(255,255,255,0.1);flex-shrink:0;">';
+    }
+    h += '<div style="flex:1;min-width:0;">';
+    h += '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;">';
+    h += '<div style="font-weight:800;color:#f1f5f9;font-size:14px;">'+_escHtml(r.categoryLabel || r.category || 'Report')+'</div>';
+    h += statusBadge + '</div>';
+    if(r.description) h += '<div style="font-size:13px;color:rgba(255,255,255,0.8);margin-bottom:8px;word-break:break-word;">'+_escHtml(r.description)+'</div>';
+    h += '<div style="font-size:11px;color:rgba(255,255,255,0.45);">📅 '+when+' &nbsp;·&nbsp; 👤 '+_escHtml(r.by||'Field');
+    if(r.gps && r.gps.lat != null && r.gps.lng != null){
+      h += ' &nbsp;·&nbsp; <a href="https://maps.google.com/?q='+encodeURIComponent(r.gps.lat+','+r.gps.lng)+'" target="_blank" style="color:#58A6FF;text-decoration:none;">📍 '+_escHtml((+r.gps.lat).toFixed(5))+', '+_escHtml((+r.gps.lng).toFixed(5))+'</a>';
+    }
+    h += '</div>';
+    if(unresolved && isAdmin){
+      h += '<button onclick="resolveReport('+JSON.stringify(k)+')" style="margin-top:10px;padding:8px 16px;background:linear-gradient(135deg,#34D399,#059669);border:none;border-radius:8px;color:#03130d;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;">✓ Mark Resolved</button>';
+    } else if(!unresolved && r.resolvedTs){
+      h += '<div style="margin-top:8px;font-size:10px;color:#06D6A0;">Resolved '+new Date(r.resolvedTs).toLocaleString('en-US',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+(r.resolvedBy?(' by '+_escHtml(r.resolvedBy)):'')+'</div>';
+    }
+    h += '</div></div>';
+  });
+  el.innerHTML = h;
+}
+
+function resolveReport(key){
+  if(typeof _adminUnlocked === 'undefined' || !_adminUnlocked){
+    alert('Unlock the Admin panel first to resolve reports.');
+    return;
+  }
+  if(!FB_DB || !key) return;
+  var user = (firebase.auth && firebase.auth().currentUser) || null;
+  FB_DB.ref('ic1_bridges/REPORTS/'+key).update({
+    status: 'Resolved',
+    resolvedTs: Date.now(),
+    resolvedBy: (user && user.email) ? user.email : 'admin'
+  }, function(err){
+    if(err){ alert('Failed to resolve: '+err.message); }
+    // The .on('value') listener will re-render the panel + beacon automatically.
+  });
 }
 
 function updateOverallPct(){
@@ -11006,11 +11174,14 @@ function renderQSTab(){
   if(!el) return;
   // Make sure saved quantity params are loaded before rendering (so the fields
   // are pre-filled, not blank), even if the user opened QS directly.
-  if(!window._qtyLoaded){
+  var _hasDb = (typeof FB_DB !== 'undefined' && FB_DB) || (typeof DB !== 'undefined' && DB);
+  if(!window._qtyLoaded && _hasDb){
     el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:40vh;flex-direction:column;gap:14px;"><div style="font-size:28px;">⏳</div><div style="color:#A78BFA;font-size:13px;font-weight:700;">Loading saved quantities…</div></div>';
     window._ensureQtyLoaded(function(){ renderQSTab(); });
     return;
   }
+  // No DB (e.g., not signed in yet) → render with current/default params rather
+  // than recursing forever waiting for a load that can't happen.
   el.innerHTML = window.renderConcreteQuantitiesHTML() + '<div style="height:24px;"></div>' + window.renderEmbQuantitySurveyHTML();
 }
 
@@ -14862,7 +15033,7 @@ function startExportVideo(){
   canvas.width=W; canvas.height=H;
   var gb=document.getElementById('ev-generate-btn'), pa=document.getElementById('ev-progress-area');
   if(gb)gb.style.display='none'; if(pa)pa.style.display='block';
-  var pl=document.getElementById('ev-progress-label'); if(pl)pl.textContent='🤖 AI writing story...';
+  var pl=document.getElementById('ev-progress-label'); if(pl)pl.textContent='Writing narration…';
   var mimeType=MediaRecorder.isTypeSupported('video/webm;codecs=vp9')?'video/webm;codecs=vp9':'video/webm';
   var stream=canvas.captureStream(FPS);
   var recorder=new MediaRecorder(stream,{mimeType:mimeType,videoBitsPerSecond:quality==='fhd'?8000000:4000000});
@@ -14909,12 +15080,7 @@ function buildAINarration(photos,callback){
   var brList=Object.keys(brAct).map(function(b){return 'Bridge '+b+' ('+brAct[b]+')';}).join(', ');
   var stList=Object.keys(stAct).map(function(s){return stAct[s]+'x '+s;}).join(', ');
   var dateRange=dates.length>1?dates[0]+' to '+dates[dates.length-1]:(dates[0]||'this week');
-  var notes=photos.filter(function(p){return p.note;}).map(function(p){return p.note;}).slice(0,3).join('; ');
-  var prompt="Write a 90-word cinematic narration for an IC1 Road Improvements construction video in Diriyah, Riyadh. Period: "+dateRange+". "+photos.length+" photos. Bridges: "+(brList||'various')+". Work: "+(stList||'various')+". Progress: "+pct+"%. "+(notes?"Notes: "+notes+". ":"")+"3 parts: powerful opening, weekly summary, motivational closing. Documentary narrator style. Plain text.";
-  fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:250,messages:[{role:'user',content:prompt}]})})
-  .then(function(r){return r.json();})
-  .then(function(d){callback(d.content&&d.content[0]?d.content[0].text.trim():evDefaultScript(pct,photos.length,dateRange));})
-  .catch(function(){callback(evDefaultScript(pct,photos.length,dateRange));});
+  callback(evDefaultScript(pct,photos.length,dateRange));
 }
 
 function evDefaultScript(pct,n,dr){
@@ -16077,7 +16243,10 @@ window.VIEW3D.PIER_SECTIONS = {
 //   • Corner arc: radius cornerR, convex, joining adjacent concave arcs.
 // The concave arc endpoints land on the footprint edge (±half); corner arcs
 // bridge symmetric points across each diagonal.
-window.VIEW3D.buildShaftSection = function(sp){
+// Build ONLY the perimeter point list ([x,z] pairs) for the shaft section.
+// THREE-free, so it can be used for area calculations (QS tab) even before
+// Three.js has been lazy-loaded by the 3D view.
+window.VIEW3D.buildShaftSectionPoints = function(sp){
   var half = sp.footprint / 2;
   var Rc = sp.cornerR;
   var Ra = sp.concaveR;
@@ -16142,6 +16311,12 @@ window.VIEW3D.buildShaftSection = function(sp){
   pushConcave(-1,  0, P_lf_B, P_lf_T);       // LEFT concave (centre -x)
   pushCorner( -cc,  cc, P_lf_T, P_top_L);    // TL corner
 
+  return pts;
+};
+
+// Build the THREE.Shape for the shaft section (3D geometry). Requires THREE.
+window.VIEW3D.buildShaftSection = function(sp){
+  var pts = window.VIEW3D.buildShaftSectionPoints(sp);
   var shape = new THREE.Shape();
   shape.moveTo(pts[0][0], pts[0][1]);
   for(var i=1;i<pts.length;i++) shape.lineTo(pts[i][0], pts[i][1]);
@@ -16150,14 +16325,14 @@ window.VIEW3D.buildShaftSection = function(sp){
 };
 
 // Cross-sectional AREA of the shaft section (m²), via the shoelace formula on
-// a fine tessellation. Used for concrete-quantity calculations.
+// the raw perimeter points. THREE-free so QS quantity calcs work even before
+// the 3D view (and Three.js) has been loaded.
 window.VIEW3D.shaftSectionArea = function(sp){
-  var shape = window.VIEW3D.buildShaftSection(sp);
-  var pts = shape.getPoints(64);
+  var pts = window.VIEW3D.buildShaftSectionPoints(sp);
   var a = 0;
   for(var i=0;i<pts.length;i++){
     var p1 = pts[i], p2 = pts[(i+1)%pts.length];
-    a += (p1.x * p2.y - p2.x * p1.y);
+    a += (p1[0] * p2[1] - p2[0] * p1[1]);
   }
   return Math.abs(a) / 2;
 };
@@ -17671,6 +17846,11 @@ window.view3d_buildPiers = function(layout){
   V.activePiers = [];  // names of piers actually rendered (have work)
 
   PIERS.forEach(function(p){
+    // AB-1C is drawn as a full polygon abutment (ABT-1C) by view3d_buildAbutments.
+    // Rendering it here too would place a pier cylinder INSIDE the abutment — that
+    // pier does not exist in the real design. Skip it entirely (data stays in PIERS
+    // for Bridge-C progress tracking, but no geometry/label is drawn).
+    if(p.name === 'AB-1C') return;
     // FILTER: only render piers where at least one stage has progress.
     // Skip "all Not Started" piers entirely to reduce visual clutter
     // (95 piers → typically 20-40 active).
@@ -17680,7 +17860,25 @@ window.view3d_buildPiers = function(layout){
       var v = status[s];
       if(v && v !== 'Not Started') hasWork = true;
     });
-    if(!hasWork) return;  // skip — pier not rendered, no label, no geometry
+    if(!hasWork){
+      // DESIGN PREVIEW: not-started piers render as a faint translucent silhouette
+      // of the full designed pier (foundation + shaft + crown). Built piers below
+      // still render solid; this only adds ghosts for the unbuilt ones so the tour
+      // reads as a continuous designed bridge. AB-1C is skipped — it's drawn as a
+      // full polygon abutment by view3d_buildAbutments (cylinder would overlap).
+      if(p.name !== 'AB-1C' && typeof window.view3d_buildPierPreview === 'function'){
+        try {
+          var psc = window.view3d_toScene(p.n, p.e, layout);
+          var pletter = null;
+          for(var kk = p.name.length - 1; kk >= 0; kk--){ var pch = p.name.charAt(kk); if(pch >= 'A' && pch <= 'Z'){ pletter = pch; break; } }
+          var pprofile = (pletter && V.BRIDGE_PROFILES[pletter]) || { peakHeight: 12, abutHeight: 2.7, columnW: 1.5, columnD: 1.2, foundW: 5.5, foundD: 5.5 };
+          var pdesignH = window.VIEW3D.designHeightFor(p.name);
+          var pv = window.view3d_buildPierPreview(p.name, psc, pdesignH, pprofile);
+          if(pv && pv.group) V.scene.add(pv.group);
+        } catch(e){ console.warn('[3D] pier preview skipped for ' + p.name + ':', e); }
+      }
+      return;  // no real construction geometry for not-started piers
+    }
 
     var sc = window.view3d_toScene(p.n, p.e, layout);
     // Determine bridge letter
@@ -17697,6 +17895,97 @@ window.view3d_buildPiers = function(layout){
     V.pierMeshes[p.name] = pier;
     V.activePiers.push({ name: p.name, sceneCoord: sc, designHeight: designH, status: status });
   });
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DESIGN PREVIEW — for piers where NO construction stage has started, render
+// a faint translucent silhouette of the complete designed pier (foundation +
+// full-height shaft + crown). Gives the tour a continuous designed-bridge look
+// while still being honest: empty/transparent = not started, solid colour =
+// built. As the field app marks stages started/complete, the real construction
+// mesh from buildOnePier takes over and replaces the preview.
+// ═══════════════════════════════════════════════════════════════════════════
+window.view3d_buildPierPreview = function(name, sceneCoord, designH, profile){
+  var V = window.VIEW3D;
+  var group = new THREE.Group();
+  group.userData.role = 'pier-preview';
+  var foundThick = 1.2;
+
+  // Material: faint translucent grey wireframe-style — clearly reads as "to be built"
+  var previewCol = 0xB0B6BE;   // same neutral concrete grey as built piers
+  var fillMat = new THREE.MeshStandardMaterial({
+    color: previewCol, roughness: 0.85, metalness: 0.0,
+    transparent: true, opacity: 0.15, depthWrite: false
+  });
+  var edgeMat = new THREE.LineBasicMaterial({
+    color: previewCol, transparent: true, opacity: 0.5
+  });
+
+  // FOUNDATION preview — flat slab at ground level
+  var fw = profile.foundW || 5.5, fd = profile.foundD || 5.5;
+  var foundGeo = new THREE.BoxGeometry(fw, foundThick, fd);
+  var foundMesh = new THREE.Mesh(foundGeo, fillMat);
+  foundMesh.position.set(sceneCoord.x, foundThick/2, sceneCoord.z);
+  group.add(foundMesh);
+  var foundEdges = new THREE.LineSegments(new THREE.EdgesGeometry(foundGeo), edgeMat);
+  foundEdges.position.copy(foundMesh.position);
+  group.add(foundEdges);
+
+  // SHAFT preview — full design column at design height, real section if available
+  var _sec = (V.PIER_SECTIONS && V.PIER_SECTIONS[name]) || null;
+  var shaftH = designH;
+  if(_sec && shaftH > 0.1){
+    // Match the parametric shape so the silhouette reads correctly
+    var vScale = _sec.visualScale || 1.0;
+    var shaftShape = V.buildShaftSection(_sec.shaft);
+    var extrudeSettings = { depth: shaftH, bevelEnabled: false, steps: 1 };
+    var shaftGeo = new THREE.ExtrudeGeometry(shaftShape, extrudeSettings);
+    shaftGeo.rotateX(-Math.PI/2);
+    if(vScale !== 1.0) shaftGeo.scale(vScale, 1, vScale);
+    var shaftMesh = new THREE.Mesh(shaftGeo, fillMat);
+    shaftMesh.position.set(sceneCoord.x, foundThick, sceneCoord.z);
+    group.add(shaftMesh);
+    var shaftEdges = new THREE.LineSegments(new THREE.EdgesGeometry(shaftGeo), edgeMat);
+    shaftEdges.position.copy(shaftMesh.position);
+    group.add(shaftEdges);
+  } else if(shaftH > 0.1){
+    // Generic box shaft for piers without a parametric section
+    var cw = profile.columnW || 1.5, cd = profile.columnD || 1.2;
+    var colGeo = new THREE.BoxGeometry(cw, shaftH, cd);
+    var colMesh = new THREE.Mesh(colGeo, fillMat);
+    colMesh.position.set(sceneCoord.x, foundThick + shaftH/2, sceneCoord.z);
+    group.add(colMesh);
+    var colEdges = new THREE.LineSegments(new THREE.EdgesGeometry(colGeo), edgeMat);
+    colEdges.position.copy(colMesh.position);
+    group.add(colEdges);
+  }
+
+  // CROWN preview — top cap at design height
+  if(_sec && _sec.crown && shaftH > 0.1){
+    var cct = _sec.crown.thick;
+    var capShape = new THREE.Shape();
+    var hw = _sec.crown.width/2, hl = _sec.crown.length/2, rr = Math.min(0.6, hl*0.8);
+    capShape.moveTo(-hw+rr, -hl);
+    capShape.lineTo(hw-rr, -hl);
+    capShape.quadraticCurveTo(hw, -hl, hw, -hl+rr);
+    capShape.lineTo(hw, hl-rr);
+    capShape.quadraticCurveTo(hw, hl, hw-rr, hl);
+    capShape.lineTo(-hw+rr, hl);
+    capShape.quadraticCurveTo(-hw, hl, -hw, hl-rr);
+    capShape.lineTo(-hw, -hl+rr);
+    capShape.quadraticCurveTo(-hw, -hl, -hw+rr, -hl);
+    capShape.closePath();
+    var capGeo = new THREE.ExtrudeGeometry(capShape, { depth: cct, bevelEnabled: true, bevelThickness: 0.12, bevelSize: 0.12, bevelSegments: 2, steps: 1 });
+    capGeo.rotateX(-Math.PI/2);
+    var capMesh = new THREE.Mesh(capGeo, fillMat);
+    capMesh.position.set(sceneCoord.x, foundThick + shaftH, sceneCoord.z);
+    group.add(capMesh);
+    var capEdges = new THREE.LineSegments(new THREE.EdgesGeometry(capGeo), edgeMat);
+    capEdges.position.copy(capMesh.position);
+    group.add(capEdges);
+  }
+
+  return { group: group, isPreview: true };
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -17778,8 +18067,12 @@ window.view3d_buildAbutments = function(layout){
 
     V.abutmentMeshes[ab.id] = { mesh: mesh, wire: wire, centroid: { x: cx, z: cz }, height: height };
 
-    // ── WALL TAPERED EXTRUSION ────────────────────────────────────────
-    if(ab.wall && ab.wall.points && ab.wall.points.length >= 2){
+    // ── WALL TAPERED EXTRUSION (handles both left MC1 and right MC2 mirror) ──
+    // Builds one wing wall as a chain of tapered box segments following the
+    // surveyed polyline (elevation interpolated between control points).
+    // idSuffix keeps MC1/MC2 meshes under distinct keys in V.wallMeshes.
+    function _buildAbutmentWall(wallDef, idSuffix){
+      if(!wallDef || !wallDef.points || wallDef.points.length < 2) return;
       var wallPct = (typeof getWallPct === 'function') ? getWallPct(ab.id) : 0;
       var wallColHex = wallPct >= 95 ? 0x06D6A0 :
                        wallPct >= 50 ? 0xD4A843 :
@@ -17787,7 +18080,7 @@ window.view3d_buildAbutments = function(layout){
       var wallThickness = 0.8;  // metres
 
       // For each pair of consecutive wall points, build a tapered box segment
-      var wallPtsScene = ab.wall.points.map(function(pt){
+      var wallPtsScene = wallDef.points.map(function(pt){
         var sc = window.view3d_toScene(pt.n, pt.e, layout);
         return { x: sc.x, z: sc.z, elev: pt.elev };
       });
@@ -17851,8 +18144,10 @@ window.view3d_buildAbutments = function(layout){
       }
 
       V.scene.add(wallGroup);
-      V.wallMeshes[ab.id] = { group: wallGroup, pct: wallPct };
+      V.wallMeshes[ab.id + idSuffix] = { group: wallGroup, pct: wallPct, abId: ab.id };
     }
+    _buildAbutmentWall(ab.wall, '');        // left wing wall (MC1)
+    _buildAbutmentWall(ab.wallRight, '_R'); // right wing wall (MC2, mirror)
   });
 
   console.log('[3D] Abutments built — ' + Object.keys(V.abutmentMeshes).length + ' abutment(s), ' + Object.keys(V.wallMeshes).length + ' wall(s)');
@@ -17877,7 +18172,10 @@ window.view3d_refreshAbutments = function(){
     Object.keys(V.wallMeshes).forEach(function(abId){
       var wm = V.wallMeshes[abId];
       if(!wm || !wm.group) return;
-      var pct = (typeof getWallPct === 'function') ? getWallPct(abId) : 0;
+      // Keys may be suffixed (e.g. 'ABT-1C_R' for the MC2 mirror wall) — resolve
+      // back to the base abutment id so progress % comes from the right data node.
+      var baseId = wm.abId || abId.replace(/_R$/, '');
+      var pct = (typeof getWallPct === 'function') ? getWallPct(baseId) : 0;
       var col = pct >= 95 ? 0x06D6A0 :
                 pct >= 50 ? 0xD4A843 :
                 pct > 0   ? 0xFB923C : 0xA78BFA;
@@ -20985,7 +21283,10 @@ window.view3d_toggleFillPanel = function(){
     'background:rgba(8,15,28,0.96);border:1px solid #34D399;border-radius:12px;padding:14px 16px;' +
     'color:#E6F4EE;font-family:Rajdhani,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,0.6);';
   panel.innerHTML =
-    '<div style="font-size:15px;font-weight:900;letter-spacing:1px;color:#34D399;margin-bottom:10px;">⛰ SHOULDER FILL VOLUME <span style="font-size:10px;color:#9fb3ab;font-weight:400;">v24-exctour</span></div>' +
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">' +
+      '<div style="font-size:15px;font-weight:900;letter-spacing:1px;color:#34D399;">⛰ SHOULDER FILL VOLUME <span style="font-size:10px;color:#9fb3ab;font-weight:400;">v24-exctour</span></div>' +
+      '<button onclick="view3d_toggleFillPanel()" title="Close" aria-label="Close fill volume panel" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.18);color:#9fb3ab;font-family:Rajdhani,sans-serif;font-size:16px;font-weight:900;line-height:1;width:26px;height:26px;border-radius:6px;cursor:pointer;flex:none;display:flex;align-items:center;justify-content:center;">×</button>' +
+    '</div>' +
     '<div style="display:flex;gap:6px;margin-bottom:12px;">' +
       '<button id="fillmode-auto" onclick="view3d_fillMode(\'auto\')" style="flex:1;background:linear-gradient(135deg,#34D399,#059669);border:none;color:#03130d;font-family:Rajdhani;font-weight:800;font-size:12px;padding:7px;border-radius:7px;cursor:pointer;">Auto (stations)</button>' +
       '<button id="fillmode-manual" onclick="view3d_fillMode(\'manual\')" style="flex:1;background:rgba(52,211,153,0.12);border:1px solid rgba(52,211,153,0.5);color:#34D399;font-family:Rajdhani;font-weight:800;font-size:12px;padding:7px;border-radius:7px;cursor:pointer;">Manual A→B</button>' +
@@ -21077,7 +21378,7 @@ window.view3d_toggleFillPanel = function(){
         var topEl = document.elementFromPoint(r.left + r.width/2, r.top + r.height/2);
         var id = topEl ? (topEl.id || (topEl.tagName + (topEl.className?('.'+topEl.className):''))) : 'null';
         if(topEl !== b){
-          alert('STILL BLOCKED by: ' + id + ' — tell Claude this exact text.');
+          console.warn('UI overlay still blocking button; topmost element: ' + id);
         }
         // If button is on top, stay silent — the fix worked, no nagging alert.
       }, 300);
@@ -21836,6 +22137,64 @@ window.view3d_togglePause = function(){
   }
   // If pausing while a tour is active, stop the tour too — clearer UX
   if(V.userPaused && V.tourActive) window.view3d_stopTour();
+};
+
+// Layout the tour caption so it never overlaps the controls bar. Measures the
+// controls bar's actual rendered height (which varies with how many tour buttons
+// are visible, screen width, and wrapping) and seats the caption's bottom edge
+// safely above it. Re-runs on window resize so rotations / responsive shifts
+// keep the spacing correct.
+window.view3d_layoutTourCaption = function(){
+  var cap = document.getElementById('view3d-tour-caption');
+  var ctrls = document.getElementById('view3d-controls');
+  if(!cap || !ctrls) return;
+  var ctrlsRect = ctrls.getBoundingClientRect();
+  var ctrlsHeight = ctrlsRect.height || 56;     // fallback if not yet rendered
+  var BOTTOM_OFFSET = 20;                        // matches controls' bottom inset
+  var SAFE_GAP = 18;                             // breathing room between
+  cap.style.bottom = (BOTTOM_OFFSET + ctrlsHeight + SAFE_GAP) + 'px';
+};
+
+// Re-layout on window resize / orientation change so the caption stays clear.
+if(!window._view3d_captionResizeBound){
+  window.addEventListener('resize', function(){
+    var cap = document.getElementById('view3d-tour-caption');
+    if(cap && cap.style.display !== 'none') window.view3d_layoutTourCaption();
+  });
+  window._view3d_captionResizeBound = true;
+}
+
+// PAUSE the tour at the current stop — preserves position and elapsed-within-stop
+// so RESUME continues from exactly where the user paused (not from stop start).
+window.view3d_pauseTour = function(){
+  var V = window.VIEW3D;
+  if(!V.tourActive || V.tourPaused) return;
+  V.tourPaused = true;
+  V._tourPauseTime = performance.now();      // remember when we paused
+  try { if(window.speechSynthesis && window.speechSynthesis.pause) window.speechSynthesis.pause(); } catch(e){}
+  try { if(typeof tourAudio_pauseMusic === 'function') tourAudio_pauseMusic(); } catch(e){}
+  var bP = document.getElementById('view3d-btn-tourpause');   if(bP) bP.style.display = 'none';
+  var bR = document.getElementById('view3d-btn-tourresume');  if(bR) bR.style.display = 'inline-block';
+  requestAnimationFrame(function(){ window.view3d_layoutTourCaption(); });
+};
+
+// RESUME the tour from where it was paused. Shifts tourStart forward by the time
+// spent paused so the elapsed-within-stop picks up exactly where it left off.
+window.view3d_resumeTour = function(){
+  var V = window.VIEW3D;
+  if(!V.tourActive || !V.tourPaused) return;
+  if(typeof V._tourPauseTime === 'number'){
+    var pausedFor = performance.now() - V._tourPauseTime;
+    V.tourStart += pausedFor;     // shift the stop's start so elapsed is preserved
+  }
+  V.tourPaused = false;
+  V._tourPauseTime = null;
+  try { if(window.speechSynthesis && window.speechSynthesis.resume) window.speechSynthesis.resume(); } catch(e){}
+  try { if(typeof tourAudio_resumeMusic === 'function') tourAudio_resumeMusic();
+        else if(typeof tourAudio_swell === 'function') tourAudio_swell(0.7); } catch(e){}
+  var bR = document.getElementById('view3d-btn-tourresume');  if(bR) bR.style.display = 'none';
+  var bP = document.getElementById('view3d-btn-tourpause');   if(bP) bP.style.display = 'inline-block';
+  requestAnimationFrame(function(){ window.view3d_layoutTourCaption(); });
 };
 
 window.view3d_resetView = function(){
@@ -24170,6 +24529,14 @@ window.view3d_startTour = function(){
     window._voiceLastSpoken = null;
     document.getElementById('view3d-tour-caption').style.display = 'block';
 
+    // Tour pause/resume controls: show PAUSE, hide RESUME + the general PAUSE
+    V.tourPaused = false; V._tourPauseTime = null;
+    var _gP = document.getElementById('view3d-btn-pause');       if(_gP) _gP.style.display = 'none';
+    var _tP = document.getElementById('view3d-btn-tourpause');   if(_tP) _tP.style.display = 'inline-block';
+    var _tR = document.getElementById('view3d-btn-tourresume');  if(_tR) _tR.style.display = 'none';
+    // Position caption above the controls bar with a safe gap
+    requestAnimationFrame(function(){ window.view3d_layoutTourCaption(); });
+
     // Start music (will fade in over 2.5s)
     if(window.MUSIC_ON) window.tourAudio_startMusic();
     // Opening impact sting
@@ -24210,6 +24577,12 @@ window.view3d_stopTour = function(){
   document.getElementById('view3d-btn-tour').style.display = 'inline-block';
   document.getElementById('view3d-btn-stop').style.display = 'none';
   document.getElementById('view3d-tour-caption').style.display = 'none';
+
+  // Reset tour pause/resume controls: restore general PAUSE, hide tour pause/resume
+  V.tourPaused = false; V._tourPauseTime = null;
+  var _gP3 = document.getElementById('view3d-btn-pause');       if(_gP3) _gP3.style.display = 'inline-block';
+  var _tP3 = document.getElementById('view3d-btn-tourpause');   if(_tP3) _tP3.style.display = 'none';
+  var _tR3 = document.getElementById('view3d-btn-tourresume');  if(_tR3) _tR3.style.display = 'none';
 
   // Hide HUD overlays
   var topbar = document.getElementById('view3d-tour-topbar');
@@ -24252,6 +24625,7 @@ window.view3d_stopTour = function(){
 window.view3d_updateTour = function(now){
   var V = window.VIEW3D;
   if(!V.tourActive || V.tourCurrentStop < 0) return;
+  if(V.tourPaused) return;   // frozen at current stop; resume will unfreeze
   if(V.tourCurrentStop >= V.tourStops.length){ window.view3d_stopTour(); return; }
   var stop = V.tourStops[V.tourCurrentStop];
   var elapsed = now - V.tourStart;

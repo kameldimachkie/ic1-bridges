@@ -1259,17 +1259,39 @@ function _setupDBListeners(){
 }
 
 function initFB(){
-  // Dynamically load Firebase then initialize
-  var loaded = 0;
-  function onLoad(){ loaded++; if(loaded===3) startFirebase(); }
-  function loadScript(src){
-    var s=document.createElement('script');
-    s.src=src; s.onload=onLoad; s.onerror=onLoad;
+  // Dynamically load Firebase then initialize.
+  // IMPORTANT: load SEQUENTIALLY in dependency order — firebase-app-compat MUST
+  // execute and define the global `firebase` namespace before the database/auth
+  // compat libs run, otherwise `firebase.auth` ends up undefined and the login
+  // screen is stuck on "Connecting…". Loading in parallel (the old behaviour)
+  // left the order to chance and failed intermittently on mobile networks.
+  var srcs = [
+    'https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js',
+    'https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js',
+    'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js'
+  ];
+  function loadSeq(i){
+    if(i >= srcs.length){
+      // All three executed — start only if the namespace is actually present.
+      if(typeof firebase !== 'undefined' && firebase.auth && firebase.database){
+        startFirebase();
+      } else {
+        // Something didn't register; retry the whole chain shortly.
+        setTimeout(function(){ initFB(); }, 2000);
+      }
+      return;
+    }
+    var s = document.createElement('script');
+    s.src = srcs[i];
+    s.async = false;                       // preserve execution order
+    s.onload = function(){ loadSeq(i + 1); };
+    s.onerror = function(){
+      // Transient mobile-network failure — retry THIS script before continuing.
+      setTimeout(function(){ loadSeq(i); }, 2000);
+    };
     document.head.appendChild(s);
   }
-  loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
-  loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js');
-  loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js');
+  loadSeq(0);
 }
 
 function pushPier(pier){
@@ -3385,17 +3407,33 @@ function renderReportForm(){
   h += '<div style="font-size:11px;color:rgba(255,255,255,0.4);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Photo <span style="color:#E63946;">*required</span></div>';
   if(REPORT_STATE.b64){
     h += '<img src="'+REPORT_STATE.b64+'" style="width:100%;border-radius:10px;max-height:160px;object-fit:cover;margin-bottom:8px;">';
-    h += '<label style="display:block;cursor:pointer;margin-bottom:14px;">';
+    // Camera (forces camera on phones via capture) + Gallery (no capture → photo picker)
+    h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:14px;">';
+    h += '<label style="display:block;cursor:pointer;">';
     h += '<input type="file" accept="image/*" capture="environment" style="display:none;" onchange="handleReportPhoto(this)">';
-    h += '<div style="text-align:center;padding:8px;border:1px dashed rgba(255,255,255,0.2);border-radius:8px;color:rgba(255,255,255,0.4);font-size:12px;">🔄 Retake Photo</div>';
+    h += '<div style="text-align:center;padding:8px;border:1px dashed rgba(255,255,255,0.2);border-radius:8px;color:rgba(255,255,255,0.4);font-size:12px;">📷 Retake</div>';
     h += '</label>';
+    h += '<label style="display:block;cursor:pointer;">';
+    h += '<input type="file" accept="image/*" style="display:none;" onchange="handleReportPhoto(this)">';
+    h += '<div style="text-align:center;padding:8px;border:1px dashed rgba(255,255,255,0.2);border-radius:8px;color:rgba(255,255,255,0.4);font-size:12px;">🖼️ Gallery</div>';
+    h += '</label>';
+    h += '</div>';
   } else {
-    h += '<label style="display:block;cursor:pointer;margin-bottom:14px;">';
+    // Two choices: take a new photo (camera) or pick an existing one from the gallery
+    h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:14px;">';
+    h += '<label style="display:block;cursor:pointer;">';
     h += '<input type="file" accept="image/*" capture="environment" style="display:none;" onchange="handleReportPhoto(this)">';
-    h += '<div style="text-align:center;padding:18px;border:2px dashed rgba(230,57,70,0.4);border-radius:10px;background:rgba(230,57,70,0.06);">';
+    h += '<div style="text-align:center;padding:18px 8px;border:2px dashed rgba(230,57,70,0.4);border-radius:10px;background:rgba(230,57,70,0.06);">';
     h += '<div style="font-size:28px;">📷</div>';
-    h += '<div style="font-size:13px;font-weight:700;color:#E63946;margin-top:4px;">Tap to Take Photo</div>';
+    h += '<div style="font-size:13px;font-weight:700;color:#E63946;margin-top:4px;">Take Photo</div>';
     h += '</div></label>';
+    h += '<label style="display:block;cursor:pointer;">';
+    h += '<input type="file" accept="image/*" style="display:none;" onchange="handleReportPhoto(this)">';
+    h += '<div style="text-align:center;padding:18px 8px;border:2px dashed rgba(230,57,70,0.4);border-radius:10px;background:rgba(230,57,70,0.06);">';
+    h += '<div style="font-size:28px;">🖼️</div>';
+    h += '<div style="font-size:13px;font-weight:700;color:#E63946;margin-top:4px;">From Gallery</div>';
+    h += '</div></label>';
+    h += '</div>';
   }
 
   // Submit
@@ -8165,12 +8203,67 @@ function doLogin(){
     return;
   }
   _loginSetBusy(true);
-  firebase.auth().signInWithEmailAndPassword(email, pw)
+  // Watchdog + stage tracking: a sign-in can hang on mobile when storage stalls
+  // (iOS Safari/WebKit IndexedDB bug) or the auth request stalls. We tag each
+  // stage and surface it on timeout so the failure point is diagnosable without
+  // a console — and so the UI never spins forever with no feedback.
+  var _settled = false;
+  var _stage = 'init';
+  var _watchdog = setTimeout(function(){
+    if(_settled) return;
+    _settled = true;
+    _loginSetBusy(false);
+    _loginError('Sign-in timed out at stage: "' + _stage + '". Check your connection and retry. If it keeps stopping at the same stage, report that stage.');
+  }, 15000);
+  var P = firebase.auth.Auth.Persistence;
+  // Resolve a promise to 'ok'/'err'/'timeout' — never rejects, never hangs.
+  function _race(promise, ms){
+    return new Promise(function(resolve){
+      var t = setTimeout(function(){ resolve('timeout'); }, ms);
+      Promise.resolve(promise).then(
+        function(){ clearTimeout(t); resolve('ok'); },
+        function(){ clearTimeout(t); resolve('err'); }
+      );
+    });
+  }
+  // iOS / iPadOS run EVERY browser (Safari, Chrome, …) on WebKit, whose
+  // IndexedDB can deadlock the credential write inside signInWithEmailAndPassword
+  // — sign-in then hangs with no error (the "stage: signin" timeout). Durable
+  // LOCAL persistence is what triggers that IndexedDB write during sign-in, so on
+  // those devices we use sessionStorage persistence instead: it never touches
+  // IndexedDB and still survives a page refresh. Other platforms keep LOCAL so
+  // the session lasts across full browser restarts.
+  var _ua = navigator.userAgent || '';
+  var _webkitMobile = /iP(hone|ad|od)/.test(_ua) ||
+                      (/Macintosh/.test(_ua) && typeof document !== 'undefined' && 'ontouchend' in document);
+  var _preferred = _webkitMobile ? P.SESSION : P.LOCAL;
+  _stage = 'persistence';
+  _loginStatus('Preparing secure session…');
+  _race(firebase.auth().setPersistence(_preferred), 3000)
+    .then(function(r){
+      if(r === 'ok') return;                 // preferred storage is healthy
+      // Last resort: in-memory persistence never touches any browser storage.
+      return _race(firebase.auth().setPersistence(P.NONE), 2000);
+    })
+    .then(function(){
+      _stage = 'signin';
+      _loginStatus('Contacting sign-in server…');
+      return firebase.auth().signInWithEmailAndPassword(email, pw);
+    })
+    .then(function(){
+      _stage = 'done';
+      _settled = true; clearTimeout(_watchdog);
+      _loginStatus('');
+      // Success: onAuthStateChanged (in startFirebase) hides the login screen.
+    })
     .catch(function(e){
+      if(_settled) return;
+      _settled = true; clearTimeout(_watchdog);
       _loginSetBusy(false);
+      _loginStatus('');
       var msg = 'Incorrect email or password.';
-      if(e.code === 'auth/too-many-requests') msg = 'Too many attempts. Try again later.';
-      if(e.code === 'auth/network-request-failed') msg = 'Network error. Check your connection.';
+      if(e && e.code === 'auth/too-many-requests') msg = 'Too many attempts. Try again later.';
+      if(e && e.code === 'auth/network-request-failed') msg = 'Network error. Check your connection.';
       _loginError(msg);
     });
   // Success handled by onAuthStateChanged wired in startFirebase()
