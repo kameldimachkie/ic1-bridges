@@ -94,6 +94,57 @@ body { background:#07090d; color:#f1f5f9; font-family:-apple-system,sans-serif; 
 }
 .st-btn.on { color:#000 !important; }
 
+/* Pier column lifts (poured segments) */
+.lift-box {
+  margin-top:10px; padding:12px;
+  background:rgba(167,139,250,0.07);
+  border:1px solid rgba(167,139,250,0.28);
+  border-radius:10px;
+}
+.lift-title {
+  font-size:10px; font-weight:800; letter-spacing:1.2px;
+  color:#A78BFA; margin-bottom:10px;
+}
+.lift-item {
+  display:flex; align-items:center; gap:8px;
+  padding:7px 10px; margin-bottom:5px;
+  background:rgba(255,255,255,0.04); border-radius:7px;
+}
+.lift-num { font-size:12px; color:rgba(255,255,255,0.7); font-weight:600; }
+.lift-h { flex:1; text-align:right; font-size:14px; font-weight:800; color:#fff;
+  font-family:'JetBrains Mono',monospace; }
+.lift-del {
+  width:26px; height:26px; border-radius:6px; border:none;
+  background:rgba(230,57,70,0.15); color:#E63946;
+  font-size:13px; cursor:pointer; flex-shrink:0;
+}
+.lift-total {
+  display:flex; justify-content:space-between; align-items:center;
+  margin-top:8px; padding-top:8px;
+  border-top:1px solid rgba(167,139,250,0.2);
+  font-size:11px; color:rgba(255,255,255,0.55);
+}
+.lift-total b { font-size:15px; color:#A78BFA; font-family:'JetBrains Mono',monospace; }
+.lift-empty { font-size:11px; color:rgba(255,255,255,0.35); font-style:italic; margin-bottom:10px; }
+.lift-entry { display:flex; gap:8px; margin-top:10px; }
+.lift-field {
+  flex:1; min-width:0;
+  padding:13px 14px; border-radius:9px;
+  border:2px solid rgba(167,139,250,0.4);
+  background:rgba(0,0,0,0.25); color:#fff;
+  font-size:17px; font-weight:700; font-family:inherit;
+  text-align:center;
+}
+.lift-field:focus { outline:none; border-color:#A78BFA; background:rgba(0,0,0,0.4); }
+.lift-field::placeholder { color:rgba(255,255,255,0.3); font-weight:500; font-size:14px; }
+.lift-add {
+  padding:13px 18px; border-radius:9px; border:none;
+  background:linear-gradient(135deg,#A78BFA,#8B5CF6);
+  color:#fff; font-size:13px; font-weight:800; letter-spacing:0.5px;
+  cursor:pointer; font-family:inherit; white-space:nowrap; flex-shrink:0;
+}
+.lift-add:active { transform:scale(0.97); }
+
 /* Road section */
 .road-block { margin-bottom:6px; }
 .road-hdr {
@@ -136,87 +187,51 @@ body.day #map-pier-panel{background:#f0f7ff!important;color:#0f172a!important;}
 </head>
 <body style="display:flex;flex-direction:column;height:100vh;">
 
-<!-- ═══ SAMSUNG A13 PIN LOGIN ═══ -->
-<div id="samsung-lock" style="position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;background:#000;font-family:-apple-system,sans-serif;">
+<!-- ═══ LOGIN SCREEN ═══ -->
+<div id="login-screen" style="position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#07090d;font-family:-apple-system,sans-serif;padding:32px 24px;">
 
-  <!-- Status bar -->
-  <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 18px 0;flex-shrink:0;">
-    <div id="lock-time" style="font-size:14px;font-weight:600;color:#fff;"></div>
-    <div style="display:flex;gap:6px;align-items:center;">
-      <svg width="16" height="12" viewBox="0 0 16 12" fill="white" opacity="0.9"><rect x="0" y="4" width="3" height="8" rx="1"/><rect x="4" y="2" width="3" height="10" rx="1"/><rect x="8" y="0" width="3" height="12" rx="1"/><rect x="12" y="0" width="3" height="12" rx="1" opacity="0.3"/></svg>
-      <svg width="16" height="12" viewBox="0 0 24 12" fill="white" opacity="0.9"><rect x="0" y="1" width="21" height="10" rx="2" stroke="white" stroke-width="1.5" fill="none"/><rect x="21" y="4" width="2" height="4" rx="1" fill="white"/><rect x="1.5" y="2.5" width="14" height="7" rx="1" fill="white"/></svg>
-    </div>
+  <!-- Logo -->
+  <div style="text-align:center;margin-bottom:40px;">
+    <div style="font-size:13px;font-weight:800;letter-spacing:3px;color:#D4A843;margin-bottom:6px;">SITESYNC</div>
+    <div style="font-size:26px;font-weight:900;color:#f1f5f9;">IC1 Field Entry</div>
+    <div style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:4px;letter-spacing:1px;">IC1 ROAD IMPROVEMENTS · DIRIYAH</div>
   </div>
 
-  <!-- Date & Time -->
-  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;padding-bottom:20px;">
-    <div id="lock-hour" style="font-size:80px;font-weight:200;color:#fff;line-height:1;letter-spacing:-2px;"></div>
-    <div id="lock-date" style="font-size:16px;color:rgba(255,255,255,0.7);margin-top:6px;font-weight:400;"></div>
-    <div style="margin-top:30px;font-size:13px;color:rgba(255,255,255,0.5);">SiteSync IC1 — Field Entry</div>
-  </div>
+  <!-- Form card -->
+  <div style="width:100%;max-width:340px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:28px 24px;">
 
-  <!-- PIN area -->
-  <div style="flex-shrink:0;padding:0 24px 30px;">
+    <div id="login-error" style="display:none;background:rgba(230,57,70,0.12);border:1px solid rgba(230,57,70,0.3);border-radius:8px;padding:10px 14px;font-size:13px;color:#E63946;margin-bottom:18px;text-align:center;"></div>
 
-    <!-- PIN label -->
-    <div style="text-align:center;font-size:14px;color:rgba(255,255,255,0.7);margin-bottom:16px;font-weight:500;">Enter PIN</div>
-
-    <!-- PIN dots -->
-    <div id="pin-dots" style="display:flex;justify-content:center;gap:14px;margin-bottom:28px;">
-      <div class="pdot" id="pd0"></div>
-      <div class="pdot" id="pd1"></div>
-      <div class="pdot" id="pd2"></div>
-      <div class="pdot" id="pd3"></div>
-      <div class="pdot" id="pd4"></div>
+    <div style="margin-bottom:16px;">
+      <label style="display:block;font-size:11px;font-weight:700;color:rgba(255,255,255,0.4);letter-spacing:1.5px;margin-bottom:8px;">EMAIL</label>
+      <input id="login-email" type="email" autocomplete="email" placeholder="name@example.com"
+        style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:13px 14px;color:#f1f5f9;font-size:15px;outline:none;font-family:inherit;"
+        onkeydown="if(event.key==='Enter')document.getElementById('login-password').focus()">
     </div>
 
-    <!-- Error message -->
-    <div id="pin-error" style="text-align:center;font-size:13px;color:#FF6B6B;margin-bottom:14px;height:18px;font-weight:500;"></div>
-
-    <!-- Keypad -->
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:300px;margin:0 auto;">
-      <button class="kbtn" onclick="pinTap('1')"><span class="knum">1</span></button>
-      <button class="kbtn" onclick="pinTap('2')"><span class="knum">2</span><span class="ksub">ABC</span></button>
-      <button class="kbtn" onclick="pinTap('3')"><span class="knum">3</span><span class="ksub">DEF</span></button>
-      <button class="kbtn" onclick="pinTap('4')"><span class="knum">4</span><span class="ksub">GHI</span></button>
-      <button class="kbtn" onclick="pinTap('5')"><span class="knum">5</span><span class="ksub">JKL</span></button>
-      <button class="kbtn" onclick="pinTap('6')"><span class="knum">6</span><span class="ksub">MNO</span></button>
-      <button class="kbtn" onclick="pinTap('7')"><span class="knum">7</span><span class="ksub">PQRS</span></button>
-      <button class="kbtn" onclick="pinTap('8')"><span class="knum">8</span><span class="ksub">TUV</span></button>
-      <button class="kbtn" onclick="pinTap('9')"><span class="knum">9</span><span class="ksub">WXYZ</span></button>
-      <div></div>
-      <button class="kbtn" onclick="pinTap('0')"><span class="knum">0</span></button>
-      <button class="kbtn kbtn-del" onclick="pinDel()"><svg width="24" height="18" viewBox="0 0 24 18" fill="none"><path d="M9 1H22C22.6 1 23 1.4 23 2V16C23 16.6 22.6 17 22 17H9L1 9L9 1Z" stroke="white" stroke-width="1.5" fill="rgba(255,255,255,0.1)"/><line x1="13" y1="6" x2="19" y2="12" stroke="white" stroke-width="1.8" stroke-linecap="round"/><line x1="19" y1="6" x2="13" y2="12" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+    <div style="margin-bottom:24px;">
+      <label style="display:block;font-size:11px;font-weight:700;color:rgba(255,255,255,0.4);letter-spacing:1.5px;margin-bottom:8px;">PASSWORD</label>
+      <input id="login-password" type="password" autocomplete="current-password" placeholder="••••••••"
+        style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:13px 14px;color:#f1f5f9;font-size:15px;outline:none;font-family:inherit;"
+        onkeydown="if(event.key==='Enter')doLogin()">
     </div>
 
+    <button onclick="doLogin()" id="login-btn"
+      style="width:100%;padding:14px;background:#D4A843;border:none;border-radius:10px;color:#07090d;font-weight:800;font-size:15px;cursor:pointer;font-family:inherit;letter-spacing:0.5px;">
+      Sign In
+    </button>
+
   </div>
+
+  <div id="login-status" style="margin-top:20px;font-size:12px;color:rgba(255,255,255,0.25);text-align:center;"></div>
 </div>
 
 <style>
-.pdot {
-  width:14px;height:14px;border-radius:50%;
-  border:2px solid rgba(255,255,255,0.6);
-  background:transparent;transition:background 0.15s;
+#login-email:focus, #login-password:focus {
+  border-color: rgba(212,168,67,0.5);
+  background: rgba(255,255,255,0.08);
 }
-.pdot.filled { background:#fff; border-color:#fff; }
-.pdot.error  { background:#FF6B6B; border-color:#FF6B6B; }
-.pdot.success{ background:#06D6A0; border-color:#06D6A0; }
-
-.kbtn {
-  background:rgba(255,255,255,0.1);
-  border:none;border-radius:50%;
-  width:72px;height:72px;
-  display:flex;flex-direction:column;
-  align-items:center;justify-content:center;
-  cursor:pointer;margin:0 auto;
-  -webkit-tap-highlight-color:transparent;
-  transition:background 0.1s;
-  gap:0;
-}
-.kbtn:active { background:rgba(255,255,255,0.25); }
-.kbtn-del { background:transparent; }
-.knum { font-size:28px;font-weight:300;color:#fff;line-height:1; }
-.ksub { font-size:9px;font-weight:600;color:rgba(255,255,255,0.5);letter-spacing:1px;margin-top:1px; }
+#login-btn:active { opacity: 0.85; }
 
 /* D-pad style nav button — replaces the simple "Lists" / "+" button.
    Custom SVG cross with subtle cyan aura, press feedback, raised look. */
@@ -528,9 +543,10 @@ function savePhotoToFirebase(pier, stageName, photoUrl, note, status, source){
 }
 
 var FB_CFG = {
-  apiKey:"AIzaSyCCxumZ9b1uGUHevQpjxZyuK5PWKd5muGk",
+  apiKey:"AIzaSyCC2uwZ9b1uGUHeqVpiX9zuWQ5KWd5muGk",
+  authDomain:"valetsitetrack.firebaseapp.com",
   databaseURL:"https://valetsitetrack-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId:"valetisitetrack"
+  projectId:"valetsitetrack"
 };
 var DB = null;
 var PS = {};
@@ -550,18 +566,22 @@ var BRIDGES = [
   {id:'N',col:'#14B8A6',piers:['AB-1N','AB-2N']}
 ];
 
+// ⚠️ KEEP IN SYNC: identical array exists in sitesync-desktop.html.
+// PSC stage added between STR and BRG (Phase: Pier Concrete Casting).
 var STAGES = [
-  {id:'BH', label:'Borehole',          w:0.208, col:'#10B981'},
-  {id:'PRB',label:'Probing',           w:2.079, col:'#CE93D8'},
-  {id:'PIL',label:'Piling',            w:18.711,col:'#60A5FA'},
-  {id:'EXC',label:'Excavation',        w:5.197, col:'#FBBF24'},
-  {id:'BLD',label:'Blinding',          w:3.119, col:'#94A3B8'},
-  {id:'FRB',label:'Foundation Rebar',  w:8.316, col:'#F87171'},
-  {id:'FRC',label:'Foundation Conc.',  w:10.395,col:'#FB923C'},
-  {id:'STR',label:'Pier Structure',    w:22.869,col:'#A78BFA'},
-  {id:'BRG',label:'Bearings',          w:5.197, col:'#34D399'},
-  {id:'GRD',label:'Girder Supply',     w:14.553,col:'#38BDF8'},
-  {id:'ERE',label:'Girder Erection',   w:9.356, col:'#F472B6'}
+  {id:'BH', label:'Borehole',          w:0.198, col:'#10B981'},
+  {id:'PRB',label:'Probing',           w:1.975, col:'#CE93D8'},
+  {id:'PIL',label:'Piling',            w:17.775,col:'#60A5FA'},
+  {id:'EXC',label:'Excavation',        w:4.937, col:'#FBBF24'},
+  {id:'BLD',label:'Blinding',          w:2.963, col:'#94A3B8'},
+  {id:'FRB',label:'Foundation Rebar',  w:7.900, col:'#F87171'},
+  {id:'FRC',label:'Foundation Conc.',  w:9.875, col:'#FB923C'},
+  {id:'STR',label:'Pier Structure',    w:12.226,col:'#A78BFA'},
+  {id:'PSC',label:'Pier Concrete',     w:9.500, col:'#9333EA'},
+  {id:'CRN',label:'Pier Crown',        w:5.000, col:'#22D3EE'},
+  {id:'BRG',label:'Bearings',          w:4.937, col:'#34D399'},
+  {id:'GRD',label:'Girder Supply',     w:13.825,col:'#38BDF8'},
+  {id:'ERE',label:'Girder Erection',   w:8.888, col:'#F472B6'}
 ];
 
 // Stages where fractional progress (e.g., 1/3, 2/3) makes engineering sense.
@@ -574,7 +594,17 @@ var STAGES = [
 //   ERE — girders erected one at a time
 // Other stages are typically single events (BH, PRB, EXC, BLD, FRB) so they
 // stay binary (Not Started / In Progress / Complete).
-var FRACTIONABLE_STAGES = ['PIL','FRC','STR','BRG','GRD','ERE'];
+var FRACTIONABLE_STAGES = ['PIL','FRC','STR','PSC','BRG','GRD','ERE'];
+
+// Pier column lift normalizer — handles legacy numbers + {h,poured} objects.
+function normalizeLifts(segs){
+  if(!Array.isArray(segs)) return [];
+  return segs.map(function(s){
+    if(typeof s === 'number') return { h:s, poured:true };
+    if(s && typeof s === 'object'){ var hh=parseFloat(s.h); if(isNaN(hh))hh=0; return { h:hh, poured:(s.poured!==false) }; }
+    var n=parseFloat(s); return { h:isNaN(n)?0:n, poured:true };
+  }).filter(function(x){ return x.h>0; });
+}
 
 // Helper: returns the credit fraction (0.0-1.0) for a stage given a pier's status
 // object. For "In Progress" with a stored progressPct, returns that fraction.
@@ -592,6 +622,51 @@ function _stageCreditFrac(stages, stageId){
   }
   return 0;
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ABUTMENTS & MC/MSE WALLS (Phase 4B — field app workflow)
+// ───────────────────────────────────────────────────────────────────────────
+// Mirrors desktop: 11 abutment stages + 6 wall stages.
+// Surveyors can update status from site. Status saves to Firebase node
+// ic1_bridges/ABUTMENTS_DATA. Every change logs to HISTORY.
+// ═══════════════════════════════════════════════════════════════════════════
+// ⚠️ KEEP IN SYNC: Same array exists in sitesync-desktop.html. If you edit
+// weights, labels, or order here, edit desktop identically.
+var ABUTMENT_STAGES = [
+  {id:'SPR', label:'Site Preparation',           w:3,  col:'#94A3B8'},
+  {id:'PDR', label:'Pile Drilling',              w:15, col:'#60A5FA'},
+  {id:'PRI', label:'Reinforcement Installation', w:7,  col:'#F87171'},
+  {id:'PCC', label:'Pile Concrete Casting',      w:10, col:'#FB923C'},
+  {id:'EXC', label:'Excavation',                 w:5,  col:'#FBBF24'},
+  {id:'BLD', label:'Blinding Concrete',          w:3,  col:'#94A3B8'},
+  {id:'FRB', label:'Foundation Reinforcement',   w:8,  col:'#F87171'},
+  {id:'FRM', label:'Formwork Installation',      w:7,  col:'#CE93D8'},
+  {id:'FCC', label:'Foundation Concrete Casting',w:12, col:'#FB923C'},
+  {id:'ARB', label:'Abutment Reinforcement',     w:13, col:'#F87171'},
+  {id:'ACC', label:'Abutment Concrete Casting',  w:17, col:'#A78BFA'}
+];
+var WALL_STAGES = [
+  {id:'WEX', label:'Excavation',                 w:8,  col:'#FBBF24'},
+  {id:'WBL', label:'Blinding Concrete',          w:6,  col:'#94A3B8'},
+  {id:'WFD', label:'Foundation',                 w:14, col:'#F87171'},
+  {id:'WPI', label:'Panel/Block Installation',   w:22, col:'#A78BFA'},
+  {id:'WRI', label:'Reinforcement Installation', w:15, col:'#F87171'},
+  {id:'WPW', label:'Progressive Wall Construction', w:35, col:'#34D399'}
+];
+// Currently only ABT-1C is fully surveyed. Other abutments will be added as
+// the contractor provides coordinates. Surveyors can still track stage
+// progress for any abutment in this list.
+var ABUTMENTS = [
+  {
+    id: 'ABT-1C',
+    bridgeId: 'C',
+    n: 2736982.36,
+    e: 660562.22,
+    height: 10,
+    wall: { id: 'MC1', lengthM: 161 }
+  }
+];
+var ABUTMENTS_DATA = {};  // populated from Firebase
 
 var ROAD_ACTS = [
   'Demolition & Clearing','Earthworks','Sub-base','Base Course',
@@ -758,21 +833,13 @@ var ROAD_LAYERS = [
   {id:'ASP_WEAR', label:'Wearing Course',       col:'#EF4444'}
 ];
 
-var ROAD_DATA = {ibn:{},sattam:{}};
+var ROAD_DATA = {ibn:{}, sattam:{}, kkr_lanes_L:{}, kkr_lanes_R:{}};
 var EMB_DATA = {};
 // EMB_FINAL: sparse map of stations whose surveyor declared "this is the final layer"
 // Key format: same as EMB_DATA (e.g., "KKR_Emb_L_0_725")
 // Value: integer = the layer number that was declared as final (= the station's true max)
 // When a key is NOT in this map, the station falls back to assuming maxLayer = 15.
 var EMB_FINAL = {};
-
-// ── ELEVATION-BASED EMBANKMENT (v56+) ──
-// Surveyor enters NG (natural ground) + Current (backfilled top) elevations
-// in metres. Layer count is derived: round((current − ng) / 0.30).
-// EMB_NG mirrors ic1_bridges/EMB_NG, EMB_CURRENT mirrors ic1_bridges/EMB_CURRENT.
-window.EMB_NG = {};
-window.EMB_CURRENT = {};
-var EMB_LAYER_THICKNESS = 0.30;
 
 // ═══════════════════════════════════════════════════════════
 // EMBANKMENT SIDE DISPLAY MAPPING
@@ -929,10 +996,20 @@ function _syncProcessEntry(entry, onDone, onErr){
       if(entry.type === 'pier'){
         if(!PS[p.pier]) PS[p.pier] = {};
         PS[p.pier][p.stage] = p.status;
+        // Carry STR/PSC lift-segment arrays through offline sync
+        if(Array.isArray(p.STR_segments)){
+          PS[p.pier].STR_segments = p.STR_segments.slice();
+        }
+        if(Array.isArray(p.PSC_segments)){
+          PS[p.pier].PSC_segments = p.PSC_segments.slice();
+        }
+        if(p.totalHeight !== undefined){
+          PS[p.pier].totalHeight = p.totalHeight;
+        }
         // Carry progressPct through offline sync — same parallel-key pattern
         if(typeof p.progressPct === 'number'){
           PS[p.pier][p.stage + '_pct'] = p.progressPct;
-        } else {
+        } else if(p.stage !== 'STR' && p.stage !== 'PSC'){
           delete PS[p.pier][p.stage + '_pct'];
         }
         DB.ref('ic1_bridges/PS/'+p.pier).set(PS[p.pier]);
@@ -1114,59 +1191,107 @@ function closeSyncPanel(){
 function startFirebase(){
   try{
     var app = firebase.initializeApp(FB_CFG);
-    DB = firebase.database(app);
-    var dot = document.getElementById('sync-dot');
 
-    // Connection state — drives offline/online behavior of the queue
-    DB.ref('.info/connected').on('value', function(snap){
-      IS_ONLINE = snap.val() === true;
-      updateSyncIndicator();
-      if(IS_ONLINE){
-        // Auto-flush queue on reconnect
-        setTimeout(function(){ syncFlush(); }, 800);
+    // Auth state gate: show/hide login screen, set up DB only when signed in.
+    firebase.auth().onAuthStateChanged(function(user){
+      var screen = _loginScreen();
+      if(user){
+        // Signed in — hide login, set up DB
+        if(screen){ screen.style.transition='opacity 0.35s'; screen.style.opacity='0'; setTimeout(function(){ screen.style.display='none'; }, 350); }
+        _loginSetBusy(false);
+        if(!DB){
+          DB = firebase.database(app);
+          _setupDBListeners();
+        }
+      } else {
+        // Signed out — show login
+        if(screen){ screen.style.display='flex'; screen.style.opacity='1'; }
+        _loginStatus('');
+        _loginError('');
+        _loginSetBusy(false);
       }
     });
 
-    DB.ref('ic1_bridges/PS').on('value', function(snap){
-      PS = snap.val()||{};
-      renderAll();
-      if(dot){dot.style.background='#06D6A0';dot.style.boxShadow='0 0 6px #06D6A0';}
-    }, function(){
-      if(dot){dot.style.background='#E63946';dot.style.boxShadow='0 0 6px #E63946';}
-    });
-    DB.ref('ic1_bridges/ROAD_ACTS_DATA').on('value', function(snap){
-      var d=snap.val(); if(d) ROAD_DATA=d;
-    });
-    DB.ref('ic1_bridges/EMB_DATA').on('value', function(snap){
-      var d=snap.val(); if(d) EMB_DATA=d;
-    });
-    DB.ref('ic1_bridges/EMB_NG').on('value', function(snap){
-      window.EMB_NG = snap.val() || {};
-    });
-    DB.ref('ic1_bridges/EMB_CURRENT').on('value', function(snap){
-      window.EMB_CURRENT = snap.val() || {};
-    });
-    DB.ref('ic1_bridges/EMB_FINAL').on('value', function(snap){
-      var d=snap.val(); EMB_FINAL = d || {};
-    });
-    // Load photo count from Firebase
-    DB.ref('ic1_bridges/PHOTO_WALL').on('value', function(snap){
-      PHOTO_WALL = snap.val()||{};
-    });
   }catch(e){ console.log('FB error:',e); }
 }
 
+function _setupDBListeners(){
+  var dot = document.getElementById('sync-dot');
+
+  // Connection state — drives offline/online behavior of the queue
+  DB.ref('.info/connected').on('value', function(snap){
+    IS_ONLINE = snap.val() === true;
+    updateSyncIndicator();
+    if(IS_ONLINE){
+      setTimeout(function(){ syncFlush(); }, 800);
+    }
+  });
+
+  DB.ref('ic1_bridges/PS').on('value', function(snap){
+    PS = snap.val()||{};
+    renderAll();
+    if(dot){dot.style.background='#06D6A0';dot.style.boxShadow='0 0 6px #06D6A0';}
+  }, function(){
+    if(dot){dot.style.background='#E63946';dot.style.boxShadow='0 0 6px #E63946';}
+  });
+  DB.ref('ic1_bridges/ROAD_ACTS_DATA').on('value', function(snap){
+    var d=snap.val(); if(d) ROAD_DATA=d;
+  });
+  DB.ref('ic1_bridges/EMB_DATA').on('value', function(snap){
+    var d=snap.val(); if(d) EMB_DATA=d;
+  });
+  DB.ref('ic1_bridges/EMB_FINAL').on('value', function(snap){
+    var d=snap.val(); EMB_FINAL = d || {};
+  });
+  DB.ref('ic1_bridges/PHOTO_WALL').on('value', function(snap){
+    PHOTO_WALL = snap.val()||{};
+  });
+  DB.ref('ic1_bridges/ABUTMENTS_DATA').on('value', function(snap){
+    ABUTMENTS_DATA = snap.val() || {};
+    if(typeof openAbutment !== 'undefined' && openAbutment){
+      var br = BRIDGES.find(function(b){ return b.id === getAbutmentById(openAbutment).bridgeId; });
+      if(br){
+        var panel = document.getElementById('ab-sp-' + safeid(openAbutment));
+        if(panel) panel.innerHTML = buildAbutmentPanel(openAbutment, br.col);
+      }
+    }
+  });
+}
+
 function initFB(){
-  // Dynamically load Firebase then initialize
-  var loaded = 0;
-  function onLoad(){ loaded++; if(loaded===2) startFirebase(); }
-  function loadScript(src){
-    var s=document.createElement('script');
-    s.src=src; s.onload=onLoad; s.onerror=onLoad;
+  // Dynamically load Firebase then initialize.
+  // IMPORTANT: load SEQUENTIALLY in dependency order — firebase-app-compat MUST
+  // execute and define the global `firebase` namespace before the database/auth
+  // compat libs run, otherwise `firebase.auth` ends up undefined and the login
+  // screen is stuck on "Connecting…". Loading in parallel (the old behaviour)
+  // left the order to chance and failed intermittently on mobile networks.
+  var srcs = [
+    'https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js',
+    'https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js',
+    'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js'
+  ];
+  function loadSeq(i){
+    if(i >= srcs.length){
+      // All three executed — start only if the namespace is actually present.
+      if(typeof firebase !== 'undefined' && firebase.auth && firebase.database){
+        startFirebase();
+      } else {
+        // Something didn't register; retry the whole chain shortly.
+        setTimeout(function(){ initFB(); }, 2000);
+      }
+      return;
+    }
+    var s = document.createElement('script');
+    s.src = srcs[i];
+    s.async = false;                       // preserve execution order
+    s.onload = function(){ loadSeq(i + 1); };
+    s.onerror = function(){
+      // Transient mobile-network failure — retry THIS script before continuing.
+      setTimeout(function(){ loadSeq(i); }, 2000);
+    };
     document.head.appendChild(s);
   }
-  loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
-  loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js');
+  loadSeq(0);
 }
 
 function pushPier(pier){
@@ -1177,6 +1302,154 @@ function pushPier(pier){
 function pushRoad(key){
   if(!DB)return;
   DB.ref('ic1_bridges/ROAD_ACTS_DATA/'+key).set(ROAD_DATA[key]||{});
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ABUTMENT HELPERS (Phase 4B field-side)
+// ═══════════════════════════════════════════════════════════════════════════
+function getAbutmentById(abId){
+  for(var i = 0; i < ABUTMENTS.length; i++){
+    if(ABUTMENTS[i].id === abId) return ABUTMENTS[i];
+  }
+  return null;
+}
+function getAbutmentsForBridge(bridgeId){
+  return ABUTMENTS.filter(function(a){ return a.bridgeId === bridgeId; });
+}
+// Get color tile for the abutment button (same scheme as pier buttons)
+function getAbutmentCol(abId){
+  var data = (ABUTMENTS_DATA && ABUTMENTS_DATA[abId]) || {};
+  var allValues = [];
+  // Include abutment stages
+  ABUTMENT_STAGES.forEach(function(s){ if(data[s.id]) allValues.push(data[s.id]); });
+  // Include wall stages
+  if(data.wall){ WALL_STAGES.forEach(function(s){ if(data.wall[s.id]) allValues.push(data.wall[s.id]); }); }
+  if(!allValues.length) return '#1e293b';
+  if(allValues.some(function(x){return x==='In Progress';})) return '#D4A843';
+  if(allValues.some(function(x){return x==='On Hold';})) return '#E63946';
+  if(allValues.some(function(x){return x==='Complete'||x==='Inspected';})) return '#06D6A0';
+  return '#1e293b';
+}
+function pushAbutment(abId){
+  if(!DB) return;
+  DB.ref('ic1_bridges/ABUTMENTS_DATA/'+abId).set(ABUTMENTS_DATA[abId]||{});
+}
+function setAbutmentStage(abId, sid, status){
+  if(!ABUTMENTS_DATA[abId]) ABUTMENTS_DATA[abId] = {};
+  var prev = ABUTMENTS_DATA[abId][sid] || 'Not Started';
+  ABUTMENTS_DATA[abId][sid] = status;
+  pushAbutment(abId);
+  if(prev !== status){
+    logHistory({type:'abutment', abutment:abId, stage:sid, from:prev, to:status});
+  }
+  var sname = ''; ABUTMENT_STAGES.forEach(function(s){ if(s.id === sid) sname = s.label; });
+  flash(status==='Complete' ? '✅ '+sname+' — Complete!' :
+        status==='In Progress' ? '🔧 '+sname+' — In Progress' :
+        '📌 '+sname+' — '+status);
+  // Refresh just the abutment's stage panel
+  var ab = getAbutmentById(abId);
+  if(!ab) return;
+  var panel = document.getElementById('ab-sp-' + safeid(abId));
+  var br = BRIDGES.find(function(b){ return b.id === ab.bridgeId; });
+  if(panel && br) panel.innerHTML = buildAbutmentPanel(abId, br.col);
+  // Also refresh the abutment button in case its color changed
+  var btn = document.getElementById('ab-btn-' + safeid(abId));
+  if(btn){
+    var col = getAbutmentCol(abId);
+    var isActive = col !== '#1e293b';
+    if(isActive){
+      btn.style.borderColor = col + '66';
+      btn.style.background  = col + '15';
+    }
+  }
+}
+function setWallStage(abId, sid, status){
+  if(!ABUTMENTS_DATA[abId]) ABUTMENTS_DATA[abId] = {};
+  if(!ABUTMENTS_DATA[abId].wall) ABUTMENTS_DATA[abId].wall = {};
+  var prev = ABUTMENTS_DATA[abId].wall[sid] || 'Not Started';
+  ABUTMENTS_DATA[abId].wall[sid] = status;
+  pushAbutment(abId);
+  if(prev !== status){
+    logHistory({type:'wall', abutment:abId, stage:sid, from:prev, to:status});
+  }
+  var sname = ''; WALL_STAGES.forEach(function(s){ if(s.id === sid) sname = s.label; });
+  flash(status==='Complete' ? '✅ Wall: '+sname+' — Complete!' :
+        status==='In Progress' ? '🔧 Wall: '+sname+' — In Progress' :
+        '📌 Wall: '+sname+' — '+status);
+  var ab = getAbutmentById(abId);
+  if(!ab) return;
+  var panel = document.getElementById('ab-sp-' + safeid(abId));
+  var br = BRIDGES.find(function(b){ return b.id === ab.bridgeId; });
+  if(panel && br) panel.innerHTML = buildAbutmentPanel(abId, br.col);
+}
+
+// Track which abutment panel is currently open (one at a time)
+var openAbutment = null;
+function toggleAbutment(abId){
+  openAbutment = (openAbutment === abId) ? null : abId;
+  // Update the panel for this abutment without full re-render
+  var ab = getAbutmentById(abId);
+  if(!ab) return;
+  var br = BRIDGES.find(function(b){ return b.id === ab.bridgeId; });
+  if(!br) return;
+  var panel = document.getElementById('ab-sp-' + safeid(abId));
+  if(panel){
+    panel.innerHTML = (openAbutment === abId) ? buildAbutmentPanel(abId, br.col) : '';
+  }
+  // Update active highlight on button
+  document.querySelectorAll('.ab-btn').forEach(function(b){
+    b.classList.toggle('active-pier', b.id === 'ab-btn-' + safeid(abId) && openAbutment === abId);
+  });
+}
+
+// Build the inner panel showing all abutment stages + wall stages (if any)
+function buildAbutmentPanel(abId, brCol){
+  var ab = getAbutmentById(abId);
+  if(!ab) return '';
+  var data = ABUTMENTS_DATA[abId] || {};
+  var h = '<div class="sp-hdr" style="color:#F59E0B;">🏛 '+abId+' &middot; '+ab.height+'m</div>';
+
+  // Abutment stages section
+  h += '<div style="font-size:10px;letter-spacing:1.5px;color:rgba(245,158,11,0.7);font-weight:800;margin:6px 0 8px;padding-bottom:4px;border-bottom:1px solid rgba(245,158,11,0.2);">ABUTMENT STAGES</div>';
+  ABUTMENT_STAGES.forEach(function(s){
+    var cur = data[s.id] || 'Not Started';
+    var curSt = STATUSES[0];
+    for(var j = 0; j < STATUSES.length; j++){ if(STATUSES[j].id === cur){ curSt = STATUSES[j]; break; } }
+    h += '<div class="stage-row">';
+    h += '<div class="stage-name">'+s.label+'</div>';
+    h += '<div class="stage-status" style="color:'+curSt.bg+';">'+cur+'</div>';
+    h += '<div class="btn-row">';
+    STATUSES.forEach(function(st){
+      var isOn = (cur === st.id);
+      h += '<button class="st-btn'+(isOn?' on':'')+'" ';
+      h += 'onclick="setAbutmentStage(\''+abId+'\',\''+s.id+'\',\''+st.id+'\')" ';
+      h += 'style="border-color:'+(isOn?st.bg:st.bg+'44')+';background:'+(isOn?st.bg:'transparent')+';color:'+(isOn?st.col:'rgba(255,255,255,0.2)')+';">'+st.label+'</button>';
+    });
+    h += '</div></div>';
+  });
+
+  // Wall stages section (only if abutment has a wall)
+  if(ab.wall){
+    var wallData = data.wall || {};
+    h += '<div style="font-size:10px;letter-spacing:1.5px;color:rgba(167,139,250,0.8);font-weight:800;margin:14px 0 8px;padding-bottom:4px;border-bottom:1px solid rgba(167,139,250,0.2);">🧱 '+ab.wall.id+' WALL &middot; '+ab.wall.lengthM+'M</div>';
+    WALL_STAGES.forEach(function(s){
+      var cur = wallData[s.id] || 'Not Started';
+      var curSt = STATUSES[0];
+      for(var k = 0; k < STATUSES.length; k++){ if(STATUSES[k].id === cur){ curSt = STATUSES[k]; break; } }
+      h += '<div class="stage-row">';
+      h += '<div class="stage-name">'+s.label+'</div>';
+      h += '<div class="stage-status" style="color:'+curSt.bg+';">'+cur+'</div>';
+      h += '<div class="btn-row">';
+      STATUSES.forEach(function(st){
+        var isOn = (cur === st.id);
+        h += '<button class="st-btn'+(isOn?' on':'')+'" ';
+        h += 'onclick="setWallStage(\''+abId+'\',\''+s.id+'\',\''+st.id+'\')" ';
+        h += 'style="border-color:'+(isOn?st.bg:st.bg+'44')+';background:'+(isOn?st.bg:'transparent')+';color:'+(isOn?st.col:'rgba(255,255,255,0.2)')+';">'+st.label+'</button>';
+      });
+      h += '</div></div>';
+    });
+  }
+  return h;
 }
 
 // ── RENDER ────────────────────────────────────────────
@@ -1216,6 +1489,49 @@ function renderAll(){
     h += '</div>';
   });
 
+  // Abutments (Phase 4B field-side)
+  if(typeof ABUTMENTS !== 'undefined' && ABUTMENTS.length){
+    h += '<div class="sec-title">🏛 Abutments</div>';
+    // Group abutments by bridge
+    var byBridge = {};
+    ABUTMENTS.forEach(function(ab){
+      if(!byBridge[ab.bridgeId]) byBridge[ab.bridgeId] = [];
+      byBridge[ab.bridgeId].push(ab);
+    });
+    Object.keys(byBridge).sort().forEach(function(brId){
+      var br = BRIDGES.find(function(b){ return b.id === brId; });
+      if(!br) return;
+      var brCol = br.col;
+      h += '<div class="bridge-block">';
+      h += '<div class="bridge-hdr" style="--c:#F59E0B;">';
+      h += '<span class="bl">Bridge '+brId+' Abutments</span>';
+      h += '<span class="bc">'+byBridge[brId].length+' abutment'+(byBridge[brId].length>1?'s':'')+'</span>';
+      h += '</div>';
+      // Abutment buttons row
+      h += '<div class="pier-row">';
+      byBridge[brId].forEach(function(ab){
+        var col = getAbutmentCol(ab.id);
+        var isActive = col !== '#1e293b';
+        var isOpen = (openAbutment === ab.id);
+        h += '<button class="pier-btn ab-btn'+(isOpen?' active-pier':'')+'" id="ab-btn-'+safeid(ab.id)+'" ';
+        h += 'onclick="toggleAbutment(\''+ab.id+'\')" ';
+        h += 'style="--c:#F59E0B;'+(isActive?'border-color:'+col+'66;background:'+col+'15;':'')+'">';
+        h += '<div class="pn" style="color:'+(isActive?col:'#F59E0B')+'B0;">'+ab.id+'</div>';
+        h += '<div style="font-size:9px;opacity:0.55;margin-top:2px;">'+ab.height+'m'+(ab.wall?' &middot; '+ab.wall.id:'')+'</div>';
+        if(isActive) h += '<div class="pd" style="display:block;background:'+col+';box-shadow:0 0 4px '+col+';"></div>';
+        h += '</button>';
+      });
+      h += '</div>';
+      // Stage panels — one per abutment (only the open one shows content)
+      byBridge[brId].forEach(function(ab){
+        h += '<div class="stage-panel" id="ab-sp-'+safeid(ab.id)+'">';
+        if(openAbutment === ab.id) h += buildAbutmentPanel(ab.id, brCol);
+        h += '</div>';
+      });
+      h += '</div>';
+    });
+  }
+
   // Roads
   h += '<div class="sec-title">🛣 Road Works</div>';
   [{key:'ibn',label:'Ibn Saud Road',col:'#58A6FF'},{key:'sattam',label:'Prince Sattam',col:'#A78BFA'}].forEach(function(rd){
@@ -1254,7 +1570,7 @@ function buildStagePanel(pier, col){
     var cur = stages[s.id]||'Not Started';
     var curSt=STATUSES[0]; for(var _j=0;_j<STATUSES.length;_j++){if(STATUSES[_j].id===cur){curSt=STATUSES[_j];break;}}
     h += '<div class="stage-row">';
-    h += '<div class="stage-name">'+s.name+'</div>';
+    h += '<div class="stage-name">'+s.label+'</div>';
     h += '<div class="stage-status" style="color:'+curSt.bg+';">'+cur+'</div>';
     h += '<div class="btn-row">';
     STATUSES.forEach(function(st){
@@ -1264,6 +1580,77 @@ function buildStagePanel(pier, col){
       h += 'style="border-color:'+(isOn?st.bg:st.bg+'44')+';background:'+(isOn?st.bg:'transparent')+';color:'+(isOn?st.col:'rgba(255,255,255,0.2)')+';">'+st.label+'</button>';
     });
     h += '</div></div>';
+
+    // ─── LIFT HEIGHTS — Pier Structure (STR) & Pier Concrete (PSC) ───
+    // Dead simple: the surveyor adds lifts, each just a height in metres.
+    // Shows the list + running total. Add a lift, remove a lift. Nothing else.
+    if(s.id === 'STR' || s.id === 'PSC'){
+      var segKey = s.id + '_segments';
+      var lifts = normalizeLifts(stages[segKey]);
+      var total = 0; lifts.forEach(function(L){ total += L.h; });
+      var sid2 = safeid(pier) + '_' + s.id;
+      var label = (s.id === 'PSC') ? 'CONCRETE LIFTS' : 'STRUCTURE LIFTS';
+      // Per-pier total design height (shared across STR + PSC for this pier).
+      // Empty by default → pier is "unconfigured": no lifts allowed yet.
+      var pierTotalH = (stages.totalHeight !== undefined && stages.totalHeight !== null && stages.totalHeight !== '')
+                       ? parseFloat(stages.totalHeight) : null;
+      var configured = (typeof pierTotalH === 'number' && !isNaN(pierTotalH) && pierTotalH > 0);
+
+      h += '<div class="lift-box">';
+      h += '<div class="lift-title">📏 ' + label + '</div>';
+
+      if(!configured){
+        // ── UNCONFIGURED STATE ── no design height set yet for this pier
+        h += '<div style="background:rgba(212,168,67,0.10);border:1px solid rgba(212,168,67,0.4);border-radius:9px;padding:12px;margin-bottom:10px;">';
+        h += '<div style="font-size:12px;font-weight:800;color:#D4A843;margin-bottom:6px;">⚠ PIER HEIGHT NOT SET</div>';
+        h += '<div style="font-size:11px;color:rgba(255,255,255,0.6);line-height:1.4;margin-bottom:10px;">Enter this pier\'s total design height first. Lifts can be recorded once the height is set.</div>';
+        h += '<div style="display:flex;gap:8px;">';
+        h += '<input id="pierheight-input-'+safeid(pier)+'" type="number" inputmode="decimal" step="0.1" min="0" max="30" placeholder="Total height (m)" class="lift-field">';
+        h += '<button class="lift-add" onclick="setPierTotalHeight(\''+pier+'\')">SET</button>';
+        h += '</div>';
+        h += '</div>';
+        h += '</div>';   // close lift-box, skip the rest
+      } else {
+        // ── CONFIGURED ── show progress vs the real design height
+        var remaining = Math.max(0, pierTotalH - total);
+        var pctH = Math.min(100, (total / pierTotalH) * 100);
+        h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">';
+        h += '<span style="font-size:11px;color:rgba(255,255,255,0.55);">Design height: <b style="color:#fff;">'+pierTotalH.toFixed(2)+' m</b></span>';
+        h += '<button onclick="editPierTotalHeight(\''+pier+'\','+pierTotalH+')" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.6);font-size:10px;padding:3px 8px;border-radius:5px;cursor:pointer;">edit</button>';
+        h += '</div>';
+        // Progress bar vs design height
+        h += '<div style="height:7px;border-radius:4px;background:rgba(255,255,255,0.08);overflow:hidden;margin-bottom:10px;">';
+        h += '<div style="height:100%;width:'+pctH+'%;background:'+(pctH>=99.5?'#06D6A0':'#A78BFA')+';border-radius:4px;"></div>';
+        h += '</div>';
+        // List of lifts
+        if(lifts.length){
+          for(var li = lifts.length - 1; li >= 0; li--){
+            h += '<div class="lift-item">';
+            h += '<span class="lift-num">Lift ' + (li+1) + '</span>';
+            h += '<span class="lift-h">' + lifts[li].h.toFixed(2) + ' m</span>';
+            h += '<button class="lift-del" onclick="removePierLift(\''+pier+'\','+li+',\''+s.id+'\')">✕</button>';
+            h += '</div>';
+          }
+          h += '<div class="lift-total"><span>Done '+total.toFixed(2)+' m · Left '+remaining.toFixed(2)+' m</span><b>'+pctH.toFixed(0)+'%</b></div>';
+        } else {
+          h += '<div class="lift-empty">No lifts yet. '+pierTotalH.toFixed(2)+' m to build.</div>';
+        }
+        // Add a lift (only if not already at/over design height)
+        if(remaining > 0.01){
+          h += '<div class="lift-entry">';
+          h += '<input id="lift-input-'+sid2+'" type="number" inputmode="decimal" step="0.1" min="0" max="'+pierTotalH+'" placeholder="Lift height (m)" class="lift-field">';
+          h += '<button class="lift-add" onclick="addPierLift(\''+pier+'\',\''+s.id+'\')">+ ADD</button>';
+          h += '</div>';
+        } else {
+          h += '<div style="text-align:center;font-size:11px;color:#06D6A0;font-weight:700;padding:6px;">✓ Full design height reached</div>';
+        }
+        // Clear-lifts (wipe test/old data) — small, tucked at the bottom
+        if(lifts.length){
+          h += '<button onclick="clearPierLifts(\''+pier+'\',\''+s.id+'\')" style="width:100%;margin-top:8px;background:rgba(230,57,70,0.10);border:1px solid rgba(230,57,70,0.3);color:#E63946;font-size:10px;font-weight:700;padding:7px;border-radius:6px;cursor:pointer;">🗑 CLEAR ALL '+label+'</button>';
+        }
+        h += '</div>';   // close lift-box
+      }
+    }
   });
   return h;
 }
@@ -1315,12 +1702,14 @@ function setStage(pier, sid, status){
   if(!PS[pier])PS[pier]={};
   var prevStatus = PS[pier][sid] || 'Not Started';
   PS[pier][sid]=status;
+  // (Pier Structure poured lifts are entered via the inline height input in
+  // the stage panel — see addPierLift() — not via a popup.)
   pushPier(pier);
   // Log the change to history (if it's actually different)
   if(prevStatus !== status){
     logHistory({type:'pier', pier:pier, stage:sid, from:prevStatus, to:status});
   }
-  var sname=''; STAGES.forEach(function(s){if(s.id===sid)sname=s.name;});
+  var sname=''; STAGES.forEach(function(s){if(s.id===sid)sname=s.label;});
   flash(status==='Complete'?'✅ '+sname+' — Complete!':status==='In Progress'?'🔧 '+sname+' — In Progress':'📌 '+sname+' — '+status);
   // Refresh panel only
   var brId=null; BRIDGES.forEach(function(br){if(br.piers.indexOf(pier)>-1)brId=br.id;});
@@ -1329,6 +1718,101 @@ function setStage(pier, sid, status){
     var panel=document.getElementById('sp-'+safeid(brId));
     if(panel) panel.innerHTML=buildStagePanel(pier,br.col);
   }
+}
+
+// ─── PIER COLUMN LIFTS (poured segments) ──────────────────────────────
+// Surveyor enters the height of each poured lift via a clean inline input in
+// the Pier Structure row. Each lift is appended to PS[pier].STR_segments and
+// synced. The desktop 3D view stacks them as differently-coloured segments.
+function _refreshLiftPanel(pier){
+  var brId=null; BRIDGES.forEach(function(br){if(br.piers.indexOf(pier)>-1)brId=br.id;});
+  if(brId){
+    var br=BRIDGES.find(function(b){return b.id===brId;});
+    var panel=document.getElementById('sp-'+safeid(brId));
+    if(panel) panel.innerHTML=buildStagePanel(pier,br.col);
+  }
+}
+// LIFT HEIGHTS — Pier Structure (STR) & Pier Concrete (PSC).
+// Simple model: each lift is just a height in metres. Add / remove. Nothing else.
+function _saveLifts(pier, lifts, stageId){
+  stageId = stageId || 'STR';
+  if(!PS[pier]) PS[pier] = {};
+  PS[pier][stageId + '_segments'] = lifts.map(function(L){ return { h: L.h }; });
+  if(lifts.length && PS[pier][stageId] !== 'Complete' && PS[pier][stageId] !== 'Inspected'){
+    PS[pier][stageId] = 'In Progress';
+  }
+  pushPier(pier);
+  _refreshLiftPanel(pier);
+}
+function addPierLift(pier, stageId){
+  stageId = stageId || 'STR';
+  var sid = safeid(pier) + '_' + stageId;
+  var input = document.getElementById('lift-input-' + sid);
+  if(!input) return;
+  var hVal = parseFloat(input.value);
+  if(isNaN(hVal) || hVal <= 0){
+    flash('⚠ Enter the lift height in metres');
+    input.focus();
+    return;
+  }
+  if(hVal > 25){ flash('⚠ That height looks too large (max ~23 m)'); return; }
+  var lifts = normalizeLifts(PS[pier] && PS[pier][stageId + '_segments']);
+  lifts.push({ h: Math.round(hVal * 100) / 100 });
+  _saveLifts(pier, lifts, stageId);
+  logHistory({type:'pier', pier:pier, stage:stageId, from:'lift', to:'lift ' + lifts.length + ' = ' + hVal + 'm'});
+  flash('Lift ' + lifts.length + ' added: ' + hVal.toFixed(2) + ' m');
+}
+function removePierLift(pier, idx, stageId){
+  stageId = stageId || 'STR';
+  var lifts = normalizeLifts(PS[pier] && PS[pier][stageId + '_segments']);
+  if(idx < 0 || idx >= lifts.length) return;
+  lifts.splice(idx, 1);
+  _saveLifts(pier, lifts, stageId);
+  flash('Lift removed');
+}
+
+// ─── PER-PIER TOTAL DESIGN HEIGHT ───────────────────────────────────────
+// Empty by default. Until set, the pier is "unconfigured" and no lifts can be
+// added. The admin/surveyor sets it when the real design value is available.
+function setPierTotalHeight(pier){
+  var input = document.getElementById('pierheight-input-' + safeid(pier));
+  if(!input) return;
+  var v = parseFloat(input.value);
+  if(isNaN(v) || v <= 0){ flash('⚠ Enter the pier total height in metres'); input.focus(); return; }
+  if(v > 30){ flash('⚠ That height looks too large (max ~30 m)'); return; }
+  if(!PS[pier]) PS[pier] = {};
+  PS[pier].totalHeight = Math.round(v * 100) / 100;
+  pushPier(pier);
+  logHistory({type:'pier', pier:pier, stage:'CONFIG', from:'height', to:'set ' + v + 'm'});
+  flash('✓ Pier height set: ' + v.toFixed(2) + ' m');
+  _refreshLiftPanel(pier);
+}
+function editPierTotalHeight(pier, current){
+  var v = prompt('Update total design height for pier ' + pier + ' (metres):', current);
+  if(v === null) return;
+  var n = parseFloat(v);
+  if(isNaN(n) || n <= 0){ flash('⚠ Invalid height'); return; }
+  if(n > 30){ flash('⚠ Too large (max ~30 m)'); return; }
+  if(!PS[pier]) PS[pier] = {};
+  PS[pier].totalHeight = Math.round(n * 100) / 100;
+  pushPier(pier);
+  logHistory({type:'pier', pier:pier, stage:'CONFIG', from:'height', to:'edit ' + n + 'm'});
+  flash('✓ Height updated: ' + n.toFixed(2) + ' m');
+  _refreshLiftPanel(pier);
+}
+// Clear all lifts for a stage (wipes stale/test data like 4E).
+function clearPierLifts(pier, stageId){
+  stageId = stageId || 'STR';
+  var label = (stageId === 'PSC') ? 'Concrete' : 'Structure';
+  if(!confirm('Clear ALL ' + label + ' lifts on pier ' + pier + '?\n\nThis removes every recorded lift for this stage. The pier\'s design height stays set.')) return;
+  if(!PS[pier]) PS[pier] = {};
+  PS[pier][stageId + '_segments'] = [];
+  // Reset the stage status back to Not Started (no lifts = no progress)
+  if(PS[pier][stageId] === 'In Progress') PS[pier][stageId] = 'Not Started';
+  pushPier(pier);
+  logHistory({type:'pier', pier:pier, stage:stageId, from:'clear', to:'all lifts cleared'});
+  flash('🗑 ' + label + ' lifts cleared');
+  _refreshLiftPanel(pier);
 }
 
 function setRoad(key, actKey, status){
@@ -2502,9 +2986,7 @@ function setupMapTouch(){
   MC.addEventListener('touchend',function(e){
     if(M_DRAG.active){
       var moved=Math.sqrt(Math.pow(e.changedTouches[0].clientX-M_TAP_START.x,2)+Math.pow(e.changedTouches[0].clientY-M_TAP_START.y,2));
-      // 14px (was 8) — fingers wobble more than mice. Apple HIG suggests
-      // ~10px as the typical tap-vs-pan threshold; 14 is forgiving.
-      if(moved<14) handleMapTap(e.changedTouches[0].clientX,e.changedTouches[0].clientY);
+      if(moved<8) handleMapTap(e.changedTouches[0].clientX,e.changedTouches[0].clientY);
     }
     M_DRAG.active=false; M_PINCH.active=false;
   });
@@ -2541,13 +3023,6 @@ function handleMapTap(cx,cy){
   var rect=MC.getBoundingClientRect();
   var px=cx-rect.left, py=cy-rect.top;
 
-  // ── TAP HIT-AREA CONSTANTS (v56-touchfix) ──
-  // Marker visuals stay small to keep the map readable, but the tap zone is
-  // enlarged to ~45 px (above Apple HIG 44 px minimum) so taps register from
-  // a wider zone around each marker. Embankment stations get a similar bump.
-  var HIT_EMB  = 40;   // was 25 — uncomfortably small for fingers
-  var HIT_PIER = 45;   // was 35 — at the Apple HIG minimum now
-
   // Check embankment station taps
   if(typeof EMB_STATIONS!=='undefined' && MBOUNDS){
     for(var si=0;si<EMB_STATIONS.length;si++){
@@ -2555,7 +3030,7 @@ function handleMapTap(cx,cy){
       var next=EMB_STATIONS[Math.min(si+1,EMB_STATIONS.length-1)];
       var dn=next.n-s.n,de=next.e-s.e,l=Math.sqrt(dn*dn+de*de)||1;
       var lpos=toMap(s.n,s.e);
-      if(Math.sqrt((px-lpos.x)*(px-lpos.x)+(py-lpos.y)*(py-lpos.y))<HIT_EMB){
+      if(Math.sqrt((px-lpos.x)*(px-lpos.x)+(py-lpos.y)*(py-lpos.y))<25){
         var lbl='KKR Emb L '+String(Math.floor(s.ch/1000))+'+'+String(s.ch%1000).padStart(3,'0');
         var ch=s.ch; var embFkL='KKR_Emb_L_'+Math.floor(ch/1000)+'_'+String(ch%1000).padStart(3,'0');
         showEmbPanel(lbl,'L',s.n,s.e,embFkL);
@@ -2569,7 +3044,7 @@ function handleMapTap(cx,cy){
     for(var si=0;si<EMB_STATIONS_R.length;si++){
       var s=EMB_STATIONS_R[si];
       var rpos=toMap(s.n,s.e);
-      if(Math.sqrt((px-rpos.x)*(px-rpos.x)+(py-rpos.y)*(py-rpos.y))<HIT_EMB){
+      if(Math.sqrt((px-rpos.x)*(px-rpos.x)+(py-rpos.y)*(py-rpos.y))<25){
         var lbl='KKR Emb R '+String(Math.floor(s.ch/1000))+'+'+String(s.ch%1000).padStart(3,'0');
         var chR=s.ch; var embFkR='KKR_Emb_R_'+Math.floor(chR/1000)+'_'+String(chR%1000).padStart(3,'0');
         showEmbPanel(lbl,'R',s.n,s.e,embFkR);
@@ -2584,7 +3059,7 @@ function handleMapTap(cx,cy){
     var d=Math.sqrt(Math.pow(pos.x-px,2)+Math.pow(pos.y-py,2));
     if(d<nd){nd=d;nearest=p;}
   });
-  if(nearest&&nd<HIT_PIER){
+  if(nearest&&nd<35){
     M_SEL=nearest.name;
     // Auto center on pier
     var pos=toMap(nearest.n,nearest.e);
@@ -2932,17 +3407,33 @@ function renderReportForm(){
   h += '<div style="font-size:11px;color:rgba(255,255,255,0.4);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Photo <span style="color:#E63946;">*required</span></div>';
   if(REPORT_STATE.b64){
     h += '<img src="'+REPORT_STATE.b64+'" style="width:100%;border-radius:10px;max-height:160px;object-fit:cover;margin-bottom:8px;">';
-    h += '<label style="display:block;cursor:pointer;margin-bottom:14px;">';
+    // Camera (forces camera on phones via capture) + Gallery (no capture → photo picker)
+    h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:14px;">';
+    h += '<label style="display:block;cursor:pointer;">';
     h += '<input type="file" accept="image/*" capture="environment" style="display:none;" onchange="handleReportPhoto(this)">';
-    h += '<div style="text-align:center;padding:8px;border:1px dashed rgba(255,255,255,0.2);border-radius:8px;color:rgba(255,255,255,0.4);font-size:12px;">🔄 Retake Photo</div>';
+    h += '<div style="text-align:center;padding:8px;border:1px dashed rgba(255,255,255,0.2);border-radius:8px;color:rgba(255,255,255,0.4);font-size:12px;">📷 Retake</div>';
     h += '</label>';
+    h += '<label style="display:block;cursor:pointer;">';
+    h += '<input type="file" accept="image/*" style="display:none;" onchange="handleReportPhoto(this)">';
+    h += '<div style="text-align:center;padding:8px;border:1px dashed rgba(255,255,255,0.2);border-radius:8px;color:rgba(255,255,255,0.4);font-size:12px;">🖼️ Gallery</div>';
+    h += '</label>';
+    h += '</div>';
   } else {
-    h += '<label style="display:block;cursor:pointer;margin-bottom:14px;">';
+    // Two choices: take a new photo (camera) or pick an existing one from the gallery
+    h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:14px;">';
+    h += '<label style="display:block;cursor:pointer;">';
     h += '<input type="file" accept="image/*" capture="environment" style="display:none;" onchange="handleReportPhoto(this)">';
-    h += '<div style="text-align:center;padding:18px;border:2px dashed rgba(230,57,70,0.4);border-radius:10px;background:rgba(230,57,70,0.06);">';
+    h += '<div style="text-align:center;padding:18px 8px;border:2px dashed rgba(230,57,70,0.4);border-radius:10px;background:rgba(230,57,70,0.06);">';
     h += '<div style="font-size:28px;">📷</div>';
-    h += '<div style="font-size:13px;font-weight:700;color:#E63946;margin-top:4px;">Tap to Take Photo</div>';
+    h += '<div style="font-size:13px;font-weight:700;color:#E63946;margin-top:4px;">Take Photo</div>';
     h += '</div></label>';
+    h += '<label style="display:block;cursor:pointer;">';
+    h += '<input type="file" accept="image/*" style="display:none;" onchange="handleReportPhoto(this)">';
+    h += '<div style="text-align:center;padding:18px 8px;border:2px dashed rgba(230,57,70,0.4);border-radius:10px;background:rgba(230,57,70,0.06);">';
+    h += '<div style="font-size:28px;">🖼️</div>';
+    h += '<div style="font-size:13px;font-weight:700;color:#E63946;margin-top:4px;">From Gallery</div>';
+    h += '</div></label>';
+    h += '</div>';
   }
 
   // Submit
@@ -3615,168 +4106,47 @@ function showEmbPanel(label, side, n, e, fbKey){
 }
 
 function renderEmbPanel(panel,label,sideLabel,n,e,fbKey,currentLayers){
-  // v56+: ELEVATION-BASED ENTRY. Surveyor enters NG (one-time) + Current
-  // (each visit). Layer count is derived live as round((cur − ng) / 0.30).
-  var maxLayers = (typeof _embStationMax === 'function') ? _embStationMax(fbKey) : EMB_TOTAL_LAYERS;
-  var thick = (typeof EMB_LAYER_THICKNESS === 'number') ? EMB_LAYER_THICKNESS : 0.30;
+  var pct=Math.round((currentLayers/EMB_TOTAL_LAYERS)*100);
+  var h='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">';
+  h+='<div><div style="font-size:11px;color:#D4A843;font-weight:700;">KKR EMBANKMENT</div>';
+  h+='<div style="font-size:18px;font-weight:900;color:#D4A843;">🏔 '+label+'</div>';
+  h+='<div style="font-size:11px;color:rgba(255,255,255,0.4);">'+sideLabel+'</div></div>';
+  h+='<button onclick="closeMapPanel();" style="background:none;border:none;color:rgba(255,255,255,0.4);font-size:18px;cursor:pointer;">✕</button></div>';
 
-  // Look up any saved elevations + legacy layer count
-  var ngSaved  = (window.EMB_NG && typeof window.EMB_NG[fbKey] === 'number') ? window.EMB_NG[fbKey] : null;
-  var curSaved = (window.EMB_CURRENT && typeof window.EMB_CURRENT[fbKey] === 'number') ? window.EMB_CURRENT[fbKey] : null;
-  // Use the legacy layer count only as a sanity-display fallback ("was: L9")
-  var legacyLyr = parseInt((EMB_DATA && EMB_DATA[fbKey]) || 0);
+  // Progress bar
+  h+='<div style="background:#1e293b;border-radius:8px;padding:12px;margin-bottom:12px;">';
+  h+='<div style="display:flex;justify-content:space-between;margin-bottom:6px;">';
+  h+='<span style="font-size:12px;color:#f1f5f9;font-weight:700;">Layer Progress</span>';
+  h+='<span style="font-size:16px;font-weight:900;color:#D4A843;">'+currentLayers+'/'+EMB_TOTAL_LAYERS+' layers ('+pct+'%)</span>';
+  h+='</div>';
+  h+='<div style="height:10px;background:rgba(255,255,255,0.08);border-radius:5px;overflow:hidden;">';
+  h+='<div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,#D4A843,#F59E0B);border-radius:5px;"></div>';
+  h+='</div></div>';
 
-  var h = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">';
-  h += '<div><div style="font-size:11px;color:#D4A843;font-weight:700;">KKR EMBANKMENT</div>';
-  h += '<div style="font-size:18px;font-weight:900;color:#D4A843;">🏔 '+label+'</div>';
-  h += '<div style="font-size:11px;color:rgba(255,255,255,0.4);">'+sideLabel+'</div></div>';
-  h += '<button onclick="closeMapPanel();" style="background:none;border:none;color:rgba(255,255,255,0.4);font-size:18px;cursor:pointer;">✕</button></div>';
-
-  // Method note
-  h += '<div style="background:rgba(34,211,238,0.10);border:1px solid rgba(34,211,238,0.25);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:11px;color:rgba(255,255,255,0.75);line-height:1.5;">';
-  h += 'Enter the <b style="color:#D4A843;">natural ground</b> and <b style="color:#D4A843;">current top</b> elevations (metres). Layer count derives automatically.';
-  if(legacyLyr > 0 && ngSaved === null && curSaved === null){
-    h += '<div style="margin-top:5px;color:#FCD34D;font-size:10px;">Previously recorded layer count: <b>L'+legacyLyr+'</b> (legacy — replace with elevations).</div>';
+  // Layer buttons
+  h+='<div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">Select Completed Layer</div>';
+  h+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:12px;">';
+  for(var l=1;l<=EMB_TOTAL_LAYERS;l++){
+    var done=l<=currentLayers;
+    h+='<button data-layer="'+l+'" data-fbkey="'+fbKey+'" data-label="'+label+'" data-side="'+sideLabel+'"';
+    h+=' onclick="setEmbLayer(this.dataset.layer,this.dataset.fbkey,this.dataset.label,this.dataset.side)"';
+    h+=' style="padding:8px 4px;border-radius:6px;border:2px solid '+(done?'#D4A843':'rgba(212,168,67,0.3)')+';';
+    h+='background:'+(done?'rgba(212,168,67,0.2)':'transparent')+';';
+    h+='color:'+(done?'#D4A843':'rgba(255,255,255,0.3)')+';font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">L'+l+'</button>';
   }
-  h += '</div>';
-
-  // Two input rows: NG and Current
-  h += '<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px;">';
-
-  h += '<div style="background:#1e293b;border-radius:8px;padding:12px;">';
-  h += '<label style="display:block;font-size:11px;font-weight:700;color:#D4A843;letter-spacing:1px;margin-bottom:5px;">NATURAL GROUND (m)</label>';
-  h += '<input type="number" step="0.001" inputmode="decimal" id="emb-ng-input" data-fbkey="'+fbKey+'" value="'+(ngSaved !== null ? ngSaved.toFixed(3) : '')+'" placeholder="e.g. 660.420" style="width:100%;padding:11px 12px;background:#0f172a;border:1.5px solid rgba(212,168,67,0.4);border-radius:6px;color:#fff;font-family:inherit;font-size:17px;font-weight:700;">';
-  h += '</div>';
-
-  h += '<div style="background:#1e293b;border-radius:8px;padding:12px;">';
-  h += '<label style="display:block;font-size:11px;font-weight:700;color:#D4A843;letter-spacing:1px;margin-bottom:5px;">CURRENT TOP LEVEL (m)</label>';
-  h += '<input type="number" step="0.001" inputmode="decimal" id="emb-cur-input" data-fbkey="'+fbKey+'" value="'+(curSaved !== null ? curSaved.toFixed(3) : '')+'" placeholder="e.g. 663.320" style="width:100%;padding:11px 12px;background:#0f172a;border:1.5px solid rgba(212,168,67,0.4);border-radius:6px;color:#fff;font-family:inherit;font-size:17px;font-weight:700;">';
-  h += '</div>';
-
-  h += '</div>';
-
-  // Live-derived layer count + volume — id targets used by oninput handler
-  h += '<div id="emb-derived-display" style="background:rgba(6,214,160,0.10);border:1px solid rgba(6,214,160,0.30);border-radius:8px;padding:12px 14px;margin-bottom:14px;">';
-  h += '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">';
-  h += '<span style="font-size:11px;color:#06D6A0;font-weight:700;letter-spacing:1px;">DERIVED LAYER COUNT</span>';
-  h += '<span id="emb-derived-layer" style="font-family:Rajdhani,sans-serif;font-size:26px;font-weight:900;color:#fff;">—</span>';
-  h += '</div>';
-  h += '<div id="emb-derived-warn" style="font-size:10px;color:rgba(255,255,255,0.45);margin-top:3px;">round((current − NG) / '+thick.toFixed(2)+')</div>';
-  h += '</div>';
-
-  // Save button
-  h += '<button id="emb-save-btn" onclick="saveEmbElevations(\''+fbKey+'\',\''+label+'\',\''+sideLabel+'\')" style="width:100%;padding:14px;background:linear-gradient(135deg,#06D6A0,#059669);border:none;border-radius:8px;color:#03130d;font-family:inherit;font-size:14px;font-weight:900;letter-spacing:1px;cursor:pointer;margin-bottom:10px;">SAVE ELEVATIONS</button>';
-  // Optional photo
-  h += '<button onclick="window._embPhotoOnly(\''+fbKey+'\',\''+label+'\',\''+sideLabel+'\')" style="width:100%;padding:10px;background:rgba(34,211,238,0.10);border:1px solid rgba(34,211,238,0.40);border-radius:8px;color:#22D3EE;font-family:inherit;font-size:12px;font-weight:800;letter-spacing:1px;cursor:pointer;">📷 ADD PHOTO (optional)</button>';
-
-  panel.innerHTML = h;
-  panel.style.display = 'block';
-
-  // Wire live derivation: as soon as inputs change, recompute and display.
-  function recomputeDerived(){
-    var ngEl  = document.getElementById('emb-ng-input');
-    var curEl = document.getElementById('emb-cur-input');
-    var disp  = document.getElementById('emb-derived-layer');
-    var warn  = document.getElementById('emb-derived-warn');
-    var btn   = document.getElementById('emb-save-btn');
-    if(!ngEl || !curEl || !disp) return;
-    var ng = parseFloat(ngEl.value);
-    var cu = parseFloat(curEl.value);
-    if(isNaN(ng) || isNaN(cu)){
-      disp.textContent = '—';
-      if(warn) warn.textContent = 'round((current − NG) / '+thick.toFixed(2)+')';
-      if(warn) warn.style.color = 'rgba(255,255,255,0.45)';
-      return;
-    }
-    if(cu < ng){
-      disp.textContent = '⚠';
-      if(warn){
-        warn.textContent = 'Current is BELOW NG — please check your values';
-        warn.style.color = '#EF4444';
-      }
-      return;
-    }
-    var layers = Math.round((cu - ng) / thick);
-    disp.textContent = layers + (maxLayers && layers >= maxLayers ? ' (cap)' : '');
-    if(warn){
-      warn.textContent = '(' + cu.toFixed(3) + ' − ' + ng.toFixed(3) + ') / ' + thick.toFixed(2) + ' = ' + ((cu-ng)/thick).toFixed(2) + ' → ' + layers;
-      warn.style.color = (layers > 0) ? '#06D6A0' : 'rgba(255,255,255,0.45)';
-    }
-  }
-  var ngI  = document.getElementById('emb-ng-input');
-  var curI = document.getElementById('emb-cur-input');
-  if(ngI)  ngI.addEventListener('input', recomputeDerived);
-  if(curI) curI.addEventListener('input', recomputeDerived);
-  recomputeDerived();   // initial render
+  h+='</div>';
+  panel.innerHTML=h;
+  panel.style.display='block';
 }
 
-// Save NG + Current to Firebase; derived layer count flows from there.
-function saveEmbElevations(fbKey, label, sideLabel){
-  var ngEl  = document.getElementById('emb-ng-input');
-  var curEl = document.getElementById('emb-cur-input');
-  if(!ngEl || !curEl) return;
-  var ng = parseFloat(ngEl.value);
-  var cu = parseFloat(curEl.value);
-  if(isNaN(ng) || isNaN(cu)){
-    flash('⚠️ Enter valid NG and Current elevations');
-    return;
-  }
-  if(cu < ng){
-    flash('⚠️ Current is below NG — cannot save');
-    return;
-  }
-  if(!window.DB){ flash('⚠️ Not connected'); return; }
-  var pending = 2;
-  var ok = true;
-  function done(){
-    pending--;
-    if(pending <= 0){
-      if(ok){
-        var layers = Math.round((cu - ng) / (typeof EMB_LAYER_THICKNESS === 'number' ? EMB_LAYER_THICKNESS : 0.30));
-        flash('✓ Saved · Layer ' + layers + ' @ ' + label + ' ' + sideLabel);
-        // Update local caches immediately (Firebase listener will catch up)
-        window.EMB_NG = window.EMB_NG || {};
-        window.EMB_CURRENT = window.EMB_CURRENT || {};
-        window.EMB_NG[fbKey] = ng;
-        window.EMB_CURRENT[fbKey] = cu;
-        // Log to recent-edits feed
-        if(typeof logAction === 'function'){
-          logAction({type:'embankment_elev', fbKey:fbKey, label:label, side:sideLabel, ng:ng, current:cu, layer:layers});
-        }
-        // Close panel after a brief delay so the user sees the toast
-        setTimeout(function(){ if(typeof closeMapPanel === 'function') closeMapPanel(); }, 700);
-      }
-    }
-  }
-  window.DB.ref('ic1_bridges/EMB_NG/'+fbKey).set(ng, function(err){
-    if(err){ ok=false; flash('⚠️ NG save failed: '+err.message); }
-    done();
-  });
-  window.DB.ref('ic1_bridges/EMB_CURRENT/'+fbKey).set(cu, function(err){
-    if(err){ ok=false; flash('⚠️ Current save failed: '+err.message); }
-    done();
-  });
-}
-
-// Legacy entry point kept for compatibility with any leftover button handlers.
-// Routes to the new flow (asks user for elevations rather than tapping a layer).
 function setEmbLayer(layer,fbKey,label,side){
-  flash('Use the elevation fields to enter layer position.');
+  layer=parseInt(layer);
+  // Require photo
+  var stageName='Layer '+layer+' @ '+label+' '+side;
+  showPhotoCapture(label, fbKey, 'Layer '+layer, stageName);
+  window._pendingEmbKey=fbKey;
+  window._pendingEmbLayer=layer;
 }
-
-// Optional photo capture — uses the existing showPhotoCapture flow but doesn't
-// gate the elevation save. The save already happened (or will happen) on its own.
-window._embPhotoOnly = function(fbKey, label, sideLabel){
-  if(typeof showPhotoCapture === 'function'){
-    var ngEl  = document.getElementById('emb-ng-input');
-    var curEl = document.getElementById('emb-cur-input');
-    var ng = ngEl ? parseFloat(ngEl.value) : NaN;
-    var cu = curEl ? parseFloat(curEl.value) : NaN;
-    var layer = (!isNaN(ng) && !isNaN(cu) && cu >= ng) ? Math.round((cu-ng) / (typeof EMB_LAYER_THICKNESS === 'number' ? EMB_LAYER_THICKNESS : 0.30)) : null;
-    var stageName = layer ? ('Layer ' + layer + ' @ ' + label + ' ' + sideLabel) : ('Embankment @ ' + label);
-    showPhotoCapture(label, fbKey, layer ? 'Layer ' + layer : 'Embankment', stageName);
-  }
-};
 
 function goToCoords(){
   var n=parseFloat(document.getElementById('coord-n').value);
@@ -4070,6 +4440,10 @@ function viMatchStage(text){
     'concrete':         {id:'FRC', label:'Foundation Concrete'},
     'pier structure':   {id:'STR', label:'Pier Structure'},
     'structure':        {id:'STR', label:'Pier Structure'},
+    'pier concrete':    {id:'PSC', label:'Pier Concrete'},
+    'pier casting':     {id:'PSC', label:'Pier Concrete'},
+    'shaft concrete':   {id:'PSC', label:'Pier Concrete'},
+    'column concrete':  {id:'PSC', label:'Pier Concrete'},
     'bearings':         {id:'BRG', label:'Bearings'},
     'bearing':          {id:'BRG', label:'Bearings'},
     'girder supply':    {id:'GRD', label:'Girder Supply'},
@@ -4257,7 +4631,7 @@ function openLists(){
   var ov = document.getElementById('lists-overlay');
   if(!ov) return;
   ov.style.display = 'flex';
-  WIZ_STATE = {step:1, areaType:null, bridge:null, pier:null, side:null, station:null, stage:null, layer:null, status:null, progressPct:null, progressNum:null, progressDen:null, photo:null, photoSkipped:false, photoSource:null, markFinal:null};
+  WIZ_STATE = {step:1, areaType:null, bridge:null, pier:null, side:null, station:null, stage:null, layer:null, status:null, progressPct:null, progressNum:null, progressDen:null, liftHeight:null, photo:null, photoSkipped:false, photoSource:null, markFinal:null};
   wizGoto(1);
 }
 
@@ -5451,6 +5825,60 @@ function _wizStatusSection(){
   var stageId = WIZ_STATE.stage;
   var isBridgeArea = (WIZ_STATE.areaType === 'bridge');
   var stageAllowsFraction = stageId && FRACTIONABLE_STAGES.indexOf(stageId) !== -1;
+  // ─── PIER STRUCTURE / PIER CONCRETE: lift-height entry ───
+  // For STR and PSC, surveyors enter the LIFT HEIGHT in metres, NOT a fraction.
+  // Shown when marking the stage In Progress OR Complete (so the final lift can
+  // be recorded at completion too). Clean, single input.
+  if((WIZ_STATE.status === 'In Progress' || WIZ_STATE.status === 'Complete')
+     && isBridgeArea && (stageId === 'STR' || stageId === 'PSC')){
+    var pier = WIZ_STATE.pier;
+    var segKey = stageId + '_segments';
+    var existing = (pier && PS[pier] && Array.isArray(PS[pier][segKey])) ? PS[pier][segKey] : [];
+    var liftsN = normalizeLifts(existing);
+    var totalH = 0; liftsN.forEach(function(L){ totalH += L.h; });
+    // Pier must have a design height set before lifts can be entered.
+    var _pth = (pier && PS[pier] && PS[pier].totalHeight) ? parseFloat(PS[pier].totalHeight) : null;
+    if(!(typeof _pth === 'number' && !isNaN(_pth) && _pth > 0)){
+      h += '<div style="margin-top:18px;padding:16px;background:rgba(212,168,67,0.10);border:1px solid rgba(212,168,67,0.4);border-radius:12px;">';
+      h += '<div style="font-size:12px;font-weight:800;color:#D4A843;margin-bottom:6px;">⚠ PIER HEIGHT NOT SET</div>';
+      h += '<div style="font-size:11px;color:rgba(255,255,255,0.6);line-height:1.4;">Set this pier\'s total design height first (open the pier on the map and use the SET button under '+(stageId==='PSC'?'Concrete':'Structure')+' Lifts). Lifts can be recorded once the height is set.</div>';
+      h += '</div>';
+      return h;
+    }
+    var isConc = (stageId === 'PSC');
+    var ttl = isConc ? '🧱 CONCRETE LIFT HEIGHT' : '🏗 STRUCTURE LIFT HEIGHT';
+    var hint = WIZ_STATE.status === 'Complete'
+      ? 'Enter the height of the final lift to record at completion (or leave blank if all lifts are already logged).'
+      : 'Enter the height of the lift you just worked on, in metres.';
+    h += '<div style="margin-top:18px;padding:16px;background:rgba(167,139,250,0.07);border:1px solid rgba(167,139,250,0.3);border-radius:12px;">';
+    h += '<div style="font-size:12px;color:#A78BFA;font-weight:800;letter-spacing:1.5px;margin-bottom:6px;">' + ttl + '</div>';
+    h += '<div style="font-size:11px;color:rgba(255,255,255,0.55);margin-bottom:12px;line-height:1.4;">' + hint + '</div>';
+    if(liftsN.length){
+      liftsN.forEach(function(L, idx){
+        h += '<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;margin-bottom:5px;background:rgba(255,255,255,0.04);border-radius:7px;">';
+        h += '<span style="font-size:12px;color:rgba(255,255,255,0.7);font-weight:600;">Lift ' + (idx+1) + '</span>';
+        h += '<span style="flex:1;text-align:right;font-size:14px;font-weight:800;color:#fff;font-family:Rajdhani,sans-serif;">' + L.h.toFixed(2) + ' m</span>';
+        h += '</div>';
+      });
+      h += '<div style="display:flex;justify-content:space-between;margin-top:6px;padding-top:6px;border-top:1px solid rgba(167,139,250,0.2);font-size:11px;color:rgba(255,255,255,0.55);">';
+      h += '<span>Total height</span><b style="color:#A78BFA;font-family:Rajdhani,sans-serif;font-size:15px;">' + totalH.toFixed(2) + ' m</b>';
+      h += '</div>';
+    }
+    h += '<div style="display:flex;gap:8px;margin-top:12px;">';
+    h += '<input id="wiz-lift-input" type="number" inputmode="decimal" step="0.1" min="0" placeholder="Height (m)" '
+      + 'style="flex:1;min-width:0;padding:14px;background:rgba(0,0,0,0.3);border:2px solid rgba(167,139,250,0.4);'
+      + 'color:#fff;border-radius:9px;font-family:Rajdhani,sans-serif;font-size:20px;font-weight:800;text-align:center;" '
+      + 'oninput="_wizLiftInputChanged()">';
+    h += '</div>';
+    if(typeof WIZ_STATE.liftHeight === 'number' && WIZ_STATE.liftHeight > 0){
+      h += '<div style="margin-top:10px;text-align:center;font-family:Rajdhani,sans-serif;font-size:14px;font-weight:700;color:#A78BFA;">';
+      h += '✓ This lift: <span style="font-size:20px;">' + WIZ_STATE.liftHeight.toFixed(2) + ' m</span>';
+      h += '</div>';
+    }
+    h += '</div>';
+    return h;   // STR/PSC use height entry — skip the fraction picker entirely
+  }
+
   if(WIZ_STATE.status === 'In Progress' && isBridgeArea && stageAllowsFraction){
     var currentPct = (typeof WIZ_STATE.progressPct === 'number') ? WIZ_STATE.progressPct : null;
     var presets = [
@@ -5676,6 +6104,14 @@ function _wizFracInputChanged(){
       resultEl.innerHTML = '<span style="color:rgba(255,255,255,0.3);font-weight:600;font-size:11px;">enter valid X ≤ Y</span>';
     }
   }
+}
+
+// Pier Structure lift-height input handler — stores the metres value.
+function _wizLiftInputChanged(){
+  var el = document.getElementById('wiz-lift-input');
+  if(!el) return;
+  var v = parseFloat(el.value);
+  WIZ_STATE.liftHeight = (!isNaN(v) && v > 0) ? Math.round(v * 100) / 100 : null;
 }
 
 function wizSelectLayer(layerId){
@@ -6008,10 +6444,17 @@ function _wizSaveOffline(){
     // Optimistically apply locally so user sees it on map immediately
     if(!PS[pier]) PS[pier] = {};
     PS[pier][sid] = status;
+    // STR/PSC lift height — append to that stage's segments (offline)
+    if((sid === 'STR' || sid === 'PSC') && typeof WIZ_STATE.liftHeight === 'number' && WIZ_STATE.liftHeight > 0){
+      var segK = sid + '_segments';
+      if(!Array.isArray(PS[pier][segK])) PS[pier][segK] = [];
+      PS[pier][segK].push({ h: WIZ_STATE.liftHeight });
+      entry.payload[segK] = PS[pier][segK].slice();   // carry full array
+    }
     // Parallel pct key — clear it if no fraction set so we don't leave stale fractions behind
     if(pct !== null){
       PS[pier][sid + '_pct'] = pct;
-    } else {
+    } else if(sid !== 'STR' && sid !== 'PSC'){
       delete PS[pier][sid + '_pct'];
     }
     if(typeof renderAll === 'function') renderAll();
@@ -6083,11 +6526,19 @@ function _wizDoSave_Pier(photoUrl){
   if(!PS[pier]) PS[pier] = {};
   var prevStatus = PS[pier][sid] || 'Not Started';
   PS[pier][sid] = status;
-  // Parallel fractional progress key — only when In Progress + fraction set
-  var pct = (status === 'In Progress' && typeof WIZ_STATE.progressPct === 'number') ? WIZ_STATE.progressPct : null;
+  // ─── PIER STRUCTURE / CONCRETE LIFT — append lift height (metres) ───
+  // For STR and PSC, the surveyor enters a lift height instead of a fraction.
+  // Append it to that stage's <stage>_segments array.
+  if((sid === 'STR' || sid === 'PSC') && typeof WIZ_STATE.liftHeight === 'number' && WIZ_STATE.liftHeight > 0){
+    var segK2 = sid + '_segments';
+    if(!Array.isArray(PS[pier][segK2])) PS[pier][segK2] = [];
+    PS[pier][segK2].push({ h: WIZ_STATE.liftHeight });
+  }
+  // Parallel fractional progress key — only when In Progress + fraction set (not STR/PSC)
+  var pct = (status === 'In Progress' && sid !== 'STR' && sid !== 'PSC' && typeof WIZ_STATE.progressPct === 'number') ? WIZ_STATE.progressPct : null;
   if(pct !== null){
     PS[pier][sid + '_pct'] = pct;
-  } else {
+  } else if(sid !== 'STR' && sid !== 'PSC'){
     delete PS[pier][sid + '_pct'];
   }
   pushPier(pier);
@@ -7720,96 +8171,107 @@ function buildSummary(){
 }
 
 
-// ═══ SAMSUNG PIN LOGIN ═══════════════════════════════════════════
-var PIN_CORRECT = '12345';
-var PIN_ENTERED = '';
-var PIN_LOCKED  = false;
-var PIN_ATTEMPTS= 0;
-
-function pinUpdateClock(){
-  var now = new Date();
-  var h = now.getHours(), m = now.getMinutes();
-  var hEl = document.getElementById('lock-hour');
-  var dEl = document.getElementById('lock-date');
-  var tEl = document.getElementById('lock-time');
-  var days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  if(hEl) hEl.textContent = String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
-  if(dEl) dEl.textContent = days[now.getDay()]+', '+months[now.getMonth()]+' '+now.getDate();
-  if(tEl) tEl.textContent = String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
+// ═══ FIREBASE EMAIL/PASSWORD LOGIN ═══════════════════════════════
+function _loginScreen(){ return document.getElementById('login-screen'); }
+function _loginError(msg){
+  var el = document.getElementById('login-error');
+  if(!el) return;
+  el.textContent = msg;
+  el.style.display = msg ? 'block' : 'none';
 }
-setInterval(pinUpdateClock, 1000);
-pinUpdateClock();
-
-function pinTap(digit){
-  if(PIN_LOCKED) return;
-  if(PIN_ENTERED.length >= 5) return;
-  PIN_ENTERED += digit;
-  pinUpdateDots();
-  if(PIN_ENTERED.length === 5) setTimeout(pinCheck, 200);
+function _loginStatus(msg){
+  var el = document.getElementById('login-status');
+  if(el) el.textContent = msg;
+}
+function _loginSetBusy(busy){
+  var btn = document.getElementById('login-btn');
+  var em  = document.getElementById('login-email');
+  var pw  = document.getElementById('login-password');
+  if(btn){ btn.disabled = busy; btn.textContent = busy ? 'Signing in…' : 'Sign In'; }
+  if(em)  em.disabled = busy;
+  if(pw)  pw.disabled = busy;
 }
 
-function pinDel(){
-  if(PIN_LOCKED) return;
-  PIN_ENTERED = PIN_ENTERED.slice(0,-1);
-  pinUpdateDots();
-  document.getElementById('pin-error').textContent = '';
-}
-
-function pinUpdateDots(){
-  for(var i=0;i<5;i++){
-    var d = document.getElementById('pd'+i);
-    if(!d) continue;
-    d.classList.remove('filled','error','success');
-    if(i < PIN_ENTERED.length) d.classList.add('filled');
+function doLogin(){
+  var email = (document.getElementById('login-email').value || '').trim();
+  var pw    = (document.getElementById('login-password').value || '');
+  _loginError('');
+  if(!email || !pw){ _loginError('Please enter your email and password.'); return; }
+  if(typeof firebase === 'undefined' || !firebase.auth){
+    _loginStatus('Connecting to server, please wait…');
+    setTimeout(doLogin, 1500);
+    return;
   }
+  _loginSetBusy(true);
+  // Watchdog + stage tracking: a sign-in can hang on mobile when storage stalls
+  // (iOS Safari/WebKit IndexedDB bug) or the auth request stalls. We tag each
+  // stage and surface it on timeout so the failure point is diagnosable without
+  // a console — and so the UI never spins forever with no feedback.
+  var _settled = false;
+  var _stage = 'init';
+  var _watchdog = setTimeout(function(){
+    if(_settled) return;
+    _settled = true;
+    _loginSetBusy(false);
+    _loginError('Sign-in timed out at stage: "' + _stage + '". Check your connection and retry. If it keeps stopping at the same stage, report that stage.');
+  }, 15000);
+  var P = firebase.auth.Auth.Persistence;
+  // Resolve a promise to 'ok'/'err'/'timeout' — never rejects, never hangs.
+  function _race(promise, ms){
+    return new Promise(function(resolve){
+      var t = setTimeout(function(){ resolve('timeout'); }, ms);
+      Promise.resolve(promise).then(
+        function(){ clearTimeout(t); resolve('ok'); },
+        function(){ clearTimeout(t); resolve('err'); }
+      );
+    });
+  }
+  // iOS / iPadOS run EVERY browser (Safari, Chrome, …) on WebKit, whose
+  // IndexedDB can deadlock the credential write inside signInWithEmailAndPassword
+  // — sign-in then hangs with no error (the "stage: signin" timeout). Durable
+  // LOCAL persistence is what triggers that IndexedDB write during sign-in, so on
+  // those devices we use sessionStorage persistence instead: it never touches
+  // IndexedDB and still survives a page refresh. Other platforms keep LOCAL so
+  // the session lasts across full browser restarts.
+  var _ua = navigator.userAgent || '';
+  var _webkitMobile = /iP(hone|ad|od)/.test(_ua) ||
+                      (/Macintosh/.test(_ua) && typeof document !== 'undefined' && 'ontouchend' in document);
+  var _preferred = _webkitMobile ? P.SESSION : P.LOCAL;
+  _stage = 'persistence';
+  _loginStatus('Preparing secure session…');
+  _race(firebase.auth().setPersistence(_preferred), 3000)
+    .then(function(r){
+      if(r === 'ok') return;                 // preferred storage is healthy
+      // Last resort: in-memory persistence never touches any browser storage.
+      return _race(firebase.auth().setPersistence(P.NONE), 2000);
+    })
+    .then(function(){
+      _stage = 'signin';
+      _loginStatus('Contacting sign-in server…');
+      return firebase.auth().signInWithEmailAndPassword(email, pw);
+    })
+    .then(function(){
+      _stage = 'done';
+      _settled = true; clearTimeout(_watchdog);
+      _loginStatus('');
+      // Success: onAuthStateChanged (in startFirebase) hides the login screen.
+    })
+    .catch(function(e){
+      if(_settled) return;
+      _settled = true; clearTimeout(_watchdog);
+      _loginSetBusy(false);
+      _loginStatus('');
+      var msg = 'Incorrect email or password.';
+      if(e && e.code === 'auth/too-many-requests') msg = 'Too many attempts. Try again later.';
+      if(e && e.code === 'auth/network-request-failed') msg = 'Network error. Check your connection.';
+      _loginError(msg);
+    });
+  // Success handled by onAuthStateChanged wired in startFirebase()
 }
 
-function pinCheck(){
-  if(PIN_ENTERED === PIN_CORRECT){
-    // Success — green dots then dismiss
-    for(var i=0;i<5;i++){
-      var d=document.getElementById('pd'+i);
-      if(d){d.classList.remove('filled','error');d.classList.add('success');}
-    }
-    setTimeout(function(){
-      var lock = document.getElementById('samsung-lock');
-      if(lock){
-        lock.style.transition='opacity 0.4s';
-        lock.style.opacity='0';
-        setTimeout(function(){ lock.style.display='none'; }, 400);
-      }
-    }, 500);
-  } else {
-    // Wrong — red dots, shake, clear
-    PIN_ATTEMPTS++;
-    for(var i=0;i<5;i++){
-      var d=document.getElementById('pd'+i);
-      if(d){d.classList.remove('filled');d.classList.add('error');}
-    }
-    // Shake
-    var dots = document.getElementById('pin-dots');
-    if(dots){
-      dots.style.transition='transform 0.05s';
-      var shakes=[10,-10,8,-8,5,-5,0], si=0;
-      var shk=setInterval(function(){
-        dots.style.transform='translateX('+shakes[si]+'px)';
-        si++; if(si>=shakes.length){ clearInterval(shk); dots.style.transform=''; }
-      },60);
-    }
-    var msg = PIN_ATTEMPTS>=5 ? 'Too many attempts. Try again in 30s.' : 'Incorrect PIN. Try again.';
-    document.getElementById('pin-error').textContent = msg;
-    if(PIN_ATTEMPTS>=5){
-      PIN_LOCKED=true;
-      setTimeout(function(){PIN_LOCKED=false;PIN_ATTEMPTS=0;document.getElementById('pin-error').textContent='';},30000);
-    }
-    setTimeout(function(){
-      PIN_ENTERED='';
-      for(var i=0;i<5;i++){
-        var d=document.getElementById('pd'+i);
-        if(d){d.classList.remove('error','filled');}
-      }
-    }, 700);
+function doSignOut(){
+  if(typeof firebase !== 'undefined' && firebase.auth){
+    firebase.auth().signOut();
   }
 }
 
