@@ -855,7 +855,7 @@ var EMB_LAYER_THICKNESS = 0.30;
 // width, sides slope 2H:1V on both sides, height = layers × 0.30 m.
 //   V = L × (W·H + slope·H²)   where slope = 2
 // e.g. 50m × 5m top × 8 layers (H=2.4m): V = 50 × (5×2.4 + 2×5.76) = 1176 m³
-// ═══ NG (NATURAL GROUND) DATA EMBEDDED FROM TOPO SURVEY (v61b-panelfix+) ════════════
+// ═══ NG (NATURAL GROUND) DATA EMBEDDED FROM TOPO SURVEY (v62-confirmsave+) ════════════
 // All_Points.csv, code='NGL', 7257 points across the project area.
 // Pre-computed NG for 68 design embankment stations via inverse-distance
 // weighting (5 nearest NGL points, IDW power 2, search radius 50m).
@@ -4636,15 +4636,78 @@ function saveEmbWIR(){
     var u = (firebase && firebase.auth && firebase.auth().currentUser) || null;
     if(u && u.email) rec.by = u.email;
   } catch(e){}
+  // v62: confirmed save. Disable the button, show a pending modal, and only
+  // report success once Firebase ACKNOWLEDGES the write (not just fires the
+  // callback). Offline writes are caught and reported so nothing is silently
+  // lost. The modal blocks until the user taps OK.
+  var saveBtn = document.querySelector('#map-pier-panel button[onclick*="saveEmbWIR"]');
+  if(saveBtn){ saveBtn.disabled = true; saveBtn.style.opacity = '0.5'; saveBtn.textContent = 'SAVING…'; }
+  var online = (typeof navigator !== 'undefined' && 'onLine' in navigator) ? navigator.onLine : true;
+
   var ref = window.DB.ref('ic1_bridges/EMB_SECTIONS').push();
-  ref.set(rec, function(err){
-    if(err){ flash('WIR save failed: ' + err.message); return; }
-    flash('WIR ' + rec.wir + ' saved - ' + volume.toFixed(1) + ' m3');
+  var settled = false;
+  function reEnable(txtLabel){
+    if(saveBtn){ saveBtn.disabled = false; saveBtn.style.opacity = '1'; saveBtn.textContent = txtLabel || 'SAVE WIR'; }
+  }
+  // Hard timeout: if Firebase neither confirms nor errors within 8 s (typical
+  // when the phone has no signal), warn the user instead of leaving them guessing.
+  var watchdog = setTimeout(function(){
+    if(settled) return;
+    settled = true;
+    reEnable('SAVE WIR');
+    window._embSaveModal(false, rec, volume,
+      'No response from the server in 8 seconds. Your phone may be offline.\n\n' +
+      'The entry was NOT confirmed. Check your connection and SAVE AGAIN. ' +
+      'Do not assume it saved.');
+  }, 8000);
+
+  ref.set(rec).then(function(){
+    if(settled) return;
+    settled = true; clearTimeout(watchdog);
+    reEnable('SAVE WIR');
     if(typeof logAction === 'function'){
       logAction({type:'embankment_wir', wir: rec.wir, side: side, start: st, end: en, volume: rec.volume});
     }
-    setTimeout(function(){ if(typeof closeMapPanel === 'function') closeMapPanel(); }, 900);
+    window._embSaveModal(true, rec, volume, null);
+  }).catch(function(err){
+    if(settled) return;
+    settled = true; clearTimeout(watchdog);
+    reEnable('SAVE WIR');
+    window._embSaveModal(false, rec, volume,
+      (online ? 'The server rejected the write' : 'Your phone is offline') +
+      ':\n' + (err && err.message ? err.message : err) +
+      '\n\nThe entry was NOT saved. Fix and try again.');
   });
+}
+
+// Blocking save-result modal — green tick on success, red on failure.
+window._embSaveModal = function(ok, rec, volume, errMsg){
+  var old = document.getElementById('emb-save-modal');
+  if(old) old.parentNode.removeChild(old);
+  var ov = document.createElement('div');
+  ov.id = 'emb-save-modal';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:200000;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(3,6,10,0.82);backdrop-filter:blur(3px);';
+  var col = ok ? '#34D399' : '#EF4444';
+  var icon = ok ? '✓' : '✕';
+  var title = ok ? 'SAVED & CONFIRMED' : 'NOT SAVED';
+  var body = ok
+    ? ('<div style="font-size:15px;color:#fff;font-weight:800;margin-bottom:4px;">' + rec.wir + '</div>'
+       + '<div style="font-family:monospace;font-size:13px;color:rgba(255,255,255,0.7);line-height:1.7;">'
+       + 'Side ' + rec.side + ' · CH ' + rec.start + '–' + rec.end + '<br>'
+       + 'Width ' + rec.width + ' m · t ' + rec.thickness + ' m<br>'
+       + '<span style="color:#34D399;font-weight:800;">Volume ' + volume.toFixed(1) + ' m³</span></div>'
+       + '<div style="font-size:12px;color:rgba(255,255,255,0.45);margin-top:10px;">Stored in the cloud. Visible on the desktop now.</div>')
+    : ('<div style="font-size:13px;color:#FCA5A5;line-height:1.6;white-space:pre-line;">' + (errMsg || 'Unknown error') + '</div>');
+  ov.innerHTML =
+    '<div style="background:#0d1420;border:2px solid ' + col + ';border-radius:18px;padding:26px 24px;width:min(360px,92vw);text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.6);">'
+    + '<div style="width:64px;height:64px;border-radius:50%;background:' + col + '22;border:2px solid ' + col + ';display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:34px;color:' + col + ';font-weight:900;">' + icon + '</div>'
+    + '<div style="font-family:Rajdhani,sans-serif;font-size:18px;font-weight:900;color:' + col + ';letter-spacing:1px;margin-bottom:12px;">' + title + '</div>'
+    + body
+    + '<button onclick="var m=document.getElementById(\'emb-save-modal\');if(m)m.remove();' + (ok ? 'if(typeof closeMapPanel===\'function\')closeMapPanel();' : '') + '" '
+    + 'style="margin-top:18px;width:100%;padding:14px;background:' + col + ';border:none;border-radius:10px;color:#04130d;font-weight:900;font-size:16px;font-family:inherit;cursor:pointer;letter-spacing:1px;">'
+    + (ok ? 'DONE' : 'TRY AGAIN') + '</button>'
+    + '</div>';
+  document.body.appendChild(ov);
 }
 
 // Save the current section panel to Firebase under EMB_SECTIONS/{auto_key}.
