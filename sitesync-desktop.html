@@ -15370,26 +15370,44 @@ function _ngsurf_processDesignSurfaceRows(rows, filename, rawRows){
       if(isFinite(n) && isFinite(e) && isFinite(z)) newPoints.push([n, e, z]);
     });
   } else {
-    // v94: HEADERLESS FALLBACK — no recognizable N/E/Z header names were
-    // found, which is exactly what happens with the standard as-built export
-    // format used for this project: "Point#, Northing, Easting, Elevation,
-    // Remark" with NO header row at all. Treating row 1 as headers (the
-    // normal path above) would silently drop point #1 and produce nonsense
-    // column names, so instead we fall back to the known fixed column
-    // positions: col 0 = point#, col 1 = Northing, col 2 = Easting,
-    // col 3 = Elevation, col 4 = remark/code (both ignored).
+    // v95: HEADERLESS FALLBACK — no recognizable N/E/Z header names were
+    // found. As-built exports for this project have shown up in TWO related
+    // but different layouts:
+    //   5-column: Point#, Northing, Easting, Elevation, Remark
+    //   4-column: Northing, Easting, Elevation, Remark (no point# column)
+    // Rather than hardcode one layout (which broke on the other), detect
+    // which one we're looking at: project Northing values are consistently
+    // large (~2,700,000+, 7 digits) while a point-number column is always a
+    // small sequential integer. Check column 0 of the first few data rows —
+    // if it's consistently small, it's a point# column and real data starts
+    // one column later; otherwise column 0 IS the Northing.
     if(rawRows && rawRows.length){
       usedPositionalFallback = true;
+      var sampleSize = Math.min(5, rawRows.length);
+      var col0LooksLikePointNumber = true;
+      for(var si = 0; si < sampleSize; si++){
+        var sampleRow = rawRows[si];
+        if(!sampleRow || sampleRow.length < 1) continue;
+        var sampleVal = parseFloat(sampleRow[0]);
+        // A real Northing on this project is always > 100,000; a point
+        // number never is. Any sampled row failing this check means col 0
+        // is NOT a simple point-number column.
+        if(!isFinite(sampleVal) || sampleVal > 100000){ col0LooksLikePointNumber = false; break; }
+      }
+      var nCol = col0LooksLikePointNumber ? 1 : 0;
+      var eCol = col0LooksLikePointNumber ? 2 : 1;
+      var zCol = col0LooksLikePointNumber ? 3 : 2;
+      console.log('[ngsurf-import] Headerless layout detected: ' + (col0LooksLikePointNumber ? '5-column (Point#, N, E, Z, Remark)' : '4-column (N, E, Z, Remark)') + ' — reading N from col '+nCol+', E from col '+eCol+', Z from col '+zCol+'.');
       rawRows.forEach(function(r){
-        if(!r || r.length < 4) return;
-        var n = parseFloat(r[1]), e = parseFloat(r[2]), z = parseFloat(r[3]);
+        if(!r || r.length <= zCol) return;
+        var n = parseFloat(r[nCol]), e = parseFloat(r[eCol]), z = parseFloat(r[zCol]);
         if(isFinite(n) && isFinite(e) && isFinite(z)) newPoints.push([n, e, z]);
       });
     }
   }
 
   if(!newPoints.length){
-    alert('Could not find N, E, and Z columns. Found headers: ' + Object.keys(rows[0]).join(', ') + '\n\nExpected either named columns (N/Northing, E/Easting, Z/Elevation), or the standard headerless format: Point#, Northing, Easting, Elevation, Remark.');
+    alert('Could not find N, E, and Z columns. Found headers: ' + Object.keys(rows[0]).join(', ') + '\n\nExpected either named columns (N/Northing, E/Easting, Z/Elevation), or a headerless format: either "Point#, Northing, Easting, Elevation, Remark" (5 columns) or "Northing, Easting, Elevation, Remark" (4 columns, no point number).');
     return;
   }
 
