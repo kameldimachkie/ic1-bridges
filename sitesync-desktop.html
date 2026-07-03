@@ -7552,6 +7552,13 @@ function showPierPanel(pier){
     h+='<div style="font-size:9px;font-weight:800;color:#A78BFA;letter-spacing:1.5px;text-transform:uppercase;">🏗 Pier Column Lifts</div>';
     h+='<div style="font-size:8px;color:rgba(255,255,255,0.4);font-style:italic;">admin editable</div>';
     h+='</div>';
+    // ── ONE-TAP POUR ENTRY: opens the Pour Ticket pre-filled with this pier.
+    // The ticket auto-numbers the lift, marks it POURED, saves via _liftsSave
+    // (Firebase + STR In Progress + HISTORY + 3D refresh) in a single step.
+    h+='<button onclick="if(typeof openPourTicket===\'function\')openPourTicket(\''+pierNm+'\')" '
+      +'style="width:100%;margin-bottom:10px;background:linear-gradient(90deg,rgba(255,176,32,0.9),rgba(230,140,20,0.9));'
+      +'border:none;color:#1a1206;font-size:12px;font-weight:900;letter-spacing:1.2px;padding:10px;border-radius:8px;cursor:pointer;">'
+      +'🛢 LOG A POUR — ONE STEP</button>';
 
     // ── Per-pier design height (empty by default → unconfigured) ──
     var _pth = (stages.totalHeight !== undefined && stages.totalHeight !== null && stages.totalHeight !== '')
@@ -37319,7 +37326,7 @@ function _pourFabInit(){
 if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _pourFabInit);
 else _pourFabInit();
 
-console.log('%c[SiteSync] 🛢 Pour Ticket v1 loaded — Ctrl+Shift+P or the amber barrel button', 'color:#FFB020;font-weight:bold;');
+console.log('%c[SiteSync] 🛢 Pour Ticket v1.1 loaded — barrel FAB + panel LOG A POUR button', 'color:#FFB020;font-weight:bold;');
 })();
 </script>
 
