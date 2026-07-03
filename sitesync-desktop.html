@@ -1132,26 +1132,124 @@ function doSiteForgot(){
     <div class="project-name">IC1 Road Improvements — Interchange 1</div>
     <div class="project-sub">Diriyah, Riyadh · Khatib & Alami</div>
   </div>
-  <div class="nav-tabs">
-    <button class="nav-tab active" onclick="switchTab('home')" style="border-color:rgba(245,158,11,0.5);color:#F59E0B;">🏠 Home</button>
-    <button class="nav-tab" onclick="switchTab('map')">🗺 Map</button>
-    <button class="nav-tab" onclick="switchTab('bridges')" style="border-color:rgba(6,214,160,0.4);color:#06D6A0;">🌉 Bridges</button>
-    <button class="nav-tab" onclick="switchTab('embankment')" style="border-color:rgba(212,168,67,0.4);color:#D4A843;">🏗 Embankment</button>
-    <button class="nav-tab" onclick="switchTab('qs')" style="border-color:rgba(34,211,238,0.4);color:#22D3EE;">📐 QS</button>
-    <button class="nav-tab" onclick="switchTab('abutments')" style="border-color:rgba(245,158,11,0.4);color:#F59E0B;">🏛 Abutments</button>
-    <button class="nav-tab" onclick="switchTab('surveynet')" style="border-color:rgba(34,211,238,0.4);color:#22D3EE;">📍 Survey Net</button>
-    <button class="nav-tab" onclick="switchTab('ngsurface')" style="border-color:rgba(34,197,94,0.4);color:#22C55E;">🌐 NG Surface</button>
-    <button class="nav-tab" onclick="switchTab('roads')" style="border-color:rgba(167,139,250,0.4);color:#A78BFA;">🛣 Roads</button>
-    <button class="nav-tab" onclick="switchTab('datamgmt')" style="border-color:rgba(168,85,247,0.4);color:#A855F7;">📊 Data Mgmt</button>
-    <button class="nav-tab" onclick="switchTab('pier-geom')" style="border-color:rgba(56,189,248,0.4);color:#38BDF8;">📐 Pier Geom</button>
-    <button class="nav-tab" onclick="switchTab('weekly')" style="border-color:rgba(239,68,68,0.5);color:#EF4444;background:linear-gradient(135deg,rgba(239,68,68,0.06),transparent);">📅 Weekly</button>
-            <button class="nav-tab" onclick="toggleSummary();" style="background:rgba(99,102,241,0.2);color:#818CF8;">📋 Snapshot</button>
-    <button class="nav-tab" onclick="switchTab('plan')">📐 Plan</button>
-    <button class="nav-tab" onclick="switchTab('photos')" style="border-color:rgba(88,166,255,0.4);color:#58A6FF;">📸 Photos</button>
-    <button class="nav-tab" onclick="openStoryPicker()" style="border-color:rgba(239,68,68,0.4);color:#EF4444;">🎬 Story</button>
-    <button class="nav-tab" onclick="switchTab('view3d')" style="border-color:rgba(245,158,11,0.5);color:#F59E0B;background:linear-gradient(135deg,rgba(245,158,11,0.08),transparent);">🎯 3D View</button>
-    <button class="nav-tab" onclick="switchTab('report')" style="border-color:rgba(212,168,67,0.4);color:#D4A843;">📋 Report</button>
-    <button class="nav-tab" onclick="switchTab('admin')" style="border-color:rgba(231,76,60,0.4);color:#E74C3C;">🛡 Admin</button>
+<style>
+  /* ═══ RIBBON v2 — grouped dropdown navigation ═══ */
+  #topbar .nav-tabs { overflow: visible; }          /* menus must not be clipped */
+  .rb-group { position: relative; flex-shrink: 0; }
+  .rb-groupbtn .rb-chev {
+    display: inline-block; font-size: 9px; margin-left: 4px; opacity: 0.55;
+    transition: transform 0.18s cubic-bezier(0.22,1,0.36,1), opacity 0.18s;
+  }
+  .rb-group.open .rb-groupbtn .rb-chev { transform: rotate(180deg); opacity: 1; }
+  .rb-group.open .rb-groupbtn,
+  .nav-tab.rb-live {
+    color: var(--gold); border-color: var(--border-gold);
+    background: var(--gold-dim);
+  }
+  .nav-tab.rb-live::after { left: 12%; right: 12%; }
+  /* Dropdown panel — position:fixed (set by JS) so nothing in the topbar clips it */
+  .rb-menu {
+    position: fixed; z-index: 9600; min-width: 248px;
+    background: linear-gradient(165deg, rgba(19,26,40,0.97), rgba(10,15,26,0.97));
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(212,168,67,0.28); border-radius: 12px;
+    box-shadow: 0 18px 50px rgba(0,0,0,0.65), 0 0 30px rgba(212,168,67,0.06);
+    padding: 6px; display: none;
+    transform-origin: top center;
+  }
+  .rb-menu.show { display: block; animation: rbMenuIn 0.16s cubic-bezier(0.22,1,0.36,1); }
+  @keyframes rbMenuIn {
+    from { opacity: 0; transform: translateY(-7px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .rb-item {
+    display: flex; align-items: center; gap: 11px; width: 100%;
+    background: transparent; border: none; border-radius: 8px;
+    padding: 8px 10px; cursor: pointer; text-align: left;
+    font-family: 'Rajdhani', sans-serif; position: relative;
+    transition: background 0.14s, transform 0.14s;
+  }
+  .rb-item::before {
+    content: ''; position: absolute; left: 0; top: 22%; bottom: 22%;
+    width: 3px; border-radius: 2px; background: var(--rbcol, var(--gold));
+    opacity: 0; transition: opacity 0.14s;
+  }
+  .rb-item:hover { background: rgba(255,255,255,0.06); transform: translateX(3px); }
+  .rb-item:hover::before { opacity: 1; }
+  .rb-item .rb-ic {
+    width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;
+    font-size: 15px; border-radius: 7px;
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.07);
+    flex-shrink: 0;
+  }
+  .rb-item .rb-tx { display: flex; flex-direction: column; min-width: 0; }
+  .rb-item .rb-tx b {
+    font-size: 12.5px; font-weight: 700; color: var(--text);
+    letter-spacing: 0.6px; text-transform: uppercase; line-height: 1.25;
+  }
+  .rb-item .rb-tx small {
+    font-size: 9.5px; color: var(--dimL); letter-spacing: 0.3px;
+    font-family: 'Inter', sans-serif; text-transform: none; font-weight: 400;
+  }
+  .rb-item.rb-on { background: var(--gold-dim); }
+  .rb-item.rb-on::before { opacity: 1; }
+  .rb-item.rb-on .rb-tx b { color: var(--gold); }
+  .rb-sep { height: 1px; margin: 5px 8px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent); }
+  .rb-cap {
+    font-size: 8px; font-weight: 800; letter-spacing: 2px; color: rgba(255,255,255,0.32);
+    padding: 6px 10px 3px; text-transform: uppercase; font-family: 'Rajdhani', sans-serif;
+  }
+</style>
+  <div class="nav-tabs" id="ribbon">
+    <button class="nav-tab active" data-rbtab="home" onclick="ribbonGo('home',this)">🏠 Home</button>
+    <button class="nav-tab" data-rbtab="map" onclick="ribbonGo('map',this)">🗺 Map</button>
+    <button class="nav-tab" data-rbtab="view3d" onclick="ribbonGo('view3d',this)" style="background:linear-gradient(135deg,rgba(245,158,11,0.08),transparent);">🎯 3D View</button>
+
+    <div class="rb-group" id="rbg-structures">
+      <button class="nav-tab rb-groupbtn" onclick="ribbonToggle('structures',this)">🌉 Structures<span class="rb-chev">▾</span></button>
+      <div class="rb-menu" id="rb-menu-structures">
+        <div class="rb-cap">Structures</div>
+        <button class="rb-item" data-rbtab="bridges" style="--rbcol:#06D6A0;" onclick="ribbonGo('bridges',this)"><span class="rb-ic">🌉</span><span class="rb-tx"><b>Bridges</b><small>Stage matrix · 10 bridges · 88 piers</small></span></button>
+        <button class="rb-item" data-rbtab="abutments" style="--rbcol:#F59E0B;" onclick="ribbonGo('abutments',this)"><span class="rb-ic">🏛</span><span class="rb-tx"><b>Abutments</b><small>Abutment works tracking</small></span></button>
+        <button class="rb-item" data-rbtab="pier-geom" style="--rbcol:#38BDF8;" onclick="ribbonGo('pier-geom',this)"><span class="rb-ic">📐</span><span class="rb-tx"><b>Pier Geom</b><small>Section geometry library</small></span></button>
+        <button class="rb-item" data-rbtab="plan" style="--rbcol:#A78BFA;" onclick="ribbonGo('plan',this)"><span class="rb-ic">🗺</span><span class="rb-tx"><b>Plan</b><small>Layout plan view</small></span></button>
+      </div>
+    </div>
+
+    <div class="rb-group" id="rbg-earthworks">
+      <button class="nav-tab rb-groupbtn" onclick="ribbonToggle('earthworks',this)">🏗 Earthworks<span class="rb-chev">▾</span></button>
+      <div class="rb-menu" id="rb-menu-earthworks">
+        <div class="rb-cap">Earthworks &amp; Roads</div>
+        <button class="rb-item" data-rbtab="embankment" style="--rbcol:#D4A843;" onclick="ribbonGo('embankment',this)"><span class="rb-ic">🏗</span><span class="rb-tx"><b>Embankment</b><small>KKR widening · fill volumes</small></span></button>
+        <button class="rb-item" data-rbtab="ngsurface" style="--rbcol:#22C55E;" onclick="ribbonGo('ngsurface',this)"><span class="rb-ic">🌐</span><span class="rb-tx"><b>NG Surface</b><small>Natural ground · toe maps · X-sections</small></span></button>
+        <button class="rb-item" data-rbtab="roads" style="--rbcol:#A78BFA;" onclick="ribbonGo('roads',this)"><span class="rb-ic">🛣</span><span class="rb-tx"><b>Roads</b><small>Road layers progress</small></span></button>
+        <button class="rb-item" data-rbtab="qs" style="--rbcol:#22D3EE;" onclick="ribbonGo('qs',this)"><span class="rb-ic">📐</span><span class="rb-tx"><b>QS</b><small>Quantity surveying</small></span></button>
+      </div>
+    </div>
+
+    <div class="rb-group" id="rbg-insights">
+      <button class="nav-tab rb-groupbtn" onclick="ribbonToggle('insights',this)">📊 Insights<span class="rb-chev">▾</span></button>
+      <div class="rb-menu" id="rb-menu-insights">
+        <div class="rb-cap">Reports &amp; Media</div>
+        <button class="rb-item" data-rbtab="weekly" style="--rbcol:#EF4444;" onclick="ribbonGo('weekly',this)"><span class="rb-ic">📅</span><span class="rb-tx"><b>Weekly</b><small>Weekly progress report · PDF export</small></span></button>
+        <button class="rb-item" data-rbtab="report" style="--rbcol:#D4A843;" onclick="ribbonGo('report',this)"><span class="rb-ic">📋</span><span class="rb-tx"><b>Report</b><small>Full project report</small></span></button>
+        <button class="rb-item" data-rbtab="photos" style="--rbcol:#58A6FF;" onclick="ribbonGo('photos',this)"><span class="rb-ic">📸</span><span class="rb-tx"><b>Photos</b><small>Field photo gallery</small></span></button>
+        <div class="rb-sep"></div>
+        <button class="rb-item" style="--rbcol:#818CF8;" onclick="ribbonAction('snapshot')"><span class="rb-ic">⚡</span><span class="rb-tx"><b>Snapshot</b><small>Quick KPI summary overlay</small></span></button>
+        <button class="rb-item" style="--rbcol:#EF4444;" onclick="ribbonAction('story')"><span class="rb-ic">🎬</span><span class="rb-tx"><b>Story</b><small>Cinematic story mode</small></span></button>
+      </div>
+    </div>
+
+    <div class="rb-group" id="rbg-data">
+      <button class="nav-tab rb-groupbtn" onclick="ribbonToggle('data',this)">🗄 Data<span class="rb-chev">▾</span></button>
+      <div class="rb-menu" id="rb-menu-data">
+        <div class="rb-cap">Data &amp; System</div>
+        <button class="rb-item" data-rbtab="datamgmt" style="--rbcol:#A855F7;" onclick="ribbonGo('datamgmt',this)"><span class="rb-ic">📊</span><span class="rb-tx"><b>Data Mgmt</b><small>Import · export · backups</small></span></button>
+        <button class="rb-item" data-rbtab="surveynet" style="--rbcol:#22D3EE;" onclick="ribbonGo('surveynet',this)"><span class="rb-ic">📍</span><span class="rb-tx"><b>Survey Net</b><small>Control points · benchmarks</small></span></button>
+        <div class="rb-sep"></div>
+        <button class="rb-item" data-rbtab="admin" style="--rbcol:#E74C3C;" onclick="ribbonGo('admin',this)"><span class="rb-ic">🛡</span><span class="rb-tx"><b>Admin</b><small>Access &amp; system tools</small></span></button>
+      </div>
+    </div>
   </div>
   <div class="divider"></div>
   <div class="topbar-right">
@@ -7458,8 +7556,10 @@ function handleClick(cx,cy){
         // Switch to Abutments tab and open this abutment's hero panel
         if(typeof switchTab === 'function'){
           // Need an event for the active-class assignment in switchTab.
-          // Easiest: simulate the click on the Abutments nav tab.
-          var navBtn = document.querySelector('.nav-tab[onclick*="abutments"]');
+          // Easiest: simulate the click on the Abutments entry (ribbon v2:
+          // it lives in the Structures dropdown as a .rb-item).
+          var navBtn = document.querySelector('[data-rbtab="abutments"]') ||
+                       document.querySelector('.nav-tab[onclick*="abutments"]');
           if(navBtn) navBtn.click();
           else switchTab('abutments');
         }
@@ -37327,6 +37427,109 @@ if(document.readyState === 'loading') document.addEventListener('DOMContentLoade
 else _pourFabInit();
 
 console.log('%c[SiteSync] 🛢 Pour Ticket v1.1 loaded — barrel FAB + panel LOG A POUR button', 'color:#FFB020;font-weight:bold;');
+})();
+</script>
+
+
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// RIBBON v2 — grouped dropdown navigation behavior
+//   3 standalone tabs (Home · Map · 3D View) + 4 groups
+//   (Structures · Earthworks · Insights · Data).
+// Menus are position:fixed and placed from the button's rect, so no ancestor
+// overflow can clip them. Active state is synced by wrapping switchTab, so
+// ANY caller anywhere in the app (home quick-links, deep links, old code)
+// keeps the ribbon highlight correct.
+// ═══════════════════════════════════════════════════════════════════════════
+(function(){
+'use strict';
+var GROUPS = ['structures','earthworks','insights','data'];
+
+window.ribbonCloseAll = function(){
+  GROUPS.forEach(function(g){
+    var grp = document.getElementById('rbg-' + g);
+    var menu = document.getElementById('rb-menu-' + g);
+    if(grp) grp.classList.remove('open');
+    if(menu) menu.classList.remove('show');
+  });
+};
+
+window.ribbonToggle = function(g, btn){
+  var grp = document.getElementById('rbg-' + g);
+  var menu = document.getElementById('rb-menu-' + g);
+  if(!grp || !menu) return;
+  var wasOpen = menu.classList.contains('show');
+  window.ribbonCloseAll();
+  if(wasOpen) return;
+  // Position under the button (fixed coords, clamped to viewport)
+  var r = btn.getBoundingClientRect();
+  var left = Math.round(r.left);
+  var width = 258;
+  if(left + width > window.innerWidth - 8) left = window.innerWidth - width - 8;
+  menu.style.left = left + 'px';
+  menu.style.top = Math.round(r.bottom + 7) + 'px';
+  grp.classList.add('open');
+  menu.classList.add('show');
+};
+
+// Navigate: close menus, run the app's own switchTab, sync highlight.
+window.ribbonGo = function(tab, el){
+  window.ribbonCloseAll();
+  if(typeof switchTab === 'function') switchTab(tab);
+  window.ribbonSyncActive(tab);
+};
+
+// Actions that are overlays, not tabs (don't change the active highlight)
+window.ribbonAction = function(what){
+  window.ribbonCloseAll();
+  if(what === 'snapshot' && typeof toggleSummary === 'function') toggleSummary();
+  if(what === 'story' && typeof openStoryPicker === 'function') openStoryPicker();
+};
+
+// Highlight the right element for a given tab id.
+window.ribbonSyncActive = function(tab){
+  document.querySelectorAll('#ribbon .nav-tab').forEach(function(t){ t.classList.remove('active','rb-live'); });
+  document.querySelectorAll('#ribbon .rb-item').forEach(function(t){ t.classList.remove('rb-on','active'); });
+  var el = document.querySelector('#ribbon [data-rbtab="' + tab + '"]');
+  if(!el) return;
+  if(el.classList.contains('rb-item')){
+    el.classList.add('rb-on');
+    var grp = el.closest('.rb-group');
+    if(grp){
+      var gb = grp.querySelector('.rb-groupbtn');
+      if(gb) gb.classList.add('rb-live');
+    }
+  } else {
+    el.classList.add('active');
+  }
+};
+
+// Wrap switchTab so programmatic callers elsewhere in the app also sync the
+// ribbon. switchTab itself still does its legacy event.target .active add —
+// harmless, because ribbonSyncActive runs after and owns the final state.
+function _wrapSwitchTab(){
+  if(typeof window.switchTab !== 'function' || window.switchTab.__rbWrapped) return;
+  var orig = window.switchTab;
+  window.switchTab = function(tab){
+    var out = orig.apply(this, arguments);
+    try { window.ribbonSyncActive(tab); } catch(e){}
+    return out;
+  };
+  window.switchTab.__rbWrapped = true;
+}
+_wrapSwitchTab();
+
+// Close menus on outside click / Esc / scroll of the page behind
+document.addEventListener('click', function(e){
+  if(!e.target.closest || !e.target.closest('.rb-group')) window.ribbonCloseAll();
+});
+document.addEventListener('keydown', function(e){
+  if(e.key === 'Escape') window.ribbonCloseAll();
+});
+window.addEventListener('resize', function(){ window.ribbonCloseAll(); });
+
+console.log('%c[SiteSync] Ribbon v2 loaded — grouped navigation (3 tabs + 4 groups)', 'color:#D4A843;font-weight:bold;');
 })();
 </script>
 
