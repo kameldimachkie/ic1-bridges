@@ -39373,12 +39373,29 @@ function init(){
   var sun = new THREE.DirectionalLight(0xfff2d0, 0.8);
   sun.position.set(180, 320, 120);
   V2.scene.add(sun);
-  buildTerrain();
-  buildPiers();
-  buildDecks();
-  buildToolbar();
-  wireControls(host);
-  wirePick(host);
+  // ── armored init: a failure in one stage reports itself on-screen and in
+  //    the console instead of blacking out the whole world ──
+  var _stErrs = [];
+  function _stage(name, fn){
+    try { fn(); }
+    catch(err){
+      _stErrs.push(name + ': ' + err.message);
+      console.error('[3Dv2] stage "' + name + '" failed:', err);
+    }
+  }
+  _stage('terrain', buildTerrain);
+  _stage('piers',   buildPiers);
+  _stage('decks',   buildDecks);
+  _stage('toolbar', buildToolbar);
+  _stage('controls',function(){ wireControls(host); });
+  _stage('picking', function(){ wirePick(host); });
+  if(_stErrs.length){
+    var stEl = document.getElementById('v2-status');
+    if(stEl){
+      stEl.style.color = '#F87171';
+      stEl.textContent = '⚠ 3Dv2 stage error — ' + _stErrs.join(' · ') + ' (full trace in console)';
+    }
+  }
   resize();
   updCam();
   V2.inited = true;
@@ -39395,8 +39412,17 @@ function resize(){
 function loop(){
   V2.raf = requestAnimationFrame(loop);
   if(!V2.active) return;
-  V2.renderer.render(V2.scene, V2.camera);
-  projectLabels();
+  try {
+    V2.renderer.render(V2.scene, V2.camera);
+    projectLabels();
+  } catch(err){
+    if(!V2._loopErr){
+      V2._loopErr = true;
+      console.error('[3Dv2] render loop error:', err);
+      var stEl = document.getElementById('v2-status');
+      if(stEl){ stEl.style.color = '#F87171'; stEl.textContent = '⚠ 3Dv2 render error — ' + err.message + ' (console has the trace)'; }
+    }
+  }
 }
 window.addEventListener('resize', function(){ if(V2.inited) resize(); });
 
@@ -39409,7 +39435,12 @@ window.view3dv2_activate = function(){
   var tab = document.getElementById('tab-view3dv2');
   if(tab) tab.style.display = 'flex';
   V2.active = true;
-  if(!V2.inited) init(); else { resize(); buildPiers(); buildDecks(); }
+  if(!V2.inited) init();
+  else {
+    resize();
+    try { buildPiers(); } catch(e){ console.error('[3Dv2] piers rebuild:', e); }
+    try { buildDecks(); } catch(e){ console.error('[3Dv2] decks rebuild:', e); }
+  }
 };
 window.view3dv2_deactivate = function(){ V2.active = false; };
 (function(){
@@ -39429,7 +39460,7 @@ window.view3dv2_deactivate = function(){ V2.active = false; };
   window.switchTab.__v2Wrapped = true;
 })();
 
-console.log('%c[SiteSync] 🧪 3D v2 · Slice 2 loaded — true-bearing decks + click-a-pier cards (terrain from Slice 1)', 'color:#22D3EE;font-weight:bold;');
+console.log('%c[SiteSync] 🧪 3D v2 · Slice 2b loaded — armored: stage failures report on-screen, never black out', 'color:#22D3EE;font-weight:bold;');
 })();
 </script>
 
