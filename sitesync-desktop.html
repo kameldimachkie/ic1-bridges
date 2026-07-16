@@ -10696,7 +10696,7 @@ function _exportClientSummaryPDFImpl(curatedPierChanged, curatedStageCompletions
       // Big, clear "BRIDGE-X" label instead of a bare single letter — this
       // is the label the client actually reads at a glance.
       var mid = pts[Math.floor(pts.length/2)];
-      svg += '<text x="'+mid.x.toFixed(1)+'" y="'+(mid.y-14).toFixed(1)+'" fill="'+bridgeLabelCol+'" font-size="15" font-weight="900" font-family="Arial" text-anchor="middle">BRIDGE-'+esc(br.id)+'</text>';
+      svg += '<text x="'+mid.x.toFixed(1)+'" y="'+(mid.y-11).toFixed(1)+'" fill="'+bridgeLabelCol+'" font-size="10" font-weight="800" font-family="Arial" text-anchor="middle">BRIDGE-'+esc(br.id)+'</text>';
     }
   });
 
