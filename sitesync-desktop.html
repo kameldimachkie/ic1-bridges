@@ -41611,6 +41611,16 @@ function _nbRenderNGPanel(container){
   outlierWrap.appendChild(outlierResult);
   panel.appendChild(outlierWrap);
 
+  // Gap Finder — same triangulation/filters used to render the 3D terrain,
+  // but surfaces the REJECTED triangles instead of throwing them away, so
+  // you get real N/E locations to go fill instead of hunting for black
+  // patches by eye.
+  var gapWrap = _nbEl('div', 'padding:8px 18px 12px;border-top:1px dashed rgba(255,255,255,0.08);');
+  var gapBtn = _nbEl('button', 'padding:6px 12px;background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.35);border-radius:6px;color:#C084FC;font-size:11px;font-weight:700;cursor:pointer;', '🕳️ Find terrain gaps');
+  gapBtn.addEventListener('click', function(){ _nbGapOpen(); });
+  gapWrap.appendChild(gapBtn);
+  panel.appendChild(gapWrap);
+
   // Delete-by-ID-list — batch remove specific bulk-imported points by their
   // original survey srcId (e.g. after finding known-bad points outside the
   // app, such as a Z=0 export glitch). Prefilled with the 31 IDs found in
@@ -41784,6 +41794,98 @@ function _nbOutlierPopulate(){
   });
   if(flagged.length > 150){
     list.appendChild(_nbEl('div', 'font-size:12px;color:rgba(255,255,255,0.35);text-align:center;padding:8px 0;', 'Showing worst 150 of ' + flagged.length + '.'));
+  }
+}
+
+// ── Gap Finder Board — fullscreen modal, same pattern as the outlier board.
+NB._gapOverlay = null;
+function _nbGapBuild(){
+  if(NB._gapOverlay) return;
+  var overlay = _nbEl('div', 'position:fixed;inset:0;background:rgba(4,6,10,0.82);z-index:9572;display:none;justify-content:center;align-items:flex-start;overflow-y:auto;padding:18px 12px;');
+  overlay.addEventListener('click', function(e){ if(e.target === overlay) _nbGapClose(); });
+
+  var card = _nbEl('div', 'width:100%;max-width:640px;margin:0 auto;background:linear-gradient(160deg,#160f1c,#0a0710);border:1px solid rgba(168,85,247,0.4);border-radius:14px;box-shadow:0 18px 60px rgba(0,0,0,0.6);');
+
+  var head = _nbEl('div', 'position:sticky;top:0;background:linear-gradient(90deg,rgba(168,85,247,0.18),rgba(168,85,247,0.04));padding:16px 18px;border-bottom:1px dashed rgba(168,85,247,0.4);border-radius:14px 14px 0 0;display:flex;justify-content:space-between;align-items:center;z-index:1;');
+  var headL = _nbEl('div');
+  headL.appendChild(_nbEl('div', 'font-size:17px;font-weight:900;color:#C084FC;letter-spacing:0.5px;', '🕳️ TERRAIN GAP FINDER'));
+  var headSub = _nbEl('div', 'font-size:12px;color:rgba(255,255,255,0.5);margin-top:3px;');
+  headSub.id = 'nb-gap-sub';
+  headL.appendChild(headSub);
+  head.appendChild(headL);
+  var xBtn = _nbEl('button', 'background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:#fff;border-radius:8px;width:34px;height:34px;font-size:16px;cursor:pointer;flex-shrink:0;', '✕');
+  xBtn.addEventListener('click', _nbGapClose);
+  head.appendChild(xBtn);
+  card.appendChild(head);
+
+  var list = _nbEl('div', 'padding:14px 16px 20px;display:flex;flex-direction:column;gap:10px;');
+  list.id = 'nb-gap-list';
+  card.appendChild(list);
+
+  overlay.appendChild(card);
+  document.body.appendChild(overlay);
+  NB._gapOverlay = overlay;
+}
+function _nbGapClose(){
+  if(NB._gapOverlay) NB._gapOverlay.style.display = 'none';
+}
+function _nbGapOpen(){
+  _nbGapBuild();
+  _nbGapPopulate();
+  NB._gapOverlay.style.display = 'flex';
+}
+function _nbGapPopulate(){
+  var sub = document.getElementById('nb-gap-sub');
+  var list = document.getElementById('nb-gap-list');
+  if(!sub || !list) return;
+  list.innerHTML = '';
+  sub.textContent = 'Analyzing current triangulation…';
+
+  var byCode = { NGL: [], ASP: [] };
+  Object.keys(NB.ngpts||{}).forEach(function(id){
+    var p = NB.ngpts[id];
+    var c = (p.code || 'NGL').toUpperCase();
+    if(byCode[c]) byCode[c].push(p);
+  });
+  var maxEdgeGround = NB.maxTriEdge || 25;
+  var maxEdgeAsp = NB.maxTriEdgeAsp || NB.maxTriEdge || 25;
+  var rawGaps = [];
+  if(byCode.NGL.length >= 3) rawGaps = rawGaps.concat(_nbFindTerrainGaps(byCode.NGL, maxEdgeGround, NB.maxZDelta, NB.maxSlope, 'NGL'));
+  if(byCode.ASP.length >= 3) rawGaps = rawGaps.concat(_nbFindTerrainGaps(byCode.ASP, maxEdgeAsp, NB.maxZDelta, NB.maxSlope, 'ASP'));
+
+  // Cluster separation scales with the current edge threshold — roughly
+  // "don't report two gaps closer together than half a typical triangle".
+  var minSep = Math.max(maxEdgeGround, maxEdgeAsp) * 0.5;
+  var gaps = _nbClusterGaps(rawGaps, minSep);
+
+  if(!gaps.length){
+    sub.textContent = 'No gaps detected — every triangle in the current view passes the active filters.';
+    sub.style.color = 'rgba(34,197,94,0.85)';
+    list.appendChild(_nbEl('div', 'font-size:14px;color:rgba(34,197,94,0.85);padding:20px 4px;text-align:center;', '✓ Clean — no rejected triangles right now.'));
+    return;
+  }
+  sub.style.color = 'rgba(255,255,255,0.5)';
+  sub.textContent = gaps.length + ' gap location(s) found — biggest first. Tap "Fill this gap" to add a point right there.';
+
+  gaps.slice(0, 60).forEach(function(g){
+    var row = _nbEl('div', 'background:rgba(168,85,247,0.09);border:1px solid rgba(168,85,247,0.25);border-radius:10px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:12px;');
+    var info = _nbEl('div', 'font-family:JetBrains Mono,monospace;font-size:14px;line-height:1.7;color:rgba(255,255,255,0.92);flex:1;min-width:0;');
+    var codeColor = g.code === 'ASP' ? '#F59E0B' : '#22C55E';
+    info.appendChild(_nbEl('div', 'font-weight:800;color:' + codeColor + ';font-size:13px;letter-spacing:1px;margin-bottom:4px;', g.code + '  ·  ' + g.reason));
+    info.appendChild(_nbEl('div', '', 'N ' + _nbFmt(g.n) + '   E ' + _nbFmt(g.e)));
+    info.appendChild(_nbEl('div', 'color:#C084FC;font-weight:700;', 'Gap span ≈ ' + g.size.toFixed(1) + ' m'));
+    row.appendChild(info);
+    var fillBtn = _nbEl('button', 'background:rgba(34,197,94,0.18);border:1px solid rgba(34,197,94,0.5);color:#4ADE80;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:800;cursor:pointer;flex-shrink:0;white-space:nowrap;', '➕ Fill this gap');
+    fillBtn.addEventListener('click', function(){
+      _nbGapClose();
+      if(NB.viewMode !== '3d'){ NB.viewMode = '3d'; _nbSetViewMode('3d'); }
+      setTimeout(function(){ _nb3DAddTapOpen(g.n, g.e); }, 60);
+    });
+    row.appendChild(fillBtn);
+    list.appendChild(row);
+  });
+  if(gaps.length > 60){
+    list.appendChild(_nbEl('div', 'font-size:12px;color:rgba(255,255,255,0.35);text-align:center;padding:8px 0;', 'Showing biggest 60 of ' + gaps.length + '.'));
   }
 }
 
@@ -42555,6 +42657,64 @@ function _nb3DBuildTerrainMesh(pts, colorHex, maxEdge, centerE, centerN, centerZ
   return new THREE.Mesh(geom, mat);
 }
 
+// ── Gap Finder ─────────────────────────────────────────────────────────
+// A "black hole" in the terrain isn't a mystery — it's a real Delaunay
+// triangle that got REJECTED by the same edge-length/slope/Z-delta filters
+// used to render the surface. So instead of guessing where gaps are, this
+// runs the identical triangulation and identical checks, but keeps the
+// rejected triangles instead of throwing them away — each one's centroid
+// is a real, specific spot where a new survey point would help.
+function _nbFindTerrainGaps(pts, maxEdge, maxZDelta, maxSlope, code){
+  if(pts.length < 3) return [];
+  var coords = new Float64Array(pts.length * 2);
+  pts.forEach(function(p, i){ coords[i*2] = p.e; coords[i*2+1] = p.n; });
+  var del;
+  try { del = new Delaunator(coords); } catch(e){ return []; }
+  var tri = del.triangles;
+  var zLimit = (maxZDelta == null ? 10 : maxZDelta);
+  var slopeLimit = (maxSlope == null ? 1.5 : maxSlope);
+  var gaps = [];
+  for(var t = 0; t < tri.length; t += 3){
+    var ia = tri[t], ib = tri[t+1], ic = tri[t+2];
+    var pa = pts[ia], pb = pts[ib], pc = pts[ic];
+    var dab = Math.hypot(pa.e-pb.e, pa.n-pb.n);
+    var dbc = Math.hypot(pb.e-pc.e, pb.n-pc.n);
+    var dca = Math.hypot(pc.e-pa.e, pc.n-pa.n);
+    var zVals = [pa.z, pb.z, pc.z];
+    var zSpread = Math.max.apply(null, zVals) - Math.min.apply(null, zVals);
+    var dzAB = Math.abs(pa.z-pb.z), dzBC = Math.abs(pb.z-pc.z), dzCA = Math.abs(pc.z-pa.z);
+    var slopeAB = dab > 0.05 ? dzAB/dab : (dzAB > 0 ? 999 : 0);
+    var slopeBC = dbc > 0.05 ? dzBC/dbc : (dzBC > 0 ? 999 : 0);
+    var slopeCA = dca > 0.05 ? dzCA/dca : (dzCA > 0 ? 999 : 0);
+    var maxEdgeLen = Math.max(dab, dbc, dca);
+    var kept = (dab <= maxEdge && dbc <= maxEdge && dca <= maxEdge && zSpread <= zLimit &&
+       slopeAB <= slopeLimit && slopeBC <= slopeLimit && slopeCA <= slopeLimit);
+    if(!kept){
+      var reason = (maxEdgeLen > maxEdge) ? 'edge too long' : ((slopeAB > slopeLimit || slopeBC > slopeLimit || slopeCA > slopeLimit) ? 'too steep' : 'elevation spike');
+      gaps.push({
+        code: code,
+        n: (pa.n + pb.n + pc.n) / 3,
+        e: (pa.e + pb.e + pc.e) / 3,
+        size: maxEdgeLen,
+        reason: reason
+      });
+    }
+  }
+  return gaps;
+}
+// Greedy clustering — biggest gaps first, skip anything too close to a gap
+// already picked. Without this a real hole reports as dozens of near-
+// duplicate rejected triangles instead of one actionable location.
+function _nbClusterGaps(gaps, minSeparation){
+  gaps.sort(function(a,b){ return b.size - a.size; });
+  var picked = [];
+  gaps.forEach(function(g){
+    var tooClose = picked.some(function(p){ return Math.hypot(p.n-g.n, p.e-g.e) < minSeparation; });
+    if(!tooClose) picked.push(g);
+  });
+  return picked;
+}
+
 function _nb3DBuildPointCloud(ids, centerE, centerN, centerZ){
   var positions = new Float32Array(ids.length * 3);
   var colors = new Float32Array(ids.length * 3);
@@ -42833,29 +42993,42 @@ function _nb3DPan(dxPixels, dyPixels){
   ob.target.z -= (rz * dxPixels - uz * dyPixels) * k;
 }
 
-// ── Tap-to-Add-Point ────────────────────────────────────────────────────
-// Raycasts from the camera through the tapped screen position onto an
-// invisible flat reference plane (see _nb3DRebuildScene), then converts the
-// hit point back to real N/E. This is inherently an ESTIMATE, not a
-// measurement — there's no real surface at a black gap by definition, so
-// there's nothing accurate to hit-test against there. That's why the N/E
-// fields in the resulting prompt stay editable rather than locked: this
-// gets you to roughly the right spot fast, then you correct it to your
-// actual known survey coordinates before saving.
+// ── Tap coordinate pick ────────────────────────────────────────────────
+// Tries the REAL terrain mesh first — if you tap on actual surveyed
+// ground/road, this gives a genuinely accurate N/E/Z straight from that
+// surface. Only falls back to the invisible flat reference plane when
+// there's no real mesh there (a black gap by definition has nothing
+// accurate to hit-test against, so that case is always an estimate).
 function _nb3DHitTestTap(clientX, clientY, canvas3d){
   var s3 = NB._scene3D;
-  if(!s3 || !s3.camera || !s3.tapPlane || !s3.center) return null;
+  if(!s3 || !s3.camera || !s3.center) return null;
   var rect = canvas3d.getBoundingClientRect();
   var ndcX = ((clientX - rect.left) / rect.width) * 2 - 1;
   var ndcY = -(((clientY - rect.top) / rect.height) * 2 - 1);
   var raycaster = new THREE.Raycaster();
   raycaster.setFromCamera({ x: ndcX, y: ndcY }, s3.camera);
+
+  if(s3.terrainGroup){
+    var terrainHits = raycaster.intersectObject(s3.terrainGroup, true);
+    if(terrainHits.length){
+      var tp = terrainHits[0].point;
+      return {
+        n: s3.center.n - tp.z,
+        e: s3.center.e + tp.x,
+        z: s3.center.z + (tp.y / NB_VERT_EXAG),
+        real: true
+      };
+    }
+  }
+  if(!s3.tapPlane) return null;
   var hits = raycaster.intersectObject(s3.tapPlane, false);
   if(!hits.length) return null;
   var pt = hits[0].point;
   return {
     n: s3.center.n - pt.z,
-    e: s3.center.e + pt.x
+    e: s3.center.e + pt.x,
+    z: null,
+    real: false
   };
 }
 
@@ -42886,6 +43059,28 @@ function _nb3DAddTapBuild(){
   NB._addTapOverlay = overlay;
 }
 function _nb3DAddTapClose(){ if(NB._addTapOverlay) NB._addTapOverlay.style.display = 'none'; }
+// Lightweight coordinate readout — shows on EVERY tap regardless of
+// Tap-to-Add mode, so you can always find out where you're looking,
+// whether that's real surveyed ground or an empty gap. Separate from the
+// heavier Add-Point-Here form, which only opens for gaps when Tap-to-Add
+// is switched on.
+NB._coordBadge = null;
+function _nb3DShowCoordReadout(hit, canvas3d){
+  if(!NB._coordBadge){
+    var badge = _nbEl('div', 'position:absolute;top:12px;right:12px;z-index:3;background:rgba(10,14,20,0.9);border:1px solid rgba(255,255,255,0.2);border-radius:10px;padding:10px 14px;font-family:JetBrains Mono,monospace;pointer-events:none;transition:opacity 0.2s ease;');
+    (canvas3d.parentElement || document.body).appendChild(badge);
+    NB._coordBadge = badge;
+  }
+  var badge = NB._coordBadge;
+  badge.innerHTML = '';
+  badge.appendChild(_nbEl('div', 'font-size:9px;font-weight:800;letter-spacing:1px;color:' + (hit.real ? '#4ADE80' : 'rgba(255,255,255,0.4)') + ';margin-bottom:4px;', hit.real ? '📍 ON SURVEYED SURFACE' : '📍 GAP — NO SURVEY DATA HERE'));
+  badge.appendChild(_nbEl('div', 'font-size:13px;color:#fff;', 'N ' + hit.n.toFixed(3) + '   E ' + hit.e.toFixed(3)));
+  badge.appendChild(_nbEl('div', 'font-size:13px;color:' + (hit.real ? '#fff' : 'rgba(255,255,255,0.35)') + ';', hit.real ? ('Z ' + hit.z.toFixed(3) + ' m') : 'Z — (estimated position only)'));
+  badge.style.opacity = '1';
+  clearTimeout(NB._coordBadgeTimer);
+  NB._coordBadgeTimer = setTimeout(function(){ if(NB._coordBadge) NB._coordBadge.style.opacity = '0'; }, 6000);
+}
+
 function _nb3DAddTapOpen(n, e){
   _nb3DAddTapBuild();
   var body = document.getElementById('nb-addtap-body');
@@ -42970,9 +43165,12 @@ function _nbSetupCanvas3DInteraction(canvas3d){
     _nbRenderCanvas();
   });
   window.addEventListener('mouseup', function(ev){
-    if(dragging && dragButton === 0 && moveDist < 6 && NB.tapAddMode){
+    if(dragging && dragButton === 0 && moveDist < 6){
       var hit = _nb3DHitTestTap(ev.clientX, ev.clientY, canvas3d);
-      if(hit) _nb3DAddTapOpen(hit.n, hit.e);
+      if(hit){
+        _nb3DShowCoordReadout(hit, canvas3d);
+        if(NB.tapAddMode && !hit.real) _nb3DAddTapOpen(hit.n, hit.e);
+      }
     }
     dragging = false; canvas3d.style.cursor = 'grab';
   });
@@ -43014,11 +43212,14 @@ function _nbSetupCanvas3DInteraction(canvas3d){
     }
   }, { passive:false });
   canvas3d.addEventListener('touchend', function(ev){
-    if(touchState && touchState.mode === 'orbit' && touchState.moveDist < 6 && NB.tapAddMode){
+    if(touchState && touchState.mode === 'orbit' && touchState.moveDist < 6){
       var t = ev.changedTouches && ev.changedTouches[0];
       if(t){
         var hit = _nb3DHitTestTap(t.clientX, t.clientY, canvas3d);
-        if(hit) _nb3DAddTapOpen(hit.n, hit.e);
+        if(hit){
+          _nb3DShowCoordReadout(hit, canvas3d);
+          if(NB.tapAddMode && !hit.real) _nb3DAddTapOpen(hit.n, hit.e);
+        }
       }
     }
     touchState = null;
