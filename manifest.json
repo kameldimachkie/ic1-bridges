@@ -1,25 +1,17 @@
 {
-  "name": "IC1 Field Entry",
-  "short_name": "IC1 Field",
-  "description": "IC1 Road Improvements - Field Data Entry",
+  "name": "SiteSync Desktop",
+  "short_name": "SiteSync",
+  "description": "IC1 Road Improvements — Diriyah Interchange construction intelligence",
+  "start_url": "./sitesync-desktop.html",
+  "scope": "./",
   "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#07090d",
-  "theme_color": "#D4A843",
-  "start_url": "/ic1-bridges/field.html",
-  "scope": "/ic1-bridges/",
+  "orientation": "any",
+  "background_color": "#05070b",
+  "theme_color": "#05070b",
   "icons": [
-    {
-      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj4KICA8cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9IjgwIiBmaWxsPSIjMDcwOTBkIi8+CiAgPHBvbHlnb24gcG9pbnRzPSIyNTYsNjAgNDUyLDE3MCA0NTIsMzQyIDI1Niw0NTIgNjAsMzQyIDYwLDE3MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjRDRBODQzIiBzdHJva2Utd2lkdGg9IjE4Ii8+CiAgPHRleHQgeD0iMjU2IiB5PSIyNDUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJBcmlhbCBCbGFjayxBcmlhbCIgZm9udC13ZWlnaHQ9IjkwMCIgZm9udC1zaXplPSIxMTAiIGZpbGw9IiNENEE4NDMiPklDMTwvdGV4dD4KICA8dGV4dCB4PSIyNTYiIHk9IjMzNSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXdlaWdodD0iYm9sZCIgZm9udC1zaXplPSI1OCIgZmlsbD0iI2YxZjVmOSI+RklFTEQ8L3RleHQ+Cjwvc3ZnPg==",
-      "sizes": "192x192",
-      "type": "image/svg+xml",
-      "purpose": "any"
-    },
-    {
-      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj4KICA8cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9IjgwIiBmaWxsPSIjMDcwOTBkIi8+CiAgPHBvbHlnb24gcG9pbnRzPSIyNTYsNjAgNDUyLDE3MCA0NTIsMzQyIDI1Niw0NTIgNjAsMzQyIDYwLDE3MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjRDRBODQzIiBzdHJva2Utd2lkdGg9IjE4Ii8+CiAgPHRleHQgeD0iMjU2IiB5PSIyNDUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJBcmlhbCBCbGFjayxBcmlhbCIgZm9udC13ZWlnaHQ9IjkwMCIgZm9udC1zaXplPSIxMTAiIGZpbGw9IiNENEE4NDMiPklDMTwvdGV4dD4KICA8dGV4dCB4PSIyNTYiIHk9IjMzNSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXdlaWdodD0iYm9sZCIgZm9udC1zaXplPSI1OCIgZmlsbD0iI2YxZjVmOSI+RklFTEQ8L3RleHQ+Cjwvc3ZnPg==",
-      "sizes": "512x512",
-      "type": "image/svg+xml",
-      "purpose": "maskable"
-    }
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }
