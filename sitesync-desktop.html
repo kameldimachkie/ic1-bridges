@@ -41450,6 +41450,31 @@ function _nbDeletePoint(id){
   if(typeof FB_DB === 'undefined' || !FB_DB) return;
   FB_DB.ref('ic1_bridges/NEWBUILD/NGPTS/' + id).remove();
 }
+// Shared inline delete-confirm — replaces native confirm(), which was
+// confirmed to silently do nothing in some mobile browser contexts (found
+// via the Position Outlier board never actually deleting anything even
+// after the popup appeared to work). First click swaps the button for an
+// inline ✓/✕ pair right in the same row; only the ✓ actually deletes.
+function _nbArmDelete(btn, container, onConfirm){
+  btn.addEventListener('click', function(){
+    if(btn._nbArmed) return;
+    btn._nbArmed = true;
+    var prevDisplay = btn.style.display;
+    btn.style.display = 'none';
+    var row = document.createElement('span');
+    row.style.cssText = 'display:inline-flex;gap:6px;';
+    var yes = document.createElement('button');
+    yes.textContent = '✓ Confirm';
+    yes.style.cssText = 'background:rgba(239,68,68,0.25);border:1px solid rgba(239,68,68,0.6);color:#F87171;border-radius:6px;padding:8px 12px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;';
+    var no = document.createElement('button');
+    no.textContent = '✕';
+    no.style.cssText = 'background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:#fff;border-radius:6px;padding:8px 10px;font-size:12px;cursor:pointer;';
+    yes.addEventListener('click', function(){ onConfirm(); });
+    no.addEventListener('click', function(){ container.removeChild(row); btn.style.display = prevDisplay; btn._nbArmed = false; });
+    row.appendChild(yes); row.appendChild(no);
+    container.appendChild(row);
+  });
+}
 // Batch-delete NG points by their original survey srcId (the id column from
 // the bulk CSV import, e.g. "30275" — NOT the Firebase push key). Bulk-import
 // keys points as 'csv_'+srcId (see _nbImportNGLFile), so we rebuild that key
@@ -41467,7 +41492,6 @@ function _nbDeleteByIdList(text){
     updates[key] = null;
   });
   var n = Object.keys(updates).length;
-  if(!confirm('Delete ' + n + ' NG point(s) by ID? This cannot be undone.')) return;
   FB_DB.ref('ic1_bridges/NEWBUILD/NGPTS').update(updates).then(function(){
     var msg = '🗑 ' + n + ' point(s) deleted by ID.';
     if(typeof showToast === 'function') showToast(msg); else alert(msg);
@@ -41621,6 +41645,15 @@ function _nbRenderNGPanel(container){
   outlierWrap.appendChild(outlierResult);
   panel.appendChild(outlierWrap);
 
+  // Position outlier detection — finds points sitting far from the main
+  // survey cluster (wrong coordinate, not a bad elevation). This is what
+  // was inflating Gap Finder's results with kilometer-scale "gaps".
+  var posOutlierWrap = _nbEl('div', 'padding:0 18px 12px;');
+  var posOutlierBtn = _nbEl('button', 'padding:6px 12px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.35);border-radius:6px;color:#FBBF24;font-size:11px;font-weight:700;cursor:pointer;', '📍 Check for position outliers');
+  posOutlierBtn.addEventListener('click', function(){ _nbPosOutlierOpen(); });
+  posOutlierWrap.appendChild(posOutlierBtn);
+  panel.appendChild(posOutlierWrap);
+
   // Gap Finder — same triangulation/filters used to render the 3D terrain,
   // but surfaces the REJECTED triangles instead of throwing them away, so
   // you get real N/E locations to go fill instead of hunting for black
@@ -41643,8 +41676,8 @@ function _nbRenderNGPanel(container){
   delArea.style.cssText = 'width:100%;height:44px;padding:8px;background:#0f1420;border:1px solid rgba(239,68,68,0.25);border-radius:6px;color:#fff;font-size:11px;font-family:JetBrains Mono,monospace;resize:vertical;box-sizing:border-box;';
   delWrap.appendChild(delArea);
   var delBtn2 = _nbEl('button', 'margin-top:6px;padding:7px 14px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.35);border-radius:6px;color:#F87171;font-size:11px;font-weight:700;cursor:pointer;', '🗑 Delete by ID list');
-  delBtn2.addEventListener('click', function(){ _nbDeleteByIdList(delArea.value); });
   delWrap.appendChild(delBtn2);
+  _nbArmDelete(delBtn2, delWrap, function(){ _nbDeleteByIdList(delArea.value); });
   panel.appendChild(delWrap);
 
   var listHost = _nbEl('div');
@@ -41666,6 +41699,71 @@ function _nbMedian(arr){
 // may sit at genuinely different elevation bands). A modified z-score
 // beyond ±5 is flagged — conservative, so legitimate slopes/embankments
 // aren't falsely flagged, but a typo'd or misplaced-decimal elevation will be.
+// ── Position outlier detection ─────────────────────────────────────────
+// Finds points sitting geographically far from everything else — a stray
+// point with a typo'd or wrong-zone coordinate. Delaunay triangulation
+// still connects a point like that to its nearest real neighbors no matter
+// how far away, producing a handful of enormous rejected triangles that
+// can single-handedly generate hundreds of inflated "gap" entries in Gap
+// Finder, drowning out the real, small, local gaps.
+//
+// Uses a spatial grid with expanding-ring search for the nearest-neighbor
+// distance of each point — an O(n) approach instead of O(n²), since a
+// naive all-pairs check across ~12,000+ points would be far too slow.
+function _nbNearestNeighborDist(pts){
+  var cellSize = 60; // meters
+  var grid = {};
+  function key(cx, cy){ return cx + '_' + cy; }
+  pts.forEach(function(p, idx){
+    var cx = Math.floor(p.e / cellSize), cy = Math.floor(p.n / cellSize);
+    var k = key(cx, cy);
+    (grid[k] = grid[k] || []).push(idx);
+  });
+  var nnDist = new Array(pts.length);
+  pts.forEach(function(p, idx){
+    var cx = Math.floor(p.e / cellSize), cy = Math.floor(p.n / cellSize);
+    var best = Infinity;
+    var maxRing = 40; // caps the search at ~2400m — beyond that, treat as isolated
+    for(var ring = 0; ring <= maxRing; ring++){
+      for(var dx = -ring; dx <= ring; dx++){
+        for(var dy = -ring; dy <= ring; dy++){
+          if(Math.max(Math.abs(dx), Math.abs(dy)) !== ring) continue; // only the new outer ring
+          var bucket = grid[key(cx+dx, cy+dy)];
+          if(!bucket) continue;
+          for(var i = 0; i < bucket.length; i++){
+            var oidx = bucket[i];
+            if(oidx === idx) continue;
+            var d = Math.hypot(pts[oidx].e - p.e, pts[oidx].n - p.n);
+            if(d < best) best = d;
+          }
+        }
+      }
+      // once a candidate is found and the searched ring's guaranteed radius
+      // exceeds it, no closer point can exist in an unsearched cell
+      if(best < Infinity && ring * cellSize > best) break;
+    }
+    nnDist[idx] = best;
+  });
+  return nnDist;
+}
+function _nbFindPositionOutliers(){
+  var ids = Object.keys(NB.ngpts || {});
+  var pts = ids.map(function(id){ var p = NB.ngpts[id]; return { id:id, n:p.n, e:p.e, z:p.z, code:(p.code||'NGL').toUpperCase() }; });
+  if(pts.length < 5) return [];
+  var nnDist = _nbNearestNeighborDist(pts);
+  var sorted = nnDist.slice().sort(function(a,b){ return a-b; });
+  var median = sorted[Math.floor(sorted.length/2)] || 1;
+  var threshold = Math.max(median * 15, 100); // 15x the typical spacing, or 100m, whichever is bigger
+  var flagged = [];
+  pts.forEach(function(p, idx){
+    if(nnDist[idx] > threshold){
+      flagged.push({ id:p.id, n:p.n, e:p.e, z:p.z, code:p.code, nnDist:nnDist[idx] });
+    }
+  });
+  flagged.sort(function(a,b){ return b.nnDist - a.nnDist; });
+  return flagged;
+}
+
 function _nbFindZOutliers(){
   var ids = Object.keys(NB.ngpts||{});
   var byCode = {};
@@ -41756,11 +41854,9 @@ function _nbOutlierPopulate(){
 
     var btnCol = _nbEl('div', 'display:flex;flex-direction:column;gap:6px;flex-shrink:0;');
     var delBtn = _nbEl('button', 'background:rgba(239,68,68,0.18);border:1px solid rgba(239,68,68,0.5);color:#F87171;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;', '✕ Delete');
-    delBtn.addEventListener('click', function(){
-      if(confirm('Delete this point (Z=' + _nbFmt(o.z) + ', group median ' + _nbFmt(o.median) + ')?')){
-        _nbDeletePoint(o.id);
-        setTimeout(_nbOutlierPopulate, 300);
-      }
+    _nbArmDelete(delBtn, btnCol, function(){
+      _nbDeletePoint(o.id);
+      setTimeout(_nbOutlierPopulate, 300);
     });
     var addBtn = _nbEl('button', 'background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.5);color:#4ADE80;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;', '➕ Add fix point');
     btnCol.appendChild(delBtn);
@@ -41804,6 +41900,81 @@ function _nbOutlierPopulate(){
   });
   if(flagged.length > 150){
     list.appendChild(_nbEl('div', 'font-size:12px;color:rgba(255,255,255,0.35);text-align:center;padding:8px 0;', 'Showing worst 150 of ' + flagged.length + '.'));
+  }
+}
+
+// ── Position Outlier Board — same pattern as the elevation board, but
+// flags points sitting geographically far from the rest of the survey
+// cluster (wrong-zone coordinate, typo, bad import) rather than a bad Z.
+NB._posOutlierOverlay = null;
+function _nbPosOutlierBuild(){
+  if(NB._posOutlierOverlay) return;
+  var overlay = _nbEl('div', 'position:fixed;inset:0;background:rgba(4,6,10,0.82);z-index:9571;display:none;justify-content:center;align-items:flex-start;overflow-y:auto;padding:18px 12px;');
+  overlay.addEventListener('click', function(e){ if(e.target === overlay) _nbPosOutlierClose(); });
+
+  var card = _nbEl('div', 'width:100%;max-width:640px;margin:0 auto;background:linear-gradient(160deg,#1c1408,#0a0704);border:1px solid rgba(245,158,11,0.4);border-radius:14px;box-shadow:0 18px 60px rgba(0,0,0,0.6);');
+
+  var head = _nbEl('div', 'position:sticky;top:0;background:linear-gradient(90deg,rgba(245,158,11,0.18),rgba(245,158,11,0.04));padding:16px 18px;border-bottom:1px dashed rgba(245,158,11,0.4);border-radius:14px 14px 0 0;display:flex;justify-content:space-between;align-items:center;z-index:1;');
+  var headL = _nbEl('div');
+  headL.appendChild(_nbEl('div', 'font-size:17px;font-weight:900;color:#FBBF24;letter-spacing:0.5px;', '📍 POSITION OUTLIER BOARD'));
+  var headSub = _nbEl('div', 'font-size:12px;color:rgba(255,255,255,0.5);margin-top:3px;');
+  headSub.id = 'nb-posoutlier-sub';
+  headL.appendChild(headSub);
+  head.appendChild(headL);
+  var xBtn = _nbEl('button', 'background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:#fff;border-radius:8px;width:34px;height:34px;font-size:16px;cursor:pointer;flex-shrink:0;', '✕');
+  xBtn.addEventListener('click', _nbPosOutlierClose);
+  head.appendChild(xBtn);
+  card.appendChild(head);
+
+  var list = _nbEl('div', 'padding:14px 16px 20px;display:flex;flex-direction:column;gap:10px;');
+  list.id = 'nb-posoutlier-list';
+  card.appendChild(list);
+
+  overlay.appendChild(card);
+  document.body.appendChild(overlay);
+  NB._posOutlierOverlay = overlay;
+}
+function _nbPosOutlierClose(){
+  if(NB._posOutlierOverlay) NB._posOutlierOverlay.style.display = 'none';
+}
+function _nbPosOutlierOpen(){
+  _nbPosOutlierBuild();
+  _nbPosOutlierPopulate();
+  NB._posOutlierOverlay.style.display = 'flex';
+}
+function _nbPosOutlierPopulate(){
+  var sub = document.getElementById('nb-posoutlier-sub');
+  var list = document.getElementById('nb-posoutlier-list');
+  if(!sub || !list) return;
+  sub.textContent = 'Scanning ' + Object.keys(NB.ngpts||{}).length + ' point(s)…';
+  list.innerHTML = '';
+  var flagged = _nbFindPositionOutliers();
+  if(!flagged.length){
+    sub.textContent = 'No position outliers detected.';
+    sub.style.color = 'rgba(34,197,94,0.85)';
+    list.appendChild(_nbEl('div', 'font-size:14px;color:rgba(34,197,94,0.85);padding:20px 4px;text-align:center;', '✓ Clean — every point sits within the main survey cluster.'));
+    return;
+  }
+  sub.style.color = 'rgba(255,255,255,0.5)';
+  sub.textContent = flagged.length + ' point(s) sitting far outside the main cluster — likely bad coordinates, not real gaps to fill.';
+  flagged.slice(0, 100).forEach(function(o){
+    var row = _nbEl('div', 'background:rgba(245,158,11,0.09);border:1px solid rgba(245,158,11,0.25);border-radius:10px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:12px;');
+    var info = _nbEl('div', 'font-family:JetBrains Mono,monospace;font-size:14px;line-height:1.7;color:rgba(255,255,255,0.92);flex:1;min-width:0;');
+    var codeColor = o.code === 'ASP' ? '#F59E0B' : '#22C55E';
+    info.appendChild(_nbEl('div', 'font-weight:800;color:' + codeColor + ';font-size:13px;letter-spacing:1px;margin-bottom:4px;', o.code + '  ·  id ' + o.id));
+    info.appendChild(_nbEl('div', '', 'N ' + _nbFmt(o.n) + '   E ' + _nbFmt(o.e) + '   Z ' + _nbFmt(o.z)));
+    info.appendChild(_nbEl('div', 'color:#FBBF24;font-weight:700;', 'Nearest neighbor ≈ ' + (o.nnDist > 2000 ? '2000+ m (isolated)' : o.nnDist.toFixed(0) + ' m away')));
+    row.appendChild(info);
+    var delBtn = _nbEl('button', 'background:rgba(239,68,68,0.18);border:1px solid rgba(239,68,68,0.5);color:#F87171;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:800;cursor:pointer;flex-shrink:0;white-space:nowrap;', '✕ Delete');
+    row.appendChild(delBtn);
+    _nbArmDelete(delBtn, row, function(){
+      _nbDeletePoint(o.id);
+      setTimeout(_nbPosOutlierPopulate, 300);
+    });
+    list.appendChild(row);
+  });
+  if(flagged.length > 100){
+    list.appendChild(_nbEl('div', 'font-size:12px;color:rgba(255,255,255,0.35);text-align:center;padding:8px 0;', 'Showing worst 100 of ' + flagged.length + '.'));
   }
 }
 
@@ -41963,12 +42134,39 @@ function _nbRenderNGList(){
     chip.appendChild(document.createTextNode(c + ': ' + byCode[c]));
     var delChip = _nbEl('button', 'margin-left:2px;background:none;border:none;color:rgba(239,68,68,0.6);cursor:pointer;font-size:11px;padding:0 3px;', '✕');
     delChip.title = 'Delete all ' + c + ' points';
+    var typeConfirmRow = null;
     delChip.addEventListener('click', function(){
-      if(!confirm('Delete all ' + byCode[c] + ' ' + c + ' point(s)? This cannot be undone.')) return;
-      if(typeof FB_DB === 'undefined' || !FB_DB) return;
-      var removals = {};
-      ids.forEach(function(id){ if((NB.ngpts[id].code||'NGL').toUpperCase() === c) removals[id] = null; });
-      FB_DB.ref('ic1_bridges/NEWBUILD/NGPTS').update(removals);
+      if(typeConfirmRow) return; // already armed
+      typeConfirmRow = document.createElement('div');
+      typeConfirmRow.style.cssText = 'display:flex;align-items:center;gap:5px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.4);border-radius:10px;padding:3px 6px 3px 9px;';
+      var label = document.createElement('span');
+      label.textContent = 'Type "' + c + '" to delete all ' + byCode[c] + ':';
+      label.style.cssText = 'font-size:10px;color:#F87171;white-space:nowrap;';
+      var input = document.createElement('input');
+      input.type = 'text';
+      input.style.cssText = 'width:60px;padding:3px 5px;background:#0f1420;border:1px solid rgba(239,68,68,0.4);border-radius:4px;color:#fff;font-size:10.5px;';
+      var goBtn = document.createElement('button');
+      goBtn.textContent = '✓';
+      goBtn.style.cssText = 'background:rgba(239,68,68,0.25);border:1px solid rgba(239,68,68,0.6);color:#F87171;border-radius:4px;padding:3px 8px;font-size:11px;font-weight:800;cursor:pointer;';
+      var cancelBtn = document.createElement('button');
+      cancelBtn.textContent = '✕';
+      cancelBtn.style.cssText = 'background:none;border:none;color:rgba(255,255,255,0.5);cursor:pointer;font-size:11px;padding:3px 4px;';
+      goBtn.addEventListener('click', function(){
+        if(input.value.trim().toUpperCase() !== c){ input.style.borderColor = '#EF4444'; return; }
+        if(typeof FB_DB === 'undefined' || !FB_DB) return;
+        var removals = {};
+        ids.forEach(function(id){ if((NB.ngpts[id].code||'NGL').toUpperCase() === c) removals[id] = null; });
+        FB_DB.ref('ic1_bridges/NEWBUILD/NGPTS').update(removals);
+        chip.removeChild(typeConfirmRow);
+        typeConfirmRow = null;
+      });
+      cancelBtn.addEventListener('click', function(){ chip.removeChild(typeConfirmRow); typeConfirmRow = null; });
+      typeConfirmRow.appendChild(label);
+      typeConfirmRow.appendChild(input);
+      typeConfirmRow.appendChild(goBtn);
+      typeConfirmRow.appendChild(cancelBtn);
+      chip.appendChild(typeConfirmRow);
+      input.focus();
     });
     chip.appendChild(delChip);
     summary.appendChild(chip);
@@ -41995,8 +42193,8 @@ function _nbRenderNGList(){
     row.appendChild(dot);
     row.appendChild(_nbEl('span', 'flex:1;', 'N ' + _nbFmt(p.n) + '   E ' + _nbFmt(p.e) + '   Z ' + _nbFmt(p.z) + '   ' + c + (p.label ? '   · ' + p.label : '')));
     var delBtn = _nbEl('button', 'background:none;border:none;color:rgba(239,68,68,0.7);cursor:pointer;font-size:13px;padding:2px 6px;', '✕');
-    delBtn.addEventListener('click', function(){ if(confirm('Delete this NG point?')) _nbDeletePoint(id); });
     row.appendChild(delBtn);
+    _nbArmDelete(delBtn, row, function(){ _nbDeletePoint(id); });
     table.appendChild(row);
   });
   host.appendChild(table);
@@ -42071,8 +42269,8 @@ function _nbRenderPierList(){
     main.appendChild(document.createTextNode('N ' + _nbFmt(p.n) + '  E ' + _nbFmt(p.e) + '  TOF ' + _nbFmt(zVal) + '  Lift ' + _nbFmt(p.lift) + 'm  ·  ' + angleTxt + (p.notes ? '  · ' + p.notes : '')));
     row.appendChild(main);
     var delBtn = _nbEl('button', 'background:none;border:none;color:rgba(239,68,68,0.7);cursor:pointer;font-size:13px;padding:2px 6px;', '✕');
-    delBtn.addEventListener('click', function(){ if(confirm('Delete pier ' + p.name + '?')) _nbDeletePier(id); });
     row.appendChild(delBtn);
+    _nbArmDelete(delBtn, row, function(){ _nbDeletePier(id); });
     table.appendChild(row);
   });
   host.appendChild(table);
