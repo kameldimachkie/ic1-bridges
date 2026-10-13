@@ -159,7 +159,7 @@ function setAt(o,parts,val){
 function seedWirs(){
   const w={};
   for(let i=1;i<=21;i++)w[i]={no:i,date:'',activity:'Earthwork',phase:0,loc:'',status:'prior',mine:false,notes:'Completed by contractor before my QA started. Details to be added from the WIR file.'};
-  w[22]={no:22,date:'2026-10-13',activity:'Grading / trimming',phase:1,loc:'',ref:'M4P1-003',layer:2,status:'approved_open',mine:true,
+  w[22]={no:22,date:'2026-10-13',activity:'Grading / trimming',phase:1,loc:'',ref:'M4P1-003',layer:2,target:'2026-10-16',status:'approved_open',mine:true,
     notes:'Contractor WIR for the new layer (layer 2) placed in zone M4P1-003. Checked on site: grading is OK except the eastern side.',
     items:{i1:{t:'Eastern side: 1 m width not graded',done:false}}};
   return w;
@@ -202,7 +202,7 @@ function applyRemote(path,data){
   const parts=path.split('/').filter(Boolean);
   if(!parts.length){
     if(data&&typeof data==='object'&&Object.keys(data).length){
-      S=data;normalize();
+      S=data;normalize();seedMerge();
       if(!Object.keys(S.wirs).length){S.wirs=seedWirs();patch('',{wirs:S.wirs,meta:Object.assign({},S.meta,{seeded:true})})}
     }else{
       // empty cloud: publish what we have (seeded WIRs + any local edits)
@@ -287,16 +287,17 @@ async function loadDesign(){
   if(!j)j=await idbGet();
   if(j)setDesign(j,false);
 }
-function buildRaster(){
+function getRast(key,colFn){if(!rast||rast.key!==key)buildRaster(colFn,key);return rast}
+function buildRaster(colFn,key){
   const PXs=5,W=Math.ceil((DES.e1-DES.e0)/PXs)+3,H=Math.ceil((DES.n1-DES.n0)/PXs)+3;
   const cv=document.createElement('canvas');cv.width=W;cv.height=H;const c=cv.getContext('2d');
   const pal=[];for(let i=0;i<48;i++)pal.push(rampCss(i/47));
   const span=DES.zmax-DES.zmin||1;
   for(let i=0;i<DES.n;i++){
-    c.fillStyle=pal[Math.round((DES.Z[i]-DES.zmin)/span*47)];
+    c.fillStyle=colFn?rgbCss(colFn(DES.E[i],DES.N[i],DES.Z[i])):pal[Math.round((DES.Z[i]-DES.zmin)/span*47)];
     c.fillRect((DES.E[i]-DES.e0)/PXs,H-3-(DES.N[i]-DES.n0)/PXs,2.4,2.4);
   }
-  rast={cv,PXs,e0:DES.e0,top:DES.n0+(H-3)*PXs+PXs};
+  rast={cv,PXs,key,e0:DES.e0,top:DES.n0+(H-3)*PXs+PXs};
 }
 
 /* ---------- control points ---------- */
@@ -435,7 +436,7 @@ function renderWir(){
       h('div',{class:'row'},h('b',{style:'font-size:17px'},'WIR '+w.no+(w.ref?' · '+w.ref:'')),
         h('span',{class:'badge b-'+w.status},STATUS[w.status]||w.status),h('span',{class:'sp'}),
         h('button',{class:'btn sm',onclick:()=>editWir(w)},'Edit')),
-      h('div',{class:'mut',style:'font-size:13px;margin:4px 0'},[w.layer?('Layer '+w.layer):null,w.activity,w.phase?('Phase '+w.phase):null,w.loc,w.date].filter(Boolean).join(' · ')),
+      h('div',{class:'mut',style:'font-size:13px;margin:4px 0'},[w.layer?('Layer '+w.layer):null,w.activity,w.phase?('Phase '+w.phase):null,w.loc,w.date,w.target?('Target '+w.target):null].filter(Boolean).join(' · ')),
       w.notes?h('div',{},w.notes):null,
       checksOf(w.no).map(c=>h('div',{class:'mono',style:'font-size:12px;margin-top:6px;color:'+(c.ok===c.used&&!c.out?'var(--ok)':'var(--warn)')},`Check ${c.date}: ${c.ok}/${c.used} within ±${c.tol} m`+(c.hi?` · ${c.hi} high`:'')+(c.lo?` · ${c.lo} low`:'')+(c.out?` · ${c.out} outside design`:''))),
       cwLine(w.no),
@@ -456,6 +457,7 @@ function editWir(w){
     h('label',{class:'f'},'WIR name / reference',inp('ref','text',w.ref)),
     h('label',{class:'f'},'Layer no.',inp('layer','number',w.layer)),
     h('label',{class:'f'},'Date',inp('date','date',w.date)),
+    h('label',{class:'f'},'Target finish (final design grade)',inp('target','date',w.target)),
     h('label',{class:'f'},'Activity',sel('activity',ACTIVITIES.map(a=>[a,a]),w.activity)),
     h('label',{class:'f'},'Phase',sel('phase',[[0,'—'],[1,'Phase 1'],[2,'Phase 2'],[3,'Phase 3'],[4,'Phase 4']],w.phase)),
     h('label',{class:'f'},'Location / zone',inp('loc','text',w.loc)),
@@ -479,7 +481,7 @@ function editWir(w){
       }
       let status=f.status.value;
       if(status==='approved'&&Object.values(items).some(i=>!i.done))status='approved_open';
-      put('wirs/'+n,{no:n,ref:f.ref.value.trim(),layer:+f.layer.value||0,date:f.date.value,activity:f.activity.value,phase:+f.phase.value,loc:f.loc.value,status,mine:f.mine.checked,notes:f.notes.value,items});
+      put('wirs/'+n,{no:n,ref:f.ref.value.trim(),layer:+f.layer.value||0,date:f.date.value,target:f.target.value,activity:f.activity.value,phase:+f.phase.value,loc:f.loc.value,status,mine:f.mine.checked,notes:f.notes.value,items});
       if(n!==w.no&&!isNew)put('wirs/'+w.no,null);
       close();
     }},'Save'),
@@ -556,7 +558,7 @@ function renderVol(){
    PLAN (2D canvas)
    ===================================================================== */
 const view={cx:0,cy:0,k:0.1,set:false};
-const plan={cv:$('#plan'),ctx:null,w:0,h:0,dpr:1,labels:true,line:true,showDes:true,check:[],draw:false,drawPhase:1,draft:[],sel:null};
+const plan={cv:$('#plan'),ctx:null,w:0,h:0,dpr:1,labels:true,line:true,showDes:true,status:false,check:[],draw:false,drawPhase:1,draft:[],sel:null};
 plan.ctx=plan.cv.getContext('2d');
 function sizePlan(){
   const b=$('#planBox');plan.dpr=window.devicePixelRatio||1;
@@ -590,7 +592,8 @@ function drawPlan(){
   for(let n=Math.ceil(w0[1]/st)*st;n<=w1[1];n+=st){const y=toS(0,n)[1];c.beginPath();c.moveTo(0,y);c.lineTo(plan.w,y);c.stroke();c.fillText(n,3,y-3)}
   // design raster
   if(DES&&plan.showDes){
-    if(!rast)buildRaster();
+    const rk=(plan.status&&cwSel&&cwirPts(+cwSel).length)?'s'+cwSel+':'+cwirPts(+cwSel).length:'e';
+    getRast(rk,rk==='e'?null:cwStatusFn(true));
     const [rx,ry]=toS(rast.e0,rast.top),sz=rast.PXs*view.k;
     c.imageSmoothingEnabled=sz>1.5;c.globalAlpha=.7;
     c.drawImage(rast.cv,rx,ry,rast.cv.width*sz,rast.cv.height*sz);c.globalAlpha=1;
@@ -644,6 +647,11 @@ function updatePlanBar(){
     h('button',{class:'btn sm'+(plan.labels?' on':''),onclick:()=>{plan.labels=!plan.labels;updatePlanBar();drawPlan()}},'Labels'),
     h('button',{class:'btn sm'+(plan.line?' on':''),onclick:()=>{plan.line=!plan.line;updatePlanBar();drawPlan()}},'Link'),
     DES?h('button',{class:'btn sm'+(plan.showDes?' on':''),onclick:()=>{plan.showDes=!plan.showDes;updatePlanBar();drawPlan()}},'Design'):null,
+    DES&&cwList().length?h('button',{class:'btn sm'+(plan.status?' on':''),onclick:()=>{
+      if(plan.status){plan.status=false;plan.check=[];updatePlanBar();drawPlan();return}
+      if(!cwSel){cwSel=String(cwList()[0]);lsSet('es_cw',cwSel)}
+      plan.status=true;plan.showDes=true;focusPlan(cwRows(+cwSel))}},'Status'):null,
+    DES?h('button',{class:'btn sm'+(legOn?' on':''),onclick:()=>{legOn=!legOn;lsSet('es_leg',legOn);updatePlanLegend();updatePlanBar()}},'Legend'):null,
     plan.check.length?h('button',{class:'btn sm',onclick:()=>{plan.check=[];updatePlanBar();drawPlan()}},'Hide check'):null,
     h('span',{class:'sp'}),
     h('select',{onchange:e=>{plan.drawPhase=+e.target.value;plan.draft=[];updatePlanBar();drawPlan()}},...[1,2,3,4].map(i=>h('option',{value:i,selected:plan.drawPhase===i},ph(i).name))),
@@ -657,6 +665,7 @@ function updatePlanBar(){
       plan.draft=[];plan.draw=false;updatePlanBar();
     }},'Finish'):null,
     !plan.draw&&ph(plan.drawPhase).poly?h('button',{class:'btn sm dng',onclick:()=>{if(confirm('Remove outline of '+ph(plan.drawPhase).name+'?'))put(`phases/${plan.drawPhase}/poly`,'')}},'Clear'):null].filter(Boolean));
+  updatePlanLegend();
 }
 function setInfo(t){$('#planInfo').textContent=t||'Tap a control point for details'}
 (function planEvents(){
@@ -706,7 +715,7 @@ function setInfo(t){$('#planInfo').textContent=t||'Tap a control point for detai
 /* =====================================================================
    3D terrain
    ===================================================================== */
-let cwSel=lsGet('es_cw','');let cwMode='thick';
+let cwSel=lsGet('es_cw','');let cwMode='thick';let cwTerrain='elev',legOn=lsGet('es_leg',true);
 let T=null,dirty3D=true,exag=cwSel?20:6;
 function show3D(){
   const bar=$('#threeBar');
@@ -716,14 +725,18 @@ function show3D(){
       h('button',{class:'btn sm',onclick:()=>{if(T){T.orb.th=.8;T.orb.ph=1;T.orb.r=T.ext*1.4;placeCam()}}},'Reset'),
       h('button',{class:'btn sm',onclick:()=>{if(T){T.orb.ph=.05;placeCam()}}},'Top'),
       h('span',{id:'cwSelWrap'}),
-      h('button',{class:'btn sm',onclick:()=>{cwMode=cwMode==='thick'?'dev':'thick';dirty3D=true;show3D()}},'Colour'));
+      h('button',{class:'btn sm',onclick:()=>{cwMode=cwMode==='thick'?'dev':'thick';dirty3D=true;show3D()}},'Colour'),
+      h('button',{class:'btn sm',id:'cwTer',onclick:()=>{
+        if(!cwSel){const L=cwList();if(!L.length){alert('No WIR layer loaded yet');return}setCw(String(L[0]))}
+        cwTerrain=cwTerrain==='status'?'elev':'status';cwMode=cwTerrain==='status'?'dev':'thick';dirty3D=true;show3D()}},'Work status'),
+      h('button',{class:'btn sm',onclick:()=>{legOn=!legOn;lsSet('es_leg',legOn);dirty3D=true;show3D();updatePlanLegend()}},'Legend'));
   }
   if(!T){
     if(typeof THREE==='undefined'){$('#three').replaceChildren(h('div',{id:'threeMsg'},'3D library could not be loaded (needs internet for three.js).'));return}
     try{init3D()}catch(e){$('#three').replaceChildren(h('div',{id:'threeMsg'},'3D is not available on this device: '+e.message));return}
   }
   if(dirty3D)build3D();
-  refreshCwSel();
+  refreshCwSel();syncBar3D();
   resize3D();render3D();
 }
 function init3D(){
@@ -751,7 +764,7 @@ function init3D(){
 function resize3D(){if(!T)return;const b=$('#three');const w=b.clientWidth,hh=b.clientHeight;if(!w||!hh)return;T.r.setSize(w,hh,false);T.cam.aspect=w/hh;T.cam.updateProjectionMatrix()}
 function placeCam(){const o=T.orb;T.cam.position.set(o.t.x+o.r*Math.sin(o.ph)*Math.sin(o.th),o.t.y+o.r*Math.cos(o.ph),o.t.z+o.r*Math.sin(o.ph)*Math.cos(o.th));T.cam.lookAt(o.t)}
 function render3D(){if(T)T.r.render(T.scene,T.cam)}
-function designMesh(CS,X,Y,Zc){
+function designMesh(CS,X,Y,Zc,colFn,tx){
   const nx=Math.ceil((DES.e1-DES.e0)/CS)+1,cells=new Map();
   for(let i=0;i<DES.n;i++){
     const ix=Math.floor((DES.E[i]-DES.e0)/CS),iy=Math.floor((DES.N[i]-DES.n0)/CS),k=iy*nx+ix;
@@ -759,10 +772,11 @@ function designMesh(CS,X,Y,Zc){
     c.e+=DES.E[i];c.n+=DES.N[i];c.z+=DES.Z[i];c.c++;
   }
   const list=[...cells.values()];list.forEach((c,i)=>c.id=i);
-  const pos=new Float32Array(list.length*3),col=new Float32Array(list.length*3),span=DES.zmax-DES.zmin||1;
+  const pos=new Float32Array(list.length*3),col=new Float32Array(list.length*3),uv=new Float32Array(list.length*2),span=DES.zmax-DES.zmin||1;
   for(const c of list){
-    const e=c.e/c.c,n=c.n/c.c,z=c.z/c.c,j=c.id*3,rgb=rampRGB((z-DES.zmin)/span);
+    const e=c.e/c.c,n=c.n/c.c,z=c.z/c.c,j=c.id*3,rgb=colFn?colFn(e,n,z):rampRGB((z-DES.zmin)/span);
     pos[j]=X(e);pos[j+1]=Y(z);pos[j+2]=Zc(n);col[j]=rgb[0];col[j+1]=rgb[1];col[j+2]=rgb[2];
+    if(tx){const R=tx.R;uv[c.id*2]=(e-R.e0)/(R.cv.width*R.PXs);uv[c.id*2+1]=(n-(R.top-R.cv.height*R.PXs))/(R.cv.height*R.PXs)}
   }
   const idx=[];
   for(const c of list){
@@ -772,7 +786,8 @@ function designMesh(CS,X,Y,Zc){
   const geo=new THREE.BufferGeometry();
   geo.setAttribute('position',new THREE.BufferAttribute(pos,3));geo.setAttribute('color',new THREE.BufferAttribute(col,3));
   geo.setIndex(idx);geo.computeVertexNormals();
-  return new THREE.Mesh(geo,new THREE.MeshLambertMaterial({vertexColors:true,side:THREE.DoubleSide}));
+  if(tx)geo.setAttribute('uv',new THREE.BufferAttribute(uv,2));
+  return new THREE.Mesh(geo,tx?new THREE.MeshLambertMaterial({map:tx.tex,side:THREE.DoubleSide}):new THREE.MeshLambertMaterial({vertexColors:true,side:THREE.DoubleSide}));
 }
 function build3D(){
   dirty3D=false;
@@ -789,7 +804,12 @@ function build3D(){
   const X=e=>e-ce,Zc=n=>-(n-cn),Y=z=>hasZ&&z!=null?(z-zmin)*exag:0;
   function idw(e,n){let sw=0,s=0;for(const p of Z){const d=(p.E-e)**2+(p.N-n)**2;if(d<1)return p.z;sw+=1/d;s+=p.z/d}return s/sw}
   const hz=(e,n)=>{if(DES){const d=designAt(e,n);return d?d.z:zmin}return idw(e,n)};
-  if(DES){g.add(designMesh(20,X,Y,Zc))}
+  if(DES){
+    const sf=cwStatusFn(false);let tx=null;
+    if(sf){const rk='s'+cwSel+':'+cwirPts(+cwSel).length,R=getRast(rk,cwStatusFn(true));
+      const tex=new THREE.CanvasTexture(R.cv);tex.minFilter=THREE.LinearFilter;tex.generateMipmaps=false;tx={tex,R}}
+    g.add(designMesh(20,X,Y,Zc,null,tx));
+  }
   else if(hasZ){
     const N=70,pad=.06,ge0=e0-(e1-e0)*pad,gn0=n0-(n1-n0)*pad,ge=(e1-e0)*(1+2*pad),gn=(n1-n0)*(1+2*pad);
     const pos=new Float32Array((N+1)*(N+1)*3),col=new Float32Array((N+1)*(N+1)*3),idx=[];
@@ -820,9 +840,11 @@ function build3D(){
   placeCam();
   const old=$('#threeMsg');if(old)old.remove();
   const oc=$('#cwBox');if(oc)oc.remove();
+  const ol=$('#legBox3');if(ol)ol.remove();
   if(!hasZ)$('#three').append(h('div',{id:'threeMsg'},`No elevations yet (${Z.length} of ${C.length} points). Load the design file or import a PNEZ file with Z in the Data tab.`));
   else $('#three').append(h('div',{id:'threeMsg',style:'border-color:var(--line);width:auto;right:auto'},`${DES?'Design':'Control'} Z ${zmin.toFixed(2)} → ${zmax.toFixed(2)} m · vertical ×${exag}`));
   if(cw)$('#three').append(cwPanel(+cwSel));
+  if(legOn&&hasZ)$('#three').append(legendEl({id:'legBox3',pos:'left:10px;top:56px',elev:!(cw&&cwTerrain==='status'),status:!!(cw&&cwTerrain==='status'),cols:!!cw}));
 }
 
 /* =====================================================================
@@ -1093,8 +1115,9 @@ function cwPanel(no){
   return h('div',{id:'cwBox',style:'position:absolute;left:8px;right:8px;bottom:8px;background:color-mix(in srgb,var(--panel) 94%,transparent);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:12px;max-height:48%;overflow:auto'},
     h('b',{},`WIR ${no}${w.ref?' · '+w.ref:''}${w.layer?' · layer '+w.layer:''}`),h('span',{class:'mut'},` ${st.n} points · ${fmt(st.area/1e4,2)} ha`),
     row('Layer placed:',[ct(st.layCut),' · ',fl(st.layFill)]),
-    row('Finished vs design:',[ct(st.cut),' · ',fl(st.fill),h('span',{class:'mut'},` · net ${fmt(Math.abs(net))} m³ ${net>=0?'fill':'cut'}`)]),
-    h('div',{class:'mut',style:'margin-top:4px'},`Thickness ${st.tmin.toFixed(2)} to ${st.tmax.toFixed(2)} m, mean ${st.tmean.toFixed(3)} m. Columns run from before level to finished level (${cwMode==='thick'?'light = thin, dark blue = thick':'green within tolerance, red above design, blue below'}).`));
+    row('Remaining to design grade:',[ct(st.cut),' · ',fl(st.fill),h('span',{class:'mut'},` · net ${fmt(Math.abs(net))} m³ ${net>=0?'fill':'cut'}`)]),
+    cwTargetEl(w),
+    h('div',{class:'mut',style:'margin-top:4px'},`Thickness ${st.tmin.toFixed(2)} to ${st.tmax.toFixed(2)} m, mean ${st.tmean.toFixed(3)} m. Columns run from before level to finished level (${cwMode==='thick'?'light = thin, dark blue = thick':'green at design grade, red above design (cut), purple below design (fill)'}).`));
 }
 function addCwir(g,X,Zc,zbase){
   if(!cwSel)return null;
@@ -1104,7 +1127,7 @@ function addCwir(g,X,Zc,zbase){
   let sx=0,sy=0,sz=0,e0=1e12,e1=-1e12,n0=1e12,n1=-1e12;
   for(const p of P){
     const yb=Yc(p.B),yc=Yc(p.C),hh=Math.max(Math.abs(yc-yb),0.05),dv=p.C-p.A;
-    const rgb=cwMode==='thick'?(u=>[.7-.6*u,.92-.7*u,.97-.4*u])(Math.max(0,Math.min(1,(p.C-p.B-.04)/.3))):(Math.abs(dv)<=tol+1e-9?[.3,.75,.45]:(dv>0?[.9,.35,.33]:[.4,.55,.95]));
+    const rgb=cwMode==='thick'?(u=>[.7-.6*u,.92-.7*u,.97-.4*u])(Math.max(0,Math.min(1,(p.C-p.B-.04)/.3))):(Math.abs(dv)<=tol+1e-9?[.3,.75,.45]:(dv>0?[.9,.35,.33]:[.65,.45,.9]));
     const m=new THREE.Mesh(geo,new THREE.MeshLambertMaterial({color:new THREE.Color(rgb[0],rgb[1],rgb[2])}));
     m.scale.set(8,hh,8);m.position.set(X(p.E),Math.min(yb,yc)+hh/2,Zc(p.N));g.add(m);
     const ed=new THREE.LineSegments(edg,new THREE.LineBasicMaterial({color:0x111111}));
@@ -1125,15 +1148,89 @@ function refreshCwSel(){
 }
 function setExag(v){exag=v;const s=$('#exSlider');if(s)s.value=v}
 function setCw(v){
-  cwSel=v;lsSet('es_cw',v);dirty3D=true;
+  cwSel=v;lsSet('es_cw',v);dirty3D=true;if(!v){cwTerrain='elev';cwMode='thick'}
   setExag(v?20:6);
   if(T){T.init=false;T.orb.th=v?.6:.8;T.orb.ph=v?.95:1}
   show3D();
 }
 
+/* ---------- legends and work status ---------- */
+function rgbCss(c){return 'rgb('+c.map(x=>Math.round(x*255)).join(',')+')'}
+const fillRGB=u=>[.55-.4*u,.75-.5*u,1-.25*u];          // fill placed: light blue (thin) to deep blue (thick)
+const SAND=[.82,.74,.55];                                // no work recorded yet
+function cwStatusFn(force){
+  if(!cwSel||(!force&&cwTerrain!=='status'))return null;
+  const P=cwirPts(+cwSel);if(!P.length)return null;
+  const gr=new Map();
+  for(const p of P){const k=Math.floor(p.E/20)*200000+Math.floor(p.N/20);let a=gr.get(k);if(!a){a=[];gr.set(k,a)}a.push(p)}
+  return (e,n)=>{
+    const ix=Math.floor(e/20),iy=Math.floor(n/20);let best=null,bd=1e12;
+    for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){
+      const l=gr.get((ix+a)*200000+iy+b);
+      if(l)for(const p of l){const d=(p.E-e)**2+(p.N-n)**2;if(d<bd){bd=d;best=p}}
+    }
+    if(best&&bd<=49){
+      const th=best.C-best.B;
+      return th>=0?fillRGB(Math.max(0,Math.min(1,(th-.04)/.3))):[.95,.35,.3];
+    }
+    return SAND;
+  };
+}
+function cwTargetEl(w){
+  if(!w||!w.target)return null;
+  const days=Math.round((new Date(w.target)-new Date(today()))/864e5);
+  return h('div',{style:'margin-top:4px'},h('span',{class:'mut'},'Target to reach final design grade: '),
+    h('b',{},w.target+(days>0?` (${days} day${days>1?'s':''} left)`:(days===0?' (today)':' (overdue)'))));
+}
+function seedMerge(){
+  const sw=seedWirs()[22],cur=S.wirs[22];
+  if(cur&&sw)for(const k of ['ref','layer','target'])if(cur[k]==null)cur[k]=sw[k];
+  cache();
+}
+function syncBar3D(){
+  const b=$('#cwTer');if(!b)return;
+  b.textContent=cwTerrain==='status'?'Elevation view':'Work status';
+  b.classList.toggle('on',cwTerrain==='status');
+}
+function legendEl(o){
+  const wrap=h('div',{id:o.id,style:'position:absolute;'+o.pos+';width:182px;background:color-mix(in srgb,var(--panel) 92%,transparent);border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:11px;line-height:1.3;z-index:5;max-height:52%;overflow:auto'});
+  const sw=(css,txt)=>h('div',{style:'display:flex;align-items:center;gap:6px;margin-top:4px'},h('span',{style:'width:16px;height:10px;border-radius:2px;flex:none;background:'+css}),h('span',{},txt));
+  const title=s=>h('div',{style:'font-weight:700;margin:6px 0 2px'},s);
+  const st=cwSel&&cwirPts(+cwSel).length?cwirStats(+cwSel,+S.meta.tol||0.1):null;
+  const w=cwSel?(S.wirs[+cwSel]||{}):{};
+  if(o.elev&&DES){
+    const stops=RAMP.map((c,i)=>rgbCss(c)+' '+(i/(RAMP.length-1)*100)+'%').join(',');
+    const ticks=[0,.25,.5,.75,1].map(u=>(DES.zmin+(DES.zmax-DES.zmin)*u).toFixed(1));
+    wrap.append(h('div',{style:'font-weight:700;margin-bottom:3px'},'Design level (m)'),
+      h('div',{style:'height:10px;border-radius:3px;background:linear-gradient(90deg,'+stops+')'}),
+      h('div',{class:'mono',style:'display:flex;justify-content:space-between;margin-top:2px;font-size:10px'},...ticks.map(x=>h('span',{},x))));
+  }
+  if(o.status&&st){
+    wrap.append(h('div',{style:'font-weight:700;margin-bottom:2px'},'Work status'),
+      sw('linear-gradient(90deg,'+rgbCss(fillRGB(0))+','+rgbCss(fillRGB(1))+')',`Fill placed today (${st.tmin.toFixed(2)} to ${st.tmax.toFixed(2)} m thick)`));
+    if(st.layCut>0.5)wrap.append(sw('rgb(242,89,77)','Cut today'));
+    wrap.append(sw(rgbCss(SAND),'No work recorded yet'));
+    if(w.target)wrap.append(h('div',{style:'margin-top:5px'},'Target: final design grade by '+w.target));
+  }
+  if(o.cols&&st){
+    wrap.append(title('Columns (before to finished level)'));
+    if(cwMode==='thick')wrap.append(sw('linear-gradient(90deg,rgb(178,235,247),rgb(25,45,150))','Layer thickness, thin to thick'));
+    else wrap.append(sw('rgb(77,191,115)','At design grade (±'+(+S.meta.tol||0.1)+' m)'),sw('rgb(230,89,84)','Above design: cut needed'),sw('rgb(166,115,230)','Below design: fill needed'));
+  }
+  if(DES)wrap.append(h('div',{style:'margin-top:6px;display:flex;align-items:center;gap:6px'},h('span',{style:'width:16px;height:10px;border-radius:2px;flex:none;background:'+(o.nodata||'#000')+';border:1px solid var(--line)'}),h('span',{},'No design data (outside the phases)')));
+  return wrap;
+}
+function updatePlanLegend(){
+  const o=$('#planLegend');if(o)o.remove();
+  if(!legOn||!DES||!plan.showDes)return;
+  const st=plan.status&&cwSel&&cwirPts(+cwSel).length;
+  $('#planBox').append(legendEl({id:'planLegend',pos:'right:8px;top:8px',nodata:cssv('--bg'),elev:!st,status:!!st,cols:false}));
+}
+
 /* ---------- boot ---------- */
 (function(){const t=lsGet('es_theme',null);if(t)document.documentElement.dataset.theme=t})();
 setStatus(false,'connecting…');
+seedMerge();
 listen();
 loadDesign();
 showTab(cur);
