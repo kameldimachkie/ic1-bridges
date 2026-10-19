@@ -619,7 +619,7 @@ function homeTiles(el){
       h('div',{class:'mut',style:'font-size:12px'},fmt(cut+fill)+' of '+fmt(bt)+' m³ · tap for progress')))}catch(e){}
   el.append(h('div',{class:'tiles'},...T.map(([ic,t,sub,cls,fn])=>h('button',{class:'tile '+(cls||''),onclick:fn},
     h('span',{class:'ti'},ic),h('b',{},t),h('small',{},sub)))));
-  el.append(h('div',{class:'mut',style:'font-size:12px;margin:12px 0 26px;text-align:center'},(S.meta.name||'EarthSync')+' · '+W.length+' WIRs · '+fmt(pts)+' contractor points loaded · build 90'));
+  el.append(h('div',{class:'mut',style:'font-size:12px;margin:12px 0 26px;text-align:center'},(S.meta.name||'EarthSync')+' · '+W.length+' WIRs · '+fmt(pts)+' contractor points loaded · build 92'));
   el.append(themeBar());
 }
 /* =====================================================================
@@ -1790,14 +1790,16 @@ function waterCells(){
   return waterCache={CS,nx,ny,water,lev,dist,nw};
 }
 function waterTexture(){
+  // tileable height map: layers of soft blobs at three scales (ripples, small waves, swell). Grey = height.
   const S=256,cv=document.createElement('canvas');cv.width=cv.height=S;const c=cv.getContext('2d');
-  c.fillStyle='#8fbfcc';c.fillRect(0,0,S,S);
-  let sd=7;const rnd=()=>{sd=(sd*16807)%2147483647;return sd/2147483647};
-  // soft elongated ripples and a few bright glints, wrapped so the tile repeats without seams
-  for(let i=0;i<260;i++){const x=rnd()*S,y=rnd()*S,w=14+rnd()*40,h=2+rnd()*5,dark=rnd()<.55;
-    c.fillStyle=dark?'rgba(10,60,90,'+(.22+rnd()*.22)+')':'rgba(255,255,255,'+(.30+rnd()*.35)+')';
-    for(const ox of [-S,0,S])for(const oy of [-S,0,S]){c.beginPath();c.ellipse(x+ox,y+oy,w,h,-.35,0,7);c.fill()}}
-  const t=new THREE.CanvasTexture(cv);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(1,1);return t}
+  c.fillStyle='#808080';c.fillRect(0,0,S,S);
+  let sd=11;const rnd=()=>{sd=(sd*16807)%2147483647;return sd/2147483647};
+  const layer=(n,rw,rh,al)=>{for(let i=0;i<n;i++){const x=rnd()*S,y=rnd()*S,w=rw*(.6+rnd()*.8),h=rh*(.6+rnd()*.8),up=rnd()<.5,ang=-.5+rnd()*.3;
+    for(const ox of [-S,0,S])for(const oy of [-S,0,S]){c.save();c.translate(x+ox,y+oy);c.rotate(ang);c.scale(w,h);
+      const g=c.createRadialGradient(0,0,0,0,0,1);g.addColorStop(0,up?'rgba(255,255,255,'+al+')':'rgba(0,0,0,'+al+')');g.addColorStop(1,'rgba(128,128,128,0)');
+      c.fillStyle=g;c.beginPath();c.arc(0,0,1,0,7);c.fill();c.restore()}}};
+  layer(30,52,22,.30);layer(110,26,9,.34);layer(260,13,4,.38);
+  const t=new THREE.CanvasTexture(cv);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.minFilter=THREE.LinearMipmapLinearFilter;return t}
 function waterMesh(X,Y,Zc){
   const W=waterCells();if(!W.nw)return null;
   const {CS,nx,ny,water,lev,dist}=W,pos=[],col=[],idx=[],vid=new Map();
@@ -1820,7 +1822,7 @@ function waterMesh(X,Y,Zc){
   const grp=new THREE.Group();
   grp.add(new THREE.Mesh(geo,new THREE.MeshLambertMaterial({vertexColors:true,side:THREE.DoubleSide})));
   // water surface: only over the deep part of the channel, a little above the bed, glossy and see-through with moving ripples
-  const wp=[],wc=[],wu=[],wf=[],wi=[],wv=new Map(),deep=q=>water[q]&&dist[q]>2.5,UVS=90;
+  const wp=[],wc=[],wu=[],wf=[],we=[],wi=[],wv=new Map(),deep=q=>water[q]&&dist[q]>2.5,UVS=90;
   // downstream direction at a cell = downhill slope of the (smoothed) water level over nearby channel cells, in screen coordinates (east, -north)
   const flowAt=(cx,cy)=>{let sxx=0,syy=0,sxy=0,sxz=0,syz=0,c=0,l0=0;const k0=cy*nx+cx;l0=L[k0];
     for(let b=-4;b<=4;b++)for(let a=-4;a<=4;a++){const xx=cx+a,yy=cy+b;if(xx<0||yy<0||xx>=nx||yy>=ny)continue;const q=yy*nx+xx;if(!water[q])continue;const dz=L[q]-l0;sxx+=a*a;syy+=b*b;sxy+=a*b;sxz+=a*dz;syz+=b*dz;c++}
@@ -1830,21 +1832,37 @@ function waterMesh(X,Y,Zc){
   const wvert=(x,y)=>{const key=y*(nx+1)+x;let v=wv.get(key);if(v!==undefined)return v;
     let s=0,c=0,t=0,fx=0,fz=0;for(const [a,bb] of [[-1,-1],[0,-1],[-1,0],[0,0]]){const xx=x+a,yy=y+bb;if(xx<0||yy<0||xx>=nx||yy>=ny)continue;const q=yy*nx+xx;if(deep(q)){s+=L[q];t+=Math.min(1,(dist[q]-2.5)/3);const f=flowAt(xx,yy);fx+=f[0];fz+=f[1];c++}}
     if(!c)return -1;t/=c;const px=X(DES.e0+x*CS),pz=Zc(DES.n0+y*CS);
-    wp.push(px,Y(s/c)+(-DEP*.62)*sc+.4,pz);wc.push(.34-.24*t,.60-.26*t,.64-.16*t);wu.push(px/UVS,pz/UVS);{const m=Math.hypot(fx,fz)||1;wf.push(fx/m,fz/m)}
+    wp.push(px,Y(s/c)+(-DEP*.62)*sc+.4,pz);wc.push(.30-.22*t,.52-.24*t,.50-.14*t);we.push(t);wu.push(px/UVS,pz/UVS);{const m=Math.hypot(fx,fz)||1;wf.push(fx/m,fz/m)}
     v=wp.length/3-1;wv.set(key,v);return v};
   for(let y=0;y<ny;y++)for(let x=0;x<nx;x++){if(!deep(y*nx+x))continue;
     const a=wvert(x,y),b=wvert(x+1,y),c=wvert(x,y+1),d=wvert(x+1,y+1);wi.push(a,c,b,b,c,d)}
   if(wi.length){
     const wg=new THREE.BufferGeometry();
-    wg.setAttribute('position',new THREE.BufferAttribute(new Float32Array(wp),3));wg.setAttribute('color',new THREE.BufferAttribute(new Float32Array(wc),3));wg.setAttribute('uv',new THREE.BufferAttribute(new Float32Array(wu),2));wg.setAttribute('flow',new THREE.BufferAttribute(new Float32Array(wf),2));
+    wg.setAttribute('position',new THREE.BufferAttribute(new Float32Array(wp),3));wg.setAttribute('color',new THREE.BufferAttribute(new Float32Array(wc),3));wg.setAttribute('uv',new THREE.BufferAttribute(new Float32Array(wu),2));wg.setAttribute('flow',new THREE.BufferAttribute(new Float32Array(wf),2));wg.setAttribute('edge',new THREE.BufferAttribute(new Float32Array(we),1));
     wg.setIndex(wi);wg.computeVertexNormals();
     const tex=waterTexture();
-    const mat=new THREE.MeshPhongMaterial({vertexColors:true,map:tex,transparent:true,opacity:.88,shininess:140,specular:0xffffff,side:THREE.DoubleSide,depthWrite:false});
-    const U={uTime:{value:0}};
-    mat.onBeforeCompile=sh=>{sh.uniforms.uTime=U.uTime;
-      sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nattribute vec2 flow;varying vec2 vFlow;').replace('#include <begin_vertex>','#include <begin_vertex>\nvFlow=flow;');
-      sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nuniform float uTime;varying vec2 vFlow;').replace('#include <map_fragment>',
-       'float p0=fract(uTime),p1=fract(uTime+.5),wb=abs(2.*p0-1.);vec4 texelColor=mix(texture2D(map,vUv-vFlow*p0*.7),texture2D(map,vUv-vFlow*p1*.7+.37),wb);diffuseColor*=texelColor;')};
+    const mat=new THREE.MeshPhongMaterial({vertexColors:true,transparent:true,opacity:1,shininess:260,specular:0xffffff,side:THREE.DoubleSide,depthWrite:false});
+    const U={uTime:{value:0},uTex:{value:tex}};
+    mat.onBeforeCompile=sh=>{sh.uniforms.uTime=U.uTime;sh.uniforms.uTex=U.uTex;
+      sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nattribute vec2 flow;attribute float edge;varying vec2 vFlow;varying float vEdge;varying vec3 vWp;').replace('#include <begin_vertex>','#include <begin_vertex>\nvFlow=flow;vEdge=edge;vWp=(modelMatrix*vec4(position,1.)).xyz;');
+      sh.fragmentShader=sh.fragmentShader.replace('#include <common>',`#include <common>
+uniform float uTime;uniform sampler2D uTex;varying vec2 vFlow;varying float vEdge;varying vec3 vWp;
+float wh(vec2 uv,vec2 fl,float tt){float p0=fract(tt),p1=fract(tt+.5),w=abs(2.*p0-1.);
+  return mix(texture2D(uTex,uv-fl*p0*.55).r,texture2D(uTex,uv-fl*p1*.55+.37).r,w);}`)
+      .replace('#include <map_fragment>','#include <map_fragment>\nvec2 wuv=vWp.xz/90.;float h0=wh(wuv,vFlow,uTime),hx=wh(wuv+vec2(.004,0.),vFlow,uTime),hz=wh(wuv+vec2(0.,.004),vFlow,uTime);float h2=wh(wuv*2.3+.19,vFlow*1.4,uTime*1.3);')
+      .replace('#include <normal_fragment_maps>',`#include <normal_fragment_maps>
+{vec3 wn=normalize(vec3(-(hx-h0)*38.,1.,-(hz-h0)*38.));normal=normalize(mix(normal,normalize(mat3(viewMatrix)*wn),.85));}`)
+      .replace('#include <dithering_fragment>',`
+{vec3 V=normalize(vViewPosition);float fr=pow(1.-clamp(dot(normal,V),0.,1.),3.);
+ vec3 sky=vec3(.62,.78,.92);
+ float depthT=clamp(vEdge,0.,1.);
+ vec3 col=gl_FragColor.rgb*(.80+.5*h0);
+ col=mix(col,sky*.9,fr*.55);
+ float shore=1.-smoothstep(0.,.45,depthT);
+ float foam=smoothstep(.60,.78,h0*.6+h2*.55)*(.18+.9*shore)+shore*.18;
+ col=mix(col,vec3(.95,.98,1.),clamp(foam,0.,1.)*.75);
+ gl_FragColor=vec4(col,mix(.40,.93,smoothstep(0.,.35,depthT))*(1.-.0*shore));}
+#include <dithering_fragment>`)};
     const wm=new THREE.Mesh(wg,mat);
     wm.renderOrder=3;grp.add(wm);grp.userData.tex=U}
   return grp;
@@ -2203,7 +2221,7 @@ function build3D(){
   const oc=$('#cwBox');if(oc)oc.remove();const opb=$('#ptBox');if(opb)opb.remove();
   const ol=$('#legBox3');if(ol)ol.remove();
   if(!hasZ)$('#three').append(h('div',{id:'threeMsg'},`No elevations yet (${Z.length} of ${C.length} points). Load the design file or import a PNEZ file with Z in the Data tab.`));
-  else $('#three').append(h('div',{id:'threeMsg',style:'border-color:var(--line);width:auto;font-size:12px'},`${DES?'Design':'Control'} Z ${zmin.toFixed(2)} → ${zmax.toFixed(2)} m · vertical ×${exag}${pondsOn&&DES&&pondCache?` · ${pondCache.list.length} ponds`:''} · build 90`));
+  else $('#three').append(h('div',{id:'threeMsg',style:'border-color:var(--line);width:auto;font-size:12px'},`${DES?'Design':'Control'} Z ${zmin.toFixed(2)} → ${zmax.toFixed(2)} m · vertical ×${exag}${pondsOn&&DES&&pondCache?` · ${pondCache.list.length} ponds`:''} · build 92`));
   if(cw)$('#three').append(cwAll?cwPanelAll():cwPanel(+cwSel));
   {const oc3=$('#pondChip');if(oc3)oc3.remove();$('#three').append(h('button',{id:'pondChip',onclick:toggleBrook},''),h('button',{id:'pondsChip',onclick:togglePonds},''));pondLabels()}
   {const oc2=$('#cpBox');if(oc2)oc2.remove();$('#three').classList.toggle('cpoff',lsGet('es_cp',true)===false);$('#three').append(makeCompass());updateCompass()}
@@ -2470,6 +2488,27 @@ function cwirPts(no){
   const c=S.cwir[no]||CWIR_SEED[no];if(!c||!c.pts)return [];
   return c.pts.split(';').filter(Boolean).map(s=>{const a=s.split(',');return {id:a[0],N:+a[1],E:+a[2],A:+a[3],B:+a[4],C:+a[5]}});
 }
+const CWIR_BORDER={27:[[2762543.57,666479.30],[2762465.00,666509.24],[2762413.60,666369.96],[2762499.22,666350.55]]}; // [N,E] corners measured on site
+function cwBorder(no){const b=(S.cwir[no]||{}).border||CWIR_BORDER[no];return b&&b.length>=3?b:null}
+function cwBorderStats(no){
+  const b=cwBorder(no),P=cwirPts(no);if(!b||!P.length||!DES)return null;
+  const key=no+':'+P.length+':'+DES.n+':'+b.join();if(cwBorderStats.c&&cwBorderStats.c.key===key)return cwBorderStats.c.v;
+  const st=1,a=st*st;let e0=1e12,e1=-1e12,n0=1e12,n1=-1e12;
+  for(const q of b){e0=Math.min(e0,q[1]);e1=Math.max(e1,q[1]);n0=Math.min(n0,q[0]);n1=Math.max(n1,q[0])}
+  const inside=(e,n)=>{let c=false;for(let i=0,j=b.length-1;i<b.length;j=i++){const ei=b[i][1],ni=b[i][0],ej=b[j][1],nj=b[j][0];if((ni>n)!==(nj>n)&&e<(ej-ei)*(n-ni)/(nj-ni)+ei)c=!c}return c};
+  const idw=(e,n,k)=>{let sw=0,sv=0,bd=1e18,bv=0;for(const q of P){const d2=(q.E-e)**2+(q.N-n)**2;if(d2<bd){bd=d2;bv=q[k]}if(d2<400){const w=1/(d2+1);sw+=w;sv+=w*q[k]}}return sw?sv/sw:bv};
+  let area=0,aD=0,remF=0,remC=0,placed=0,need=0,aG=0;
+  for(let n=n0+st/2;n<n1;n+=st)for(let e=e0+st/2;e<e1;e+=st){
+    if(!inside(e,n))continue;area+=a;
+    const d=designAt(e,n);if(!d)continue;aD+=a;
+    const el=idw(e,n,'C'),pr=idw(e,n,'B'),dz=d.z-el;
+    if(dz>0)remF+=dz*a;else remC-=dz*a;
+    if(el>pr)placed+=(el-pr)*a;
+    if(d.g==d.g){aG+=a;const f=d.z-d.g+0.30;if(f>0)need+=f*a}
+  }
+  const v={area,aD,remFill:remF*(area/(aD||1)),remCut:remC*(area/(aD||1)),placed:placed*(area/(aD||1)),need:aG?need*(area/aG):null};
+  cwBorderStats.c={key,v};return v;
+}
 function cwList(){
   const k=new Set([...Object.keys(CWIR_SEED),...Object.keys(S.cwir)]);
   return [...k].map(Number).filter(n=>cwirPts(n).length).sort((a,b)=>b-a);
@@ -2564,9 +2603,10 @@ function cwPanel(no){
   const st=cwirStats(no,+S.meta.tol||0.1),w=S.wirs[no]||{};
   const row=(l,parts)=>h('div',{style:'margin-top:4px'},h('span',{class:'mut'},l+' '),...parts);
   const fl=(v)=>h('b',{class:'mono',style:'color:var(--info)'},'Fill '+fmt(v)+' m³'),ct=(v)=>h('b',{class:'mono',style:'color:var(--bad)'},'Cut '+fmt(v)+' m³');
+  const bs=cwBorderStats(no);if(bs){st.cut=bs.remCut;st.fill=bs.remFill;st.layFill=bs.placed;st.layCut=0;st.area=bs.area}
   const net=st.fill-st.cut;
   const box=h('div',{id:'cwBox',style:'position:absolute;left:8px;right:8px;bottom:8px;background:color-mix(in srgb,var(--panel) 94%,transparent);border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:13px;line-height:1.35;max-height:48%;overflow:auto'},
-    h('b',{},`WIR ${no}${w.ref?' · '+w.ref:''}${w.layer?' · layer '+w.layer:''}`),h('span',{class:'mut'},` ${st.n} points · ${fmt(st.area)} m²`),h('div',{class:'mut'},'In '+Object.entries(cwAreaCount(no)).sort((a,b)=>b[1]-a[1]).map(([k,v])=>areaZone(+k)+' (area '+k+', '+v+' pts)').join(' · ')),
+    h('b',{},`WIR ${no}${w.ref?' · '+w.ref:''}${w.layer?' · layer '+w.layer:''}`),h('span',{class:'mut'},` ${st.n} points · ${fmt(st.area)} m²${bs?' (site border)':''}`),h('div',{class:'mut'},'In '+Object.entries(cwAreaCount(no)).sort((a,b)=>b[1]-a[1]).map(([k,v])=>areaZone(+k)+' (area '+k+', '+v+' pts)').join(' · ')),
     row('Layer placed:',[ct(st.layCut),' · ',fl(st.layFill)]),
     row('Remaining to design grade:',[ct(st.cut),' · ',fl(st.fill),h('span',{class:'mut'},` · net ${fmt(Math.abs(net))} m³ ${net>=0?'fill':'cut'}`)]),
     cwTargetEl(w),
@@ -2596,6 +2636,9 @@ function addCwir(g,X,Zc,zbase){
     sx+=X(p.E);sy+=(yb+yc)/2;sz+=Zc(p.N);
     e0=Math.min(e0,p.E);e1=Math.max(e1,p.E);n0=Math.min(n0,p.N);n1=Math.max(n1,p.N);
   }
+  for(const no of nos){const b=cwBorder(no),Pn=cwirPts(no);if(!b||!Pn.length)continue;
+    const my=Pn.reduce((t,q)=>t+q.C,0)/Pn.length,v=b.map(q=>new THREE.Vector3(X(q[1]),Yc(my)+exag*.5+1,Zc(q[0])));
+    g.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(v),new THREE.LineBasicMaterial({color:0xffee33})))}
   const n=allP.length;
   return {x:sx/n,y:sy/n,z:sz/n,span:Math.max(e1-e0,n1-n0)||100};
 }
