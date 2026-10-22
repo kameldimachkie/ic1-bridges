@@ -845,12 +845,12 @@ function homeTiles(el){
         return h('button',{class:'mlink',title:sub,onclick:fn},h('span',{class:'mi'},ic),t,n?h('span',{class:'mb'},String(n)):null)}),
       h('button',{class:'mlink mt',onclick:()=>setMode('all')},'Show all tiles')));
     spinNeedles(el);
-    el.append(h('div',{class:'mut',style:'font-size:12px;margin:14px 0 26px;text-align:center'},(S.meta.name||'EarthSync')+' · build 131'));
+    el.append(h('div',{class:'mut',style:'font-size:12px;margin:14px 0 26px;text-align:center'},(S.meta.name||'EarthSync')+' · build 132'));
     return;
   }
   el.append(h('div',{class:'tiles'},...tiles));spinNeedles(el);
   el.append(h('div',{style:'text-align:center;margin-top:12px'},h('button',{class:'mlink mt',onclick:()=>setMode('simple')},'Simple view')));
-  el.append(h('div',{class:'mut',style:'font-size:12px;margin:12px 0 26px;text-align:center'},(S.meta.name||'EarthSync')+' · '+W.length+' WIRs · '+fmt(pts)+' contractor points loaded · build 131'));
+  el.append(h('div',{class:'mut',style:'font-size:12px;margin:12px 0 26px;text-align:center'},(S.meta.name||'EarthSync')+' · '+W.length+' WIRs · '+fmt(pts)+' contractor points loaded · build 132'));
   el.append(themeBar());
 }
 /* =====================================================================
@@ -1855,10 +1855,11 @@ function drawPlan(){
   }
   // every contractor WIR on the map, coloured by type, labelled with its number
   if(plan.wirs&&!plan.cf){
-    const L=cwList().slice().sort((x,y)=>((S.wirs[x]||{}).date||'').localeCompare((S.wirs[y]||{}).date||'')||x-y),a=toS(0,0),b=toS(10,0),px=Math.max(2,Math.hypot(b[0]-a[0],b[1]-a[1])*1.02),KC={strip:'#d98a2b',fill:'#3b82f6',final:'#22a35a'};
+    const L=cwList().slice().sort((x,y)=>((S.wirs[x]||{}).date||'').localeCompare((S.wirs[y]||{}).date||'')||x-y),a=toS(0,0),b=toS(10,0),px=Math.max(2,Math.hypot(b[0]-a[0],b[1]-a[1])*1.02),KC={strip:'#d98a2b',fill:'#3b82f6',final:'#22a35a'},LB=[];
     for(const no of L){const P=cwirPts(no);if(!P.length)continue;const k=wirKind(no);c.fillStyle=KC[k];c.globalAlpha=.55;
       let sx=0,sy=0;for(const q of P){const [x,y]=toS(q.E,q.N);sx+=x;sy+=y;c.fillRect(x-px/2,y-px/2,px,px)}c.globalAlpha=1;
       const x=sx/P.length,y=sy/P.length,t='WIR '+no;c.font='bold 12px system-ui';const w=c.measureText(t).width+12;
+      if(LB.some(r=>Math.abs(r[0]-x)<(r[2]+w)/2+2&&Math.abs(r[1]-y)<22))continue;LB.push([x,y,w]);
       c.fillStyle='rgba(15,20,30,.85)';c.beginPath();if(c.roundRect)c.roundRect(x-w/2,y-10,w,20,10);else c.rect(x-w/2,y-10,w,20);c.fill();c.strokeStyle=KC[k];c.lineWidth=1.5;c.stroke();
       c.fillStyle='#fff';c.textAlign='center';c.textBaseline='middle';c.fillText(t,x,y+1)}
   }
@@ -1975,7 +1976,7 @@ function setInfo(t){$('#planInfo').textContent=t||'Tap a control point for detai
 /* =====================================================================
    3D terrain
    ===================================================================== */
-let cwAll=lsGet('es_cwall',false)===true;let cwSel=lsGet('es_cw','');let cwMode='dev';let cwTerrain='elev',legOn=lsGet('es_leg',window.innerWidth>=600);
+let cwAll=lsGet('es_cwall2',true)!==false;let cwSel=lsGet('es_cw','');let cwMode='dev';let cwTerrain='elev',legOn=lsGet('es_leg',window.innerWidth>=600);
 let T=null,dirty3D=true,exag=cwSel?20:6;
 let surfMode=lsGet('es_surf','design');
 const SURF_LAB={design:'Design',ngl:'Existing (NGL)',both:'Both',cf:'Cut / Fill'};
@@ -2700,7 +2701,7 @@ function build3D(){
   const oc=$('#cwBox');if(oc)oc.remove();const opb=$('#ptBox');if(opb)opb.remove();
   const ol=$('#legBox3');if(ol)ol.remove();
   if(!hasZ)$('#three').append(h('div',{id:'threeMsg'},`No elevations yet (${Z.length} of ${C.length} points). Load the design file or import a PNEZ file with Z in the Data tab.`));
-  else $('#three').append(h('div',{id:'threeMsg',style:'border-color:var(--line);width:auto;font-size:12px'},`${DES?'Design':'Control'} Z ${zmin.toFixed(2)} → ${zmax.toFixed(2)} m · vertical ×${exag}${pondsOn&&DES&&pondCache?` · ${pondCache.list.length} ponds`:''} · build 131`));
+  else $('#three').append(h('div',{id:'threeMsg',style:'border-color:var(--line);width:auto;font-size:12px'},`${DES?'Design':'Control'} Z ${zmin.toFixed(2)} → ${zmax.toFixed(2)} m · vertical ×${exag}${pondsOn&&DES&&pondCache?` · ${pondCache.list.length} ponds`:''} · build 132`));
   if(cw)$('#three').append(cwAll?cwPanelAll():cwPanel(+cwSel));
   {const oc3=$('#pondChip');if(oc3)oc3.remove();$('#three').append(h('button',{id:'pondChip',onclick:toggleBrook},''),h('button',{id:'pondsChip',onclick:togglePonds},''));pondLabels();placeChips()}
   {const ot=$('#tools3');if(ot)ot.remove();$('#three').append(tools3());const ox=$('#fsExit');if(ox)ox.remove();if(document.body.classList.contains('fs3'))$('#three').append(fsExitBtn())}
@@ -3156,7 +3157,7 @@ function refreshCwSel(){
 }
 function setExag(v){exag=v;const s=$('#exSlider');if(s)s.value=v}
 function setCw(v){
-  cwAll=(v==='all');lsSet('es_cwall',cwAll);
+  cwAll=(v==='all');lsSet('es_cwall2',cwAll);
   if(cwAll){v=cwSel||String(cwList()[0]||'')}
   cwSel=v;lsSet('es_cw',v);dirty3D=true;if(!v){cwTerrain='elev';cwMode='dev'}
   if(cwAll)cwTerrain='elev';
@@ -3563,7 +3564,7 @@ function repBuild(){
     }
   }
   paper.append(remH,rem);
-  paper.append(h('div',{style:'margin-top:18px;font-size:10px;color:#777'},'Generated by EarthSync build 131 · '+new Date().toLocaleString('en-GB')));
+  paper.append(h('div',{style:'margin-top:18px;font-size:10px;color:#777'},'Generated by EarthSync build 132 · '+new Date().toLocaleString('en-GB')));
   // snapshots after the page is on screen
   setTimeout(()=>{
     for(const [w,hold] of holders){
