@@ -1088,12 +1088,12 @@ function homeTiles(el){
         return h('button',{class:'mlink',title:sub,onclick:fn},h('span',{class:'mi'},ic),t,n?h('span',{class:'mb'},String(n)):null)}),
       h('button',{class:'mlink mt',onclick:()=>setMode('all')},'Show all tiles')));
     spinNeedles(el);
-    el.append(h('div',{class:'mut',style:'font-size:12px;margin:14px 0 26px;text-align:center'},(S.meta.name||'EarthSync')+' · build 181'));
+    el.append(h('div',{class:'mut',style:'font-size:12px;margin:14px 0 26px;text-align:center'},(S.meta.name||'EarthSync')+' · build 182'));
     return;
   }
   el.append(h('div',{class:'tiles'},...tiles));spinNeedles(el);
   el.append(h('div',{style:'text-align:center;margin-top:12px'},h('button',{class:'mlink mt',onclick:()=>setMode('simple')},'Simple view')));
-  el.append(h('div',{class:'mut',style:'font-size:12px;margin:12px 0 26px;text-align:center'},(S.meta.name||'EarthSync')+' · '+W.length+' WIRs · '+fmt(pts)+' contractor points loaded · build 181'));
+  el.append(h('div',{class:'mut',style:'font-size:12px;margin:12px 0 26px;text-align:center'},(S.meta.name||'EarthSync')+' · '+W.length+' WIRs · '+fmt(pts)+' contractor points loaded · build 182'));
   el.append(themeBar());
 }
 /* =====================================================================
@@ -1869,7 +1869,7 @@ function renderWir(){
     const items=Object.entries(w.items||{});
     el.append(h('div',{class:'card'},
       h('div',{class:'row'},h('b',{style:'font-size:17px'},'WIR '+w.no+(w.ref?' · '+w.ref:'')),
-        w.missing?h('span',{class:'badge',style:'background:var(--bad);color:#fff'},'Missing hard copy'):h('span',{class:'badge b-'+w.status},(STATUS[w.status]||w.status)+(w.code?' · Code '+w.code:'')),w.tag?h('span',{class:'badge',style:'background:#5b6b7d;color:#fff'},w.tag):null,cwirPts(w.no).length&&wirHeld(w.no)?h('span',{class:'badge',style:'background:#e8590c;color:#fff',title:holdWhy(w.no)},'Held – pending verification'):null,...refFor(w.no).filter(r=>r.status==='open').map(r=>h('span',{class:'badge',style:'background:#ef4444;color:#fff'},'Refused – '+refLabel(r).split(' (')[0].toLowerCase())),h('span',{class:'sp'}),
+        w.missing?h('span',{class:'badge',style:'background:var(--bad);color:#fff'},'Missing hard copy'):h('span',{class:'badge b-'+w.status},(STATUS[w.status]||w.status)+(w.code?' · Code '+w.code:'')),w.tag?h('span',{class:'badge',style:'background:#5b6b7d;color:#fff'},w.tag):null,cwirPts(w.no).length&&wirHeld(w.no)?h('span',{class:'badge',style:'background:#e8590c;color:#fff',title:holdWhy(w.no)},'Held – pending verification'):w.relWhy&&!wirHeld(w.no)?h('span',{class:'badge',style:'background:#1f8f4e;color:#fff',title:'Was held: '+(w.relFrom||'')},'Released '+dmy(w.relDate||'')+' – '+w.relWhy):null,...refFor(w.no).filter(r=>r.status==='open').map(r=>h('span',{class:'badge',style:'background:#ef4444;color:#fff'},'Refused – '+refLabel(r).split(' (')[0].toLowerCase())),h('span',{class:'sp'}),
         (cwirPts(w.no).length?(wirHeld(w.no)?h('button',{class:'btn sm',style:'background:#1f8f4e;color:#fff;border:0',title:'Verified by our survey team',onclick:()=>setHold(w.no,false)},'Release'):h('button',{class:'btn sm',title:'Hold quantities pending verification',onclick:()=>setHold(w.no,true)},'Hold')):null),h('button',{class:'btn sm',title:'Flag a remark',onclick:()=>remarkModal(w.no)},'⚑'),h('button',{class:'btn sm',onclick:()=>editWir(w)},'Edit')),
       wirLinks(w).length?h('div',{class:'row',style:'gap:6px;margin:4px 0'},...wirLinks(w)):null,
       h('div',{class:'mut',style:'font-size:13px;margin:4px 0'},[w.layer?('Layer '+w.layer):null,w.activity,w.phase?('Phase '+w.phase):null,areaM2(w.ref)?fmt(areaM2(w.ref))+' m²':null,w.loc,w.date,w.left!=null?(w.left==='Final'?'Last layer':'Layers left: '+w.left):null,w.target?('Target '+w.target):null].filter(Boolean).join(' · ')),
@@ -2996,7 +2996,7 @@ function build3D(){
   const oc=$('#cwBox');if(oc)oc.remove();const opb=$('#ptBox');if(opb)opb.remove();
   const ol=$('#legBox3');if(ol)ol.remove();
   if(!hasZ)$('#three').append(h('div',{id:'threeMsg'},`No elevations yet (${Z.length} of ${C.length} points). Load the design file or import a PNEZ file with Z in the Data tab.`));
-  else $('#three').append(h('div',{id:'threeMsg',style:'border-color:var(--line);width:auto;font-size:12px'},`${DES?'Design':'Control'} Z ${zmin.toFixed(2)} → ${zmax.toFixed(2)} m · vertical ×${exag}${pondsOn&&DES&&pondCache?` · ${pondCache.list.length} ponds`:''} · build 181`));
+  else $('#three').append(h('div',{id:'threeMsg',style:'border-color:var(--line);width:auto;font-size:12px'},`${DES?'Design':'Control'} Z ${zmin.toFixed(2)} → ${zmax.toFixed(2)} m · vertical ×${exag}${pondsOn&&DES&&pondCache?` · ${pondCache.list.length} ponds`:''} · build 182`));
   if(cw)$('#three').append(cwAll?cwPanelAll():cwPanel(+cwSel));
   {const oc3=$('#pondChip');if(oc3)oc3.remove();$('#three').append(h('button',{id:'pondChip',onclick:toggleBrook},''),h('button',{id:'pondsChip',onclick:togglePonds},''));pondLabels();placeChips()}
   {const ot=$('#tools3');if(ot)ot.remove();$('#three').append(tools3());const ox=$('#fsExit');if(ox)ox.remove();if(document.body.classList.contains('fs3'))$('#three').append(fsExitBtn())}
@@ -3865,9 +3865,9 @@ function areaSheet(k){
     d.addEventListener('click',e=>{const kk=e.target.dataset&&e.target.dataset.k;if(kk&&kk!==k)areaSheet(kk)});return d})();
   const ph_=R.phase?'Phase '+R.phase:'',old=a.old.map(([g,p])=>'g'+g).join(' · ');
   const rowsW=R.rows.length?R.rows.map(r=>{const t=r.kind==='strip'?'Stripping':r.kind==='waste'?'Waste removed':r.kind==='final'?'Final grading':'Layer '+(r.w.layer||'');
-      const pill=r.held?['Held','#e5645f']:r.ok?['Approved','#58c487']:r.w.status==='rejected'?['Rejected','#e5645f']:['Pending','#e0a13a'];
+      const pill=r.held?['Held','#e5645f']:r.ok?[r.w.relWhy?'Approved · released':'Approved','#58c487']:r.w.status==='rejected'?['Rejected','#e5645f']:['Pending','#e0a13a'];
       return h('div',{class:'as-wir',onclick:()=>{close();openWirRef(r.no)}},h('b',{},'WIR '+String(r.no).padStart(4,'0')),h('span',{},t),h('span',{class:'as-mut'},dmy(r.w.date||r.w.sub||'')),
-        h('span',{class:'as-mut'},r.n+' pts'+(r.vol?' · '+fmt(r.vol)+' m³':'')),h('span',{class:'as-pill',style:'--c:'+pill[1]},pill[0]))})
+        h('span',{class:'as-mut'},r.n+' pts'+(r.vol?' · '+fmt(r.vol)+' m³':'')),h('span',{class:'as-pill',style:'--c:'+pill[1]+(canEdit()?';cursor:pointer':''),title:canEdit()?(r.held?'Tap to release from hold':'Tap to hold quantities'):(r.w.relWhy?'Released '+dmy(r.w.relDate||'')+' – '+r.w.relWhy:''),onclick:e=>{if(!canEdit())return;e.stopPropagation();setHold(r.no,!r.held);asCache={};areaSheet(k)}},pill[0]))})
     :[h('div',{class:'as-mut',style:'padding:10px 2px'},'No WIR in this area yet.')];
   const sheet=h('div',{class:'as-sheet'},
     h('div',{class:'as-head'},
@@ -4004,7 +4004,7 @@ function repWirBlock(w,d,tol){
     ['Zone',w.ref||''],['Location',w.loc||''],['Phase',w.phase||''],
     ['Submitted on',w.sub?dmy(w.sub):''],['Inspected on',w.date?dmy(w.date):''],['Target date',w.target?dmy(w.target):''],
     ['Status',h('span',{class:'pill st-'+w.status},(STATUS[w.status]||w.status)+(w.code?' · Code '+w.code:''))],
-    wirHeld(w.no)&&cwirPts(w.no).length?['Quantities',h('span',{class:'pill st-rejected'},'Held pending verification – '+holdWhy(w.no))]:null,
+    wirHeld(w.no)&&cwirPts(w.no).length?['Quantities',h('span',{class:'pill st-rejected'},'Held pending verification – '+holdWhy(w.no))]:w.relWhy&&cwirPts(w.no).length?['Quantities','Released from hold on '+dmy(w.relDate||'')+' – '+w.relWhy]:null,
     (()=>{const m=newAreaCount(w.no),k=Object.keys(m).sort((a,b)=>m[b]-m[a]);return k.length?['New areas (designer 40)',k.map(x=>newAreaName(x)+' ('+m[x]+' pts)').join(', ')]:null})(),
     ['Work areas covered',w.ref&&/^M4P/i.test(w.ref)?w.ref+(areaM2(w.ref)?' ('+fmt(areaM2(w.ref))+' m², contractor area)':''):ak.length?ak.sort((a,b)=>areas[b]-areas[a]).map(k=>areaZone(+k)+' ('+areas[k]+' pts)').join(', '):'']]));
   const st=repStats(w.no,tol);
@@ -4176,7 +4176,7 @@ function wirHeld(no){const w=S.wirs[no]||{};if(w.hold!=null)return !!w.hold;retu
 function holdWhy(no){const w=S.wirs[no]||{};return w.holdWhy||HOLD_TXT[HOLD_SEED[no]]||HOLD_TXT.manual}
 function setHold(no,on){if(!canEdit()){toast(blockMsg());return}const w=S.wirs[no];if(!w)return;
   if(on){const why=prompt('Reason for holding WIR '+no+':',holdWhy(no));if(why===null)return;put('wirs/'+no+'/hold',true);put('wirs/'+no+'/holdWhy',why);put('wirs/'+no+'/holdDate',today())}
-  else{if(!confirm('Release WIR '+no+'? Its quantities go back into the certified totals (verified by our survey team).'))return;put('wirs/'+no+'/hold',false);put('wirs/'+no+'/relDate',today())}
+  else{const why=prompt('Release WIR '+no+' – its quantities go back into the certified totals.\nReleased on whose instruction / why:','By instruction of Eng. Mahmoud Salameh');if(why===null)return;put('wirs/'+no+'/hold',false);put('wirs/'+no+'/relDate',today());put('wirs/'+no+'/relWhy',why||'Released');put('wirs/'+no+'/relFrom',holdWhy(no))}
   doneC=null;renderAll()}
 /* ---------- BM check: compare static GNSS / levelling results with the Khuzam-4 and Khuzam-3 BM lists ---------- */
 function bmKey(n){const m=String(n||'').match(/(\d{3,})/);return m?m[1]:String(n||'').toUpperCase().replace(/[^A-Z0-9]/g,'')}
