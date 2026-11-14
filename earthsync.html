@@ -319,6 +319,7 @@ path.as-satpulse{animation:satp 1.1s ease-in-out infinite}@keyframes satp{50%{st
 .as-foot{padding:10px 22px 18px;color:#6f86a0;font-size:11px}
 #areaGo{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:6;white-space:nowrap;display:none;border:0;border-radius:999px;padding:11px 20px;font:700 15px system-ui;color:#fff;background:linear-gradient(90deg,#2a6fdb,#4fc3f7);box-shadow:0 6px 20px rgba(42,111,219,.45);cursor:pointer}
 #busySp{position:fixed;inset:0;z-index:90;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.08);pointer-events:none}#busySp.on{display:flex}#busySp i{width:44px;height:44px;border-radius:50%;border:4px solid rgba(255,255,255,.35);border-top-color:var(--acc);animation:bsp .7s linear infinite;box-shadow:0 0 0 6px rgba(0,0,0,.15)}@keyframes bsp{to{transform:rotate(360deg)}}.tapped{transform:scale(.97);opacity:.8}
+.as-abh{position:absolute;left:50%;top:58px;transform:translateX(-50%);z-index:12;background:rgba(8,17,29,.92);border:1px solid #ffca28;border-radius:999px;padding:7px 8px 7px 14px;color:#e8f1fb;font:600 13px system-ui;display:flex;align-items:center;gap:6px;white-space:nowrap;max-width:calc(100% - 20px)}.as-abh b{color:#ffca28}.as-abh button{border:0;border-radius:999px;background:#ffca28;color:#10233b;font:800 12px system-ui;padding:5px 10px;cursor:pointer;margin-left:6px}@media(max-width:699px){.as-abh span{display:none}}.as-cutab{color:#ffca28;font-weight:800;text-decoration:none;white-space:nowrap}.as-cutc.ab .as-3drow{display:none}
 .ww-bg{position:fixed;inset:0;background:rgba(2,8,16,.72);z-index:9500;display:flex;align-items:center;justify-content:center;padding:14px}.ww{width:min(760px,100%);max-height:100%;display:flex;flex-direction:column;background:linear-gradient(160deg,#10233b,#0a1524);border:1px solid rgba(255,202,40,.5);border-radius:16px;overflow:hidden;color:#e9f1fb;box-shadow:0 20px 60px rgba(0,0,0,.6)}.ww-h{display:flex;justify-content:space-between;gap:10px;padding:12px 14px;border-bottom:1px solid #1f3552}.ww-h b{font-size:17px}.ww-k{font:800 11px system-ui;letter-spacing:.12em;text-transform:uppercase;color:#ffca28;margin-bottom:3px}.ww-s{font-size:12.5px;color:#9fb6cf;margin-top:2px}.ww-x{flex:none;width:38px;height:38px;border-radius:50%;border:1px solid #2a4566;background:rgba(255,255,255,.05);color:#fff;font-size:16px;cursor:pointer}.ww-cv{display:block;width:100%;height:min(62vh,520px)}.ww-f{display:flex;flex-wrap:wrap;gap:6px 16px;padding:10px 14px;font-size:13px;color:#9fb6cf;border-top:1px solid #1f3552}.ww-f b{color:#fff}.as-rpwl{opacity:.75}.as-rpw:has(.as-rpwb){overflow-x:auto;text-overflow:clip;scrollbar-width:none}@media(max-width:699px){.as-rpwl{display:none}}.as-rpw button.as-rpwb{background:rgba(255,202,40,.14);border:1px solid rgba(255,202,40,.55);color:#ffe08a;border-radius:999px;padding:3px 10px;margin:2px 4px 2px 0;font:700 12px system-ui;cursor:pointer}
 .modalbg{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;justify-content:center;z-index:50}
 .modal{background:var(--panel);border:1px solid var(--line);border-radius:14px 14px 0 0;width:100%;max-width:560px;max-height:92vh;overflow:auto;padding:16px}
@@ -1396,12 +1397,12 @@ function homeTiles(el){
         return h('button',{class:'mlink',title:sub,onclick:fn},h('span',{class:'mi'},ic),t,n?h('span',{class:'mb'},String(n)):null)}),
       h('button',{class:'mlink mt',onclick:()=>setMode('all')},'Show all tiles')));
     spinNeedles(el);
-    el.append(h('div',{class:'mut',style:'font-size:12px;margin:14px 0 26px;text-align:center'},(S.meta.name||'EarthSync')+' · build 366'));
+    el.append(h('div',{class:'mut',style:'font-size:12px;margin:14px 0 26px;text-align:center'},(S.meta.name||'EarthSync')+' · build 367'));
     return;
   }
   el.append(h('div',{class:'tiles'},...tiles));spinNeedles(el);
   el.append(h('div',{style:'text-align:center;margin-top:12px'},h('button',{class:'mlink mt',onclick:()=>setMode('simple')},'Simple view')));
-  el.append(h('div',{class:'mut',style:'font-size:12px;margin:12px 0 26px;text-align:center'},(S.meta.name||'EarthSync')+' · '+W.length+' WIRs · '+fmt(pts)+' contractor points loaded · build 366'));
+  el.append(h('div',{class:'mut',style:'font-size:12px;margin:12px 0 26px;text-align:center'},(S.meta.name||'EarthSync')+' · '+W.length+' WIRs · '+fmt(pts)+' contractor points loaded · build 367'));
   el.append(themeBar());
 }
 /* =====================================================================
@@ -3597,7 +3598,7 @@ function build3D(){
   const oc=$('#cwBox');if(oc)oc.remove();const opb=$('#ptBox');if(opb)opb.remove();
   const ol=$('#legBox3');if(ol)ol.remove();
   if(!hasZ)$('#three').append(h('div',{id:'threeMsg'},`No elevations yet (${Z.length} of ${C.length} points). Load the design file or import a PNEZ file with Z in the Data tab.`));
-  else $('#three').append(h('div',{id:'threeMsg',style:'border-color:var(--line);width:auto;font-size:12px'},`${DES?'Design':'Control'} Z ${zmin.toFixed(2)} → ${zmax.toFixed(2)} m · vertical ×${exag}${pondsOn&&DES&&pondCache?` · ${pondCache.list.length} ponds`:''} · build 366`));
+  else $('#three').append(h('div',{id:'threeMsg',style:'border-color:var(--line);width:auto;font-size:12px'},`${DES?'Design':'Control'} Z ${zmin.toFixed(2)} → ${zmax.toFixed(2)} m · vertical ×${exag}${pondsOn&&DES&&pondCache?` · ${pondCache.list.length} ponds`:''} · build 367`));
   if(cw)$('#three').append(cwAll?cwPanelAll():cwPanel(+cwSel));
   {const oc3=$('#pondChip');if(oc3)oc3.remove();$('#three').append(h('button',{id:'pondChip',onclick:toggleBrook},''),h('button',{id:'pondsChip',onclick:togglePonds},''),h('button',{id:'wasteChip',onclick:toggleWaste},''));pondLabels();placeChips()}
   {const ot=$('#tools3');if(ot)ot.remove();$('#three').append(tools3());const ox=$('#fsExit');if(ox)ox.remove();if(document.body.classList.contains('fs3'))$('#three').append(fsExitBtn())}
@@ -5296,16 +5297,17 @@ function as3D(box,R,onPick){
   // ---- cut: a vertical slice facing the viewer; the near part is cut away and the slice face shows NGL, design and the ground now ----
   const cutPlane=new THREE.Plane(new THREE.Vector3(0,0,-1),0),CP=[cutPlane];ren.localClippingEnabled=true;
   const applyClip=()=>grp.children.forEach(o=>{if(o===curt)return;o.traverse(m=>{if(m.material){const w=cutOn?CP:null;if(m.material.clippingPlanes!==w){m.material.clippingPlanes=w;m.material.needsUpdate=true}}})});
-  let cutCmp=null,cutOn=false,cutTh=0,cutF=0.5,cutS=0,cutU=null,curt=null,cutProf=[];
+  let cutAB=null,drawAB=0,abA=null,abMk=null,cutCmp=null,cutOn=false,cutTh=0,cutF=0.5,cutS=0,cutU=null,curt=null,cutProf=[];
   const NH=new Map(),nk=(e,n)=>Math.floor(e/10)+','+Math.floor(n/10);for(const n of list){const k_=nk(n.q.E,n.q.N);(NH.get(k_)||NH.set(k_,[]).get(k_)).push(n)}
   const sampleAt=(E,N)=>{let ws=0,g=0,z=0,s_=0,best=null,bd=1e9;const ix=Math.floor(E/10),iy=Math.floor(N/10);
     for(let a_=-stp;a_<=stp;a_++)for(let b_=-stp;b_<=stp;b_++)for(const n of NH.get((ix+a_)+','+(iy+b_))||[]){const d=(n.q.E-E)**2+(n.q.N-N)**2;if(d>81*stp*stp)continue;const w=1/(d+1);ws+=w;g+=n.q.G*w;z+=n.q.Z*w;s_+=hf(n)*w;if(d<bd){bd=d;best=n}}
     if(!ws)return null;g/=ws;z/=ws;s_/=ws;const kind=s_<g-0.05?'x':s_>g+0.05?(best.q.lay&&tt>0.5&&best.pile==null?'f':'w'):'g';return {g,z,s:s_,kind}};
-  const cutDir=()=>({n:[-Math.sin(cutTh),-Math.cos(cutTh)],t:[Math.cos(cutTh),-Math.sin(cutTh)]});
+  const cutDir=()=>{if(cutAB){const dx=cutAB.b[0]-cutAB.a[0],dz=cutAB.b[1]-cutAB.a[1],L=Math.hypot(dx,dz)||1,t=[dx/L,dz/L];return {n:[t[1],-t[0]],t}}return {n:[-Math.sin(cutTh),-Math.cos(cutTh)],t:[Math.cos(cutTh),-Math.sin(cutTh)]}};
   const cutRange=()=>{const {n}=cutDir();let lo=1e9,hi=-1e9;for(const m of list){const d=n[0]*X(m)+n[1]*Zc(m);if(d<lo)lo=d;if(d>hi)hi=d}return [lo+5,hi-5]};
   const cutCv=h('canvas',{class:'as-cutcv'}),cutRd=h('div',{class:'as-cutrd'}),
     cutSl=h('input',{type:'range',min:0,max:1000,value:500,class:'as-3dr','aria-label':'Move the cut',oninput:e=>{cutF=+e.target.value/1000;buildCut()}}),
-    cutCard=h('div',{class:'as-cutc'},h('div',{class:'as-cuth'},'✂ Cross-section through the cut',h('span',{},'turn the 3D view to change the direction of the cut')),
+    cutHd=h('span',{},'✂ Cross-section through the cut'),cutSub=h('span',{},'turn the 3D view to change the direction of the cut · '),
+    cutCard=h('div',{class:'as-cutc'},h('div',{class:'as-cuth'},cutHd,h('span',{},cutSub,h('a',{href:'#',class:'as-cutab',onclick:e=>{e.preventDefault();e.stopPropagation();startAB()}},'✏ draw your own line A → B'))),
       h('div',{class:'as-3drow'},h('span',{class:'as-cutl'},'Near'),cutSl,h('span',{class:'as-cutl'},'Far')),cutCv,cutRd,
       h('div',{class:'as-cutk'},...[['#e08a3c','waste above natural ground'],['#3f7fe0','fill layers'],['rgba(255,59,141,.45)','dug out below natural ground'],[LT?'#b9ab92':'#7d6b55','natural ground'],['#2f7bff','design level (blue line)'],[LT?'#10233b':'#ffffff','NGL (line)']].map(([c_,t_])=>h('span',{},h('i',{style:'background:'+c_}),t_))));
   const ribbon=(pts,yf,th,col,ord,off)=>{const p_=[];for(let i=1;i<pts.length;i++){const a_=pts[i-1],b_=pts[i];if(!a_||!b_)continue;const ax=a_.cx-off[0],az=a_.cz-off[1],bx=b_.cx-off[0],bz=b_.cz-off[1],ya=yf(a_),yb=yf(b_);
@@ -5314,10 +5316,10 @@ function as3D(box,R,onPick){
   function buildCut(){
     if(curt){grp.remove(curt);disp(curt);curt=null}
     if(!cutOn){applyClip();cutCard.remove();box.classList.remove('fscut');req();return}
-    const {n,t}=cutDir(),[lo,hi]=cutRange();cutS=lo+(hi-lo)*cutF;
+    const {n,t}=cutDir(),[lo,hi]=cutRange();cutS=cutAB?n[0]*cutAB.a[0]+n[1]*cutAB.a[1]:lo+(hi-lo)*cutF;cutCard.classList.toggle('ab',!!cutAB);cutHd.textContent=cutAB?'✂ Section along your line A → B':'✂ Cross-section through the cut';cutSub.textContent=cutAB?'0 m = point A (gold post in 3D) · ':'turn the 3D view to change the direction of the cut · ';
     cutPlane.normal.set(n[0],0,n[1]);cutPlane.constant=-cutS;applyClip();
-    const step=Math.max(2,span/140),off=0.3,P_=[];
-    for(let u=-span*1.1;u<=span*1.1;u+=step){const x=n[0]*(cutS+off)+t[0]*u,z=n[1]*(cutS+off)+t[1]*u,v=sampleAt(cx+x,cy-z);P_.push(v?{u,cx:x,cz:z,...v}:null)}
+    const uA=cutAB?t[0]*cutAB.a[0]+t[1]*cutAB.a[1]:-span*1.1,uB=cutAB?t[0]*cutAB.b[0]+t[1]*cutAB.b[1]:span*1.1,step=cutAB?Math.max(1,(uB-uA)/300):Math.max(2,span/140),off=cutAB?0:0.3,P_=[];
+    for(let u=uA;u<=uB+step*0.01;u+=step){const x=n[0]*(cutS+off)+t[0]*u,z=n[1]*(cutS+off)+t[1]*u,v=sampleAt(cx+x,cy-z);P_.push(v?{u,cx:x,cz:z,...v}:null)}
     while(P_.length&&!P_[0])P_.shift();while(P_.length&&!P_[P_.length-1])P_.pop();cutProf=P_;
     curt=new THREE.Group();const base=Y(zlo)-Math.max(1.5,span*0.012),ep=[],ec_=[],xp=[],hx=c_=>{const q=new THREE.Color(c_);return [q.r,q.g,q.b]};
     const cE=hx(LT?'#b9ab92':'#7d6b55'),cW=hx('#e08a3c'),cF=hx('#3f7fe0');
@@ -5333,13 +5335,13 @@ function as3D(box,R,onPick){
     [ribbon(P_,p=>Y(p.g),th,LT?0x10233b:0xffffff,11,o2),ribbon(P_,p=>Y(p.z),th*1.2,0x2f7bff,12,[n[0]*0.6,n[1]*0.6])].forEach(m=>m&&curt.add(m));
     // stations on the plan: a post with "0 m" (gold) at the start of the section and the chart's distances along it
     {const PS=P_.filter(Boolean);if(PS.length>1){const u0=PS[0].u,u1=PS[PS.length-1].u,L=u1-u0,sx=[10,20,50,100,200].find(s_=>L/s_<=6)||500,cmp=(e,nn)=>['N','NE','E','SE','S','SW','W','NW'][Math.round(((Math.atan2(e,nn)*180/Math.PI)+360)%360/45)%8];
-      cutCmp={from:cmp(-t[0],t[1]),to:cmp(t[0],-t[1])};const r_=Math.max(0.6,span*0.004);
+      cutCmp=cutAB?{from:'A',to:'B',ab:1}:{from:cmp(-t[0],t[1]),to:cmp(t[0],-t[1])};const r_=Math.max(0.6,span*0.004);
       const post=(p,d,first,last)=>{const top=Math.max(Y(p.s),Y(p.g),Y(p.z))+span*(first?0.06:0.035),cyl=new THREE.Mesh(new THREE.CylinderGeometry(1,1,1,8),new THREE.MeshBasicMaterial({color:first?0xffca28:(LT?0x10233b:0xffffff)}));
         cyl.scale.set(first?r_*1.4:r_,top-base,first?r_*1.4:r_);cyl.position.set(p.cx,(top+base)/2,p.cz);cyl.renderOrder=13;curt.add(cyl);
-        const sp=tag3D(first?'▶ 0 m':Math.round(d)+' m',first?'start · '+cutCmp.from+' end':last?cutCmp.to+' end':null,first?28:19,first?{bg:'rgba(255,202,40,.95)',fg:'#10233b',fg2:'#10233b',f1:36,f2:24,ord:21}:{bg:'rgba(8,17,29,.85)',bd:'#ffffff',fg:'#ffffff',fg2:'#ffca28',f1:30,f2:22,ord:20});
+        const sp=tag3D(first?(cutCmp.ab?'A · 0 m':'▶ 0 m'):(last&&cutCmp.ab?'B · ':'')+Math.round(d)+' m',first?(cutCmp.ab?'start':'start · '+cutCmp.from+' end'):last&&!cutCmp.ab?cutCmp.to+' end':null,first?28:19,first?{bg:'rgba(255,202,40,.95)',fg:'#10233b',fg2:'#10233b',f1:36,f2:24,ord:21}:{bg:'rgba(8,17,29,.85)',bd:'#ffffff',fg:'#ffffff',fg2:'#ffca28',f1:30,f2:22,ord:20});
         sp.position.set(p.cx,top,p.cz);curt.add(sp)};
       const near=u=>PS.reduce((b_,x)=>Math.abs(x.u-u)<Math.abs(b_.u-u)?x:b_,PS[0]);
-      for(let d=0;d<=L+0.01;d+=sx)post(near(u0+d),d,d===0,false);if(L%sx>sx*0.35)post(PS[PS.length-1],L,false,true)}}
+      for(let d=0;d<=L+0.01;d+=sx)post(near(u0+d),d,d===0,false);if(cutAB?L%sx>0.5:L%sx>sx*0.35)post(PS[PS.length-1],L,false,true)}}
     if(cutU!=null){const p=P_.reduce((b_,x)=>x&&(!b_||Math.abs(x.u-cutU)<Math.abs(b_.u-cutU))?x:b_,null);if(p){const top=Math.max(Y(p.s),Y(p.g),Y(p.z))+span*0.05,cyl=new THREE.Mesh(new THREE.CylinderGeometry(1,1,1,8),new THREE.MeshBasicMaterial({color:0xf2a93b}));
       const r_=Math.max(1,span*0.009);cyl.scale.set(r_,top-base,r_);const po=r_+1;cyl.position.set(p.cx-n[0]*po,(top+base)/2,p.cz-n[1]*po);cyl.renderOrder=13;curt.add(cyl);const bl=new THREE.Mesh(new THREE.SphereGeometry(1,16,12),new THREE.MeshBasicMaterial({color:0xf2a93b}));bl.scale.setScalar(r_*1.6);bl.position.set(p.cx-n[0]*po,top,p.cz-n[1]*po);curt.add(bl)}}
     grp.add(curt);placeCut();drawCut();req()}
@@ -5352,7 +5354,7 @@ function as3D(box,R,onPick){
     const L_=46,R_=10,T_=10,B_=38,xs=u=>L_+(u-u0)/(u1-u0)*(W-L_-R_),ys=v=>T_+(hi-v)/(hi-lo)*(H-T_-B_);
     c.strokeStyle=LT?'rgba(16,35,59,.08)':'rgba(255,255,255,.07)';c.fillStyle=mu;c.font='600 10.5px system-ui';c.textAlign='right';c.textBaseline='middle';
     const st=[0.25,0.5,1,2,5,10].find(s_=>(hi-lo)/s_<=6)||20;for(let v=Math.ceil(lo/st)*st;v<=hi;v+=st){const y=ys(v);c.beginPath();c.moveTo(L_,y);c.lineTo(W-R_,y);c.stroke();c.fillText(v.toFixed(st<1?2:0),L_-5,y)}
-    c.textAlign='center';c.textBaseline='top';const sx=[10,20,50,100,200].find(s_=>(u1-u0)/s_<=6)||500;for(let d=0;d<=u1-u0;d+=sx)c.fillText(d+' m',xs(u0+d),H-B_+6);if(cutCmp){c.font='800 11px system-ui';c.fillStyle='#ffca28';c.textAlign='left';c.fillText('▶ start ('+cutCmp.from+' end, gold post in 3D)',xs(u0),H-B_+20);c.textAlign='right';c.fillText(cutCmp.to+' end',xs(u1),H-B_+20);c.fillStyle=fg}
+    c.textAlign='center';c.textBaseline='top';const sx=[10,20,50,100,200].find(s_=>(u1-u0)/s_<=6)||500;for(let d=0;d<=u1-u0;d+=sx)c.fillText(d+' m',xs(u0+d),H-B_+6);if(cutCmp){c.font='800 11px system-ui';c.fillStyle='#ffca28';c.textAlign='left';c.fillText(cutCmp.ab?'A (start, gold post)':'▶ start ('+cutCmp.from+' end, gold post in 3D)',xs(u0),H-B_+20);c.textAlign='right';c.fillText(cutCmp.ab?'B':cutCmp.to+' end',xs(u1),H-B_+20);c.fillStyle=fg}
     const seg=(f,col)=>{c.fillStyle=col;let open=false;for(let i=1;i<cutProf.length;i++){const a_=cutProf[i-1],b_=cutProf[i];if(!a_||!b_)continue;const r=f(a_,b_);if(!r)continue;c.beginPath();c.moveTo(xs(a_.u),ys(r[0]));c.lineTo(xs(b_.u),ys(r[1]));c.lineTo(xs(b_.u),ys(r[3]));c.lineTo(xs(a_.u),ys(r[2]));c.closePath();c.fill();c.strokeStyle=col;c.lineWidth=0.8;c.stroke()}};
     seg((a_,b_)=>[Math.min(a_.g,a_.s),Math.min(b_.g,b_.s),lo,lo],LT?'#d9cfbd':'#5d4f3f');
     seg((a_,b_)=>(a_.s-a_.g)+(b_.s-b_.g)>0?[Math.max(a_.s,a_.g),Math.max(b_.s,b_.g),a_.g,b_.g]:null,'#e08a3c');
@@ -5372,7 +5374,7 @@ function as3D(box,R,onPick){
         'Design is on average '+Math.abs(sd).toFixed(2)+' m '+(sd>=0?'below':'above')+' the natural ground here ('+(sd>=0?'cut':'fill')+'). Tap the section for levels at any spot.']}
     cutRd.replaceChildren(...tx)}
   cutCv.addEventListener('pointerdown',e=>{const P_=cutProf.filter(Boolean);if(P_.length<2)return;const r=cutCv.getBoundingClientRect(),W=r.width,u0=P_[0].u,u1=P_[P_.length-1].u;cutU=u0+Math.max(0,Math.min(1,(e.clientX-r.left-46)/(W-56)))*(u1-u0);buildCut()});
-  const resnap=()=>{if(!cutOn)return;cutTh=V.th;buildCut()};
+  const resnap=()=>{if(!cutOn||cutAB)return;cutTh=V.th;buildCut()};
   // camera
   const place=()=>{cam.position.set(V.tx+V.r*Math.sin(V.ph)*Math.sin(V.th),V.r*Math.cos(V.ph),V.tz+V.r*Math.sin(V.ph)*Math.cos(V.th));cam.lookAt(V.tx,0,V.tz)};
   const cmp=h('div',{class:'as-3dn',title:'North'},h('i',{}),h('b',{},'N'));
@@ -5389,7 +5391,7 @@ function as3D(box,R,onPick){
     if(P.size>1)return;if(e.buttons===2||e.shiftKey)pan(dx,dy);else{V.th-=dx*0.008;V.ph=Math.max(0.05,Math.min(1.48,V.ph-dy*0.006))}req()});
   const up=e=>{const was=P.has(e.pointerId);P.delete(e.pointerId);if(P.size<2)g0=null;if(was&&moved>=6&&!P.size)resnap();
     if(was&&e.type==='pointerup'&&moved<6&&Date.now()-t0<600&&!P.size){const r=cvs.getBoundingClientRect(),ry=new THREE.Raycaster();ry.setFromCamera({x:(e.clientX-r.left)/r.width*2-1,y:-(e.clientY-r.top)/r.height*2+1},cam);
-      const hit=ry.intersectObject(surf)[0];if(!hit)return;const E=hit.point.x+cx,N=cy-hit.point.z;let best=null,bd=1e18;for(const n of list){const d=(n.q.E-E)**2+(n.q.N-N)**2;if(d<bd){bd=d;best=n}}
+      const hit=ry.intersectObject(surf)[0];if(drawAB){if(hit)abPick(hit.point);return}if(!hit)return;const E=hit.point.x+cx,N=cy-hit.point.z;let best=null,bd=1e18;for(const n of list){const d=(n.q.E-E)**2+(n.q.N-N)**2;if(d<bd){bd=d;best=n}}
       if(RP.on&&best){const D=RP.dates[RP.i]||'';let no=null,dm=1e18;for(const i of RP.hot||[]){const n=list[i],d=(n.q.E-E)**2+(n.q.N-N)**2;if(d<dm){dm=d;no=(RP.ev[i].find(x=>x.d===D)||{}).no}}
         if(!(no&&dm<(span*0.06)**2)){const ev=RP.ev[list.indexOf(best)]||[];const x=ev.filter(x=>x.d<=D).pop();no=x?x.no:null}
         if(no){rpPause();wirWin(no,(S.wirs[no]||{}).date===D?D:null)}return}
@@ -5425,8 +5427,19 @@ function as3D(box,R,onPick){
   const camTo=T=>{const A={...V};A.th=T.th+((((A.th-T.th+Math.PI)%(2*Math.PI))+2*Math.PI)%(2*Math.PI))-Math.PI;const s0=performance.now();const f=now=>{const k=Math.min(1,(now-s0)/650),e=1-Math.pow(1-k,3);for(const key of ['th','ph','r','tx','tz'])V[key]=A[key]+(T[key]-A[key])*e;req();if(k<1)requestAnimationFrame(f);else resnap()};requestAnimationFrame(f)};
   const vb=(t,ti,f)=>h('button',{class:'as-3dv',title:ti,onclick:e=>{e.stopPropagation();f(e)}},t);
   const vcol=h('div',{class:'as-3dvc'},vb('3D','Start view',()=>camTo({...home})),vb('Top','Seen from above, north up',()=>camTo({th:0,ph:0.02,r:span*2.3,tx:0,tz:0})),vb('Side','Seen from the side',()=>camTo({th:V.th,ph:1.36,r:span*1.7,tx:0,tz:0})),
-    vb('📍','Go to point – place a point by its coordinates',()=>pinForm(go3D)),vb('⛶','Full screen',e=>{const on=!box.classList.contains('fs');box.classList.toggle('fs',on);placePan();e.currentTarget.textContent=on?'✕':'⛶';e.currentTarget.title=on?'Exit full screen':'Full screen';if(cutOn){placeCut();requestAnimationFrame(drawCut)}requestAnimationFrame(size)}));
-  const cutB=h('button',{class:'as-chip',onclick:e=>{e.stopPropagation();cutOn=!cutOn;cutB.classList.toggle('on',cutOn);if(cutOn){cutTh=V.th;cutU=null}buildCut();if(cutOn)camTo({...V,ph:Math.max(V.ph,1.18),r:Math.min(V.r,span*1.45)});if(cutOn)setTimeout(()=>cutCard.scrollIntoView({behavior:'smooth',block:'nearest'}),150)}},'✂ Cut');
+    vb('📍','Go to point – place a point by its coordinates',()=>pinForm(go3D)),vb('✏','Draw a section line: tap point A, then point B',()=>startAB()),vb('⛶','Full screen',e=>{const on=!box.classList.contains('fs');box.classList.toggle('fs',on);placePan();e.currentTarget.textContent=on?'✕':'⛶';e.currentTarget.title=on?'Exit full screen':'Full screen';if(cutOn){placeCut();requestAnimationFrame(drawCut)}requestAnimationFrame(size)}));
+  // ✏ your own section line: tap A, tap B; the cut shows the profile from A (0 m) to B only
+  const abHint=h('div',{class:'as-abh'});
+  function abEnd(){drawAB=0;abA=null;if(abMk){scene.remove(abMk);disp(abMk);abMk=null}abHint.remove();req()}
+  function startAB(){abEnd();drawAB=1;abHint.replaceChildren(h('b',{},'✏ Tap point A'),h('span',{},' on the ground – the start of your section'),h('button',{onclick:e=>{e.stopPropagation();abEnd()}},'Cancel'));box.append(abHint);
+    camTo({th:V.th,ph:0.02,r:Math.min(V.r,span*2.3),tx:V.tx,tz:V.tz});box.scrollIntoView({behavior:'smooth',block:'nearest'})}
+  function abPick(pt){const m=new THREE.Mesh(new THREE.SphereGeometry(1,16,12),new THREE.MeshBasicMaterial({color:0xffca28,depthTest:false}));m.scale.setScalar(Math.max(1.5,span*0.008));m.position.copy(pt);m.renderOrder=30;
+    if(drawAB===1){abA=[pt.x,pt.z];if(abMk){scene.remove(abMk);disp(abMk)}abMk=m;scene.add(m);drawAB=2;abHint.firstChild.textContent='✏ Tap point B';abHint.children[1].textContent=' – the end of your section';req();return}
+    const b=[pt.x,pt.z];disp(m);if(Math.hypot(b[0]-abA[0],b[1]-abA[1])<10){toast('Point B is too close to A – tap further away');return}
+    cutAB={a:abA,b};const a_=abA;abEnd();cutOn=true;cutB.classList.add('on');cutU=null;buildCut();
+    const {n}=cutDir(),L=Math.hypot(b[0]-a_[0],b[1]-a_[1]),asp=cam.aspect||1;camTo({th:Math.atan2(-n[0],-n[1]),ph:1.12,r:Math.max(span*0.12,L/2/(Math.tan(20*Math.PI/180)*Math.min(1,asp))*1.35),tx:(a_[0]+b[0])/2,tz:(a_[1]+b[1])/2});
+    setTimeout(()=>cutCard.scrollIntoView({behavior:'smooth',block:'nearest'}),700)}
+  const cutB=h('button',{class:'as-chip',onclick:e=>{e.stopPropagation();cutOn=!cutOn;cutB.classList.toggle('on',cutOn);cutAB=null;abEnd();if(cutOn){cutTh=V.th;cutU=null}buildCut();if(cutOn)camTo({...V,ph:Math.max(V.ph,1.18),r:Math.min(V.r,span*1.45)});if(cutOn)setTimeout(()=>cutCard.scrollIntoView({behavior:'smooth',block:'nearest'}),150)}},'✂ Cut');
   const fpTot=RR.reduce((a,r)=>({placed:a.placed+(r.placed||0),need:a.need+(r.placed||0)+(r.unrec||0)+(r.rFill||0)}),{placed:0,need:0}),fpEl=fpTot.need>0?h('div',{class:'as-3dfp'}):null;
   const fmEl=h('div',{class:'as-3dgap',style:'display:none'}),gapEl=h('div',{class:'as-3dgap'}),gLg=h('div',{class:'as-3dwl'},h('i',{style:'background:linear-gradient(90deg,#1f4fb0,#b3d6ff)'}),'below design (fill) deep → shallow',h('i',{style:'background:#33c766'}),'at design ±5 cm',h('i',{style:'background:linear-gradient(90deg,#dba0ff,#6e1fbf)'}),'above design (cut)',h('i',{style:'background:linear-gradient(90deg,#ff8c1f,#8c2802)'}),'waste pile');gLg.style.display=gOn?'':'none';
   const gB=h('button',{class:'as-chip'+(gOn?' on':''),title:'Colour the ground by its distance from the design level',onclick:e=>{e.stopPropagation();gOn=!gOn;lsSet('es_as3gap',gOn);gB.classList.toggle('on',gOn);gLg.style.display=gOn?'':'none';wLg.style.display=gOn?'none':(wOn?'':'none');build()}},'📏 Gap to design');
