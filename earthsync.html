@@ -691,6 +691,11 @@ a.btn{text-decoration:none;display:inline-block}
 #t-home.hv3 .v3-ph{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}#t-home.hv3 .v3-ph b{font-size:15px}#t-home.hv3 .v3-ph small{color:var(--mut)}
 #t-home.hv3 .v3-pk{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--mut)}#t-home.hv3 .v3-pk i{width:9px;height:9px;border-radius:50%;display:inline-block;margin-left:8px}
 #t-home.hv3 .v3-pv{cursor:pointer}#t-home.hv3 .v3-psv{width:100%;height:150px;display:block}#t-home.hv3 .v3-pd{transition:r .15s}#t-home.hv3 .v3-pd:hover{r:7}
+#t-home .m-pulse{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:10px 12px 4px;margin:12px 0 4px}
+#t-home .m-pulse .v3-ph{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}#t-home .m-pulse .v3-ph b{font-size:15px}#t-home .m-pulse .v3-ph small{color:var(--mut);font-size:11.5px;flex:1}
+#t-home .m-pulse .v3-pk{display:none}#t-home .m-pulse .v3-pv{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -4px}#t-home .m-pulse .v3-psv{width:920px;height:150px;display:block}
+#t-home .m-phide{border:0;background:none;color:var(--mut);font:600 12px system-ui;text-decoration:underline;cursor:pointer;padding:0}
+.pw-tabs{display:none;gap:4px;background:rgba(255,255,255,.06);border-radius:999px;padding:3px}.pw-tabs button{border:0;background:none;color:#cfe0f2;font:800 13px system-ui;padding:7px 14px;border-radius:999px;cursor:pointer}.pw-tabs button.on{background:#ffca28;color:#10233b}
 .pw-bg{position:fixed;inset:0;z-index:300;background:rgba(5,12,22,.6);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:18px}
 .pw-win{width:min(1500px,100%);height:min(900px,100%);background:#0f1d2f;color:#e9f1fb;border:1px solid rgba(143,166,192,.25);border-radius:22px;box-shadow:0 30px 80px rgba(0,0,0,.5);display:flex;flex-direction:column;overflow:hidden}
 .pw-top{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid rgba(143,166,192,.2)}
@@ -716,6 +721,7 @@ a.btn{text-decoration:none;display:inline-block}
 .pw-act{margin-top:16px;display:flex;gap:8px}.pw-no{margin:14px 0;color:#8ea6bf}
 @media (max-width:900px){.pw-body{grid-template-columns:1fr;overflow:auto}.pw-3d.as-cv{min-height:360px}}
 #t-home.hv3 .v3-pd{cursor:pointer}
+@media (max-width:899px){.pw-bg{padding:0}.pw-win{border-radius:0;height:100%}.pw-tt{display:none}.pw-tabs{display:flex;flex:1;justify-content:center}.pw-body{display:block;padding:10px;overflow:hidden;position:relative}.pw-l,.pw-r{height:100%;box-sizing:border-box}.pw-body:not(.t3) .pw-r{display:none}.pw-body.t3 .pw-l{display:none}.pw-r{display:flex;min-width:0;overflow:hidden}.pw-rh small{display:none}.pw-l{overflow:auto}.pw-3d.as-cv{min-height:0;flex:1}.pw-g{grid-template-columns:1fr 1fr}.pw-hd h3{font-size:18px}.pw-home{padding:8px 12px}}
 
 #t-home .v3-back{position:fixed;left:14px;bottom:96px;z-index:60;border:0;border-radius:999px;padding:10px 16px;font:800 13px system-ui;cursor:pointer;color:#10233b;background:linear-gradient(145deg,#ffca28,#f59e0b);box-shadow:0 8px 24px rgba(0,0,0,.3)}#t-home.hv3 .v3-back{display:none}
 #t-home.hv3 .hero .kpis{color:var(--txt)}#t-home.hv3 .hero .kpi{color:var(--txt)}#t-home.hv3 .hero .kpi b{color:var(--txt)}
@@ -1624,15 +1630,27 @@ function pulseWir(no){
   const kd=e=>{if(e.key==='Escape')close()};
   function close(){window.__hiW=null;as3DStop();bg.remove();document.removeEventListener('keydown',kd)}
   const home=()=>{close();homeView=null;showTab('home');try{renderHome()}catch(e){}};
-  const top=h('div',{class:'pw-top'},h('button',{class:'pw-home',title:'Back to the home page',onclick:home},'🏠 Home'),h('div',{class:'pw-tt'},'Site pulse · '+(w.cno||'WIR '+w.no)),h('button',{class:'pw-x',title:'Close (Esc)',onclick:close},'✕'));
-  bg.append(h('div',{class:'pw-win'},top,h('div',{class:'pw-body'},left,right)));
+  const mob=innerWidth<900;let go3=null;const tabs=h('div',{class:'pw-tabs'},h('button',{class:'on',onclick:e=>{body.classList.remove('t3');tabs.children[0].classList.add('on');tabs.children[1].classList.remove('on')}},'Breakdown'),h('button',{onclick:e=>{body.classList.add('t3');tabs.children[1].classList.add('on');tabs.children[0].classList.remove('on');if(go3){const f=go3;go3=null;f()}}},'📍 3D'));
+  const top=h('div',{class:'pw-top'},h('button',{class:'pw-home',title:'Back to the home page',onclick:home},'🏠 Home'),h('div',{class:'pw-tt'},'Site pulse · '+(w.cno||'WIR '+w.no)),tabs,h('button',{class:'pw-x',title:'Close (Esc)',onclick:close},'✕'));
+  const body=h('div',{class:'pw-body'},left,right);bg.append(h('div',{class:'pw-win'},top,body));
   bg.addEventListener('click',e=>{if(e.target===bg)close()});document.addEventListener('keydown',kd);document.body.append(bg);
   const R=k?asCalc(k):null;
   if(!R){box.append(h('div',{class:'as-3dmsg'},P.length?'This WIR is outside the work areas.':'No points to place in 3D.'));return}
   right.querySelector('small').textContent=newAreaName(k)+' · pink dots = survey points of this WIR, yellow line = their outer boundary · drag to turn, scroll to zoom';
   if(typeof THREE==='undefined'&&typeof load3==='function'){}
-  try{lsSet('es_as3s','area');lsSet('es_as3p',true);window.__hiW={P,lab:(w.cno||'WIR '+w.no)+' · '+(w.ref||''),sub:kn+' · '+P.length+' points',fly:1};setTimeout(()=>{try{as3D(box,R,()=>{})}catch(e){console.warn(e);box.append(h('div',{class:'as-3dmsg'},'3D could not open here.'))}},60)}catch(e){console.warn(e)}
+  try{lsSet('es_as3s','area');lsSet('es_as3p',true);window.__hiW={P,lab:(w.cno||'WIR '+w.no)+' · '+(w.ref||''),sub:kn+' · '+P.length+' points',fly:1};const st3=()=>setTimeout(()=>{try{as3D(box,R,()=>{})}catch(e){console.warn(e);box.append(h('div',{class:'as-3dmsg'},'3D could not open here.'))}},60);if(mob)go3=st3;else st3()}catch(e){console.warn(e)}
 }
+function sitePulse(mob){const own=canEdit();const DAY=864e5,t1=Date.now(),t0=t1-42*DAY,M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const Wl=Object.values(S.wirs).filter(w=>w&&w.date&&(own||!(w.no===63&&!(S.pub116&&S.pub116.on)))).map(w=>({w,t:dMs(w.date)})).filter(x=>x.t>=t0&&x.t<=t1+DAY).sort((a,b)=>a.t-b.t);
+    const stc=w=>/^approved/.test(w.status||'')?'#22c55e':/refus|reject/.test(w.status||'')?'#e5645f':'#f0a93a';
+    const kd=w=>{try{const k=wirKind(w.no);return k==='strip'?'Stripping':k==='waste'?'Waste':k==='final'?(/cut/i.test(w.layer||'')?'Cut':'Final'):'Fill L'+(w.layer||'')}catch(e){return ''}};
+    const Wd=1000,Hd=150,X=t=>40+(t-t0)/(t1-t0)*(Wd-80),cnt={};let s=`<svg viewBox="0 0 ${Wd} ${Hd}" preserveAspectRatio="none" class="v3-psv"><line x1="40" y1="120" x2="${Wd-40}" y2="120" stroke="rgba(143,166,192,.35)" stroke-width="1.5"/>`;
+    for(let t=t0;t<=t1;t+=7*DAY){const d=new Date(t);s+=`<line x1="${X(t).toFixed(1)}" y1="116" x2="${X(t).toFixed(1)}" y2="124" stroke="rgba(143,166,192,.45)"/><text x="${X(t).toFixed(1)}" y="141" text-anchor="middle" font-size="11" fill="#8ea6bf">${d.getDate()} ${M[d.getMonth()]}</text>`}
+    s+=`<line x1="${X(t1).toFixed(1)}" y1="8" x2="${X(t1).toFixed(1)}" y2="124" stroke="#ffca28" stroke-dasharray="3 3"/><text x="${(X(t1)-4).toFixed(1)}" y="14" text-anchor="end" font-size="11" font-weight="800" fill="#ffca28">today</text>`;
+    for(const {w,t} of Wl){const key=w.date;const k=cnt[key]=(cnt[key]||0)+1,y=120-k*(mob?17:13.5);s+=`<circle class="v3-pd" data-no="${w.no}" cx="${X(Math.min(t1,t+DAY/2)).toFixed(1)}" cy="${y}" r="${mob?7.5:5.6}" fill="${stc(w)}" stroke="#0b1a2b" stroke-width="1.2"><title>${(w.cno||'WIR '+w.no)} · ${dmy(w.date)} · ${w.ref||''} ${kd(w)} · ${w.status||''}</title></circle>`}
+    s+='</svg>';const box=h('div',{class:'v3-pv'});box.innerHTML=s;box.addEventListener('click',e=>{const c=e.target.closest&&e.target.closest('[data-no]');if(c){e.stopPropagation();pulseWir(+c.dataset.no)}else showTab('wir')});
+    const ap=Wl.filter(x=>/^approved/.test(x.w.status||'')).length;
+    return h('div',{class:'v3-pulse'+(mob?' m-pulse':'')},h('div',{class:'v3-ph'},h('b',{},'Site pulse'),h('small',{},Wl.length+' WIRs in the last 6 weeks · '+ap+' approved · '+(Wl.length-ap)+' under review'+(mob?' · tap a dot':' · click a dot for its breakdown and 3D')),h('span',{class:'v3-pk'},h('i',{style:'background:#22c55e'}),'approved',h('i',{style:'background:#f0a93a'}),'under review')),box)}
 function homeV3(el,T,spT,openN){
   const ntc=el.querySelector('.ntc'),hero=el.querySelector('.hero');el.replaceChildren();el.classList.remove('hv2');el.classList.add('hv3');
   const own=canEdit();
@@ -1670,17 +1688,7 @@ function homeV3(el,T,spT,openN){
     orb=h('div',{class:'v3-orb',title:'Whole site progress – survey estimate. Click for the work areas map.',onclick:e=>{e.stopPropagation();areaPicker()}},sv,h('div',{},h('div',{class:'v3-ot'},'Site progress'),li('#e0b25a','Stripping',z.pStrip.toFixed(1)+'%'),li('#4f8ff7','Fill',z.pFill.toFixed(1)+'%'),li('#e5645f','Cut',z.pCut.toFixed(1)+'%'),h('div',{class:'v3-oe'},'survey estimate')))}catch(e){console.warn(e)}
   const kp=hero?hero.querySelector('.kpis'):null;
   // ----- site pulse: every WIR of the last 6 weeks on one time line
-  const pulse=(()=>{const DAY=864e5,t1=Date.now(),t0=t1-42*DAY,M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    const Wl=Object.values(S.wirs).filter(w=>w&&w.date&&(own||!(w.no===63&&!(S.pub116&&S.pub116.on)))).map(w=>({w,t:dMs(w.date)})).filter(x=>x.t>=t0&&x.t<=t1+DAY).sort((a,b)=>a.t-b.t);
-    const stc=w=>/^approved/.test(w.status||'')?'#22c55e':/refus|reject/.test(w.status||'')?'#e5645f':'#f0a93a';
-    const kd=w=>{try{const k=wirKind(w.no);return k==='strip'?'Stripping':k==='waste'?'Waste':k==='final'?(/cut/i.test(w.layer||'')?'Cut':'Final'):'Fill L'+(w.layer||'')}catch(e){return ''}};
-    const Wd=1000,Hd=150,X=t=>40+(t-t0)/(t1-t0)*(Wd-80),cnt={};let s=`<svg viewBox="0 0 ${Wd} ${Hd}" preserveAspectRatio="none" class="v3-psv"><line x1="40" y1="120" x2="${Wd-40}" y2="120" stroke="rgba(143,166,192,.35)" stroke-width="1.5"/>`;
-    for(let t=t0;t<=t1;t+=7*DAY){const d=new Date(t);s+=`<line x1="${X(t).toFixed(1)}" y1="116" x2="${X(t).toFixed(1)}" y2="124" stroke="rgba(143,166,192,.45)"/><text x="${X(t).toFixed(1)}" y="141" text-anchor="middle" font-size="11" fill="#8ea6bf">${d.getDate()} ${M[d.getMonth()]}</text>`}
-    s+=`<line x1="${X(t1).toFixed(1)}" y1="8" x2="${X(t1).toFixed(1)}" y2="124" stroke="#ffca28" stroke-dasharray="3 3"/><text x="${(X(t1)-4).toFixed(1)}" y="14" text-anchor="end" font-size="11" font-weight="800" fill="#ffca28">today</text>`;
-    for(const {w,t} of Wl){const key=w.date;const k=cnt[key]=(cnt[key]||0)+1,y=120-k*13.5;s+=`<circle class="v3-pd" data-no="${w.no}" cx="${X(Math.min(t1,t+DAY/2)).toFixed(1)}" cy="${y}" r="5.6" fill="${stc(w)}" stroke="#0b1a2b" stroke-width="1.2"><title>${(w.cno||'WIR '+w.no)} · ${dmy(w.date)} · ${w.ref||''} ${kd(w)} · ${w.status||''}</title></circle>`}
-    s+='</svg>';const box=h('div',{class:'v3-pv'});box.innerHTML=s;box.addEventListener('click',e=>{const c=e.target.closest&&e.target.closest('[data-no]');if(c){e.stopPropagation();pulseWir(+c.dataset.no)}else showTab('wir')});
-    const ap=Wl.filter(x=>/^approved/.test(x.w.status||'')).length;
-    return h('div',{class:'v3-pulse'},h('div',{class:'v3-ph'},h('b',{},'Site pulse'),h('small',{},Wl.length+' WIRs in the last 6 weeks · '+ap+' approved · '+(Wl.length-ap)+' under review · click a dot for its breakdown and 3D'),h('span',{class:'v3-pk'},h('i',{style:'background:#22c55e'}),'approved',h('i',{style:'background:#f0a93a'}),'under review')),box)})();
+  const pulse=sitePulse(false);
   const side=h('aside',{class:'v3-side'},nt,orb?h('div',{class:'v3-sc'},orb):null,kp?h('div',{class:'v3-sk hero'},kp):null);
   const main=h('div',{class:'v3-main'},h('div',{class:'v3-cols'},h('div',{class:'v3-left'},hero,pulse),side),h('div',{class:'hfoot'},h('span',{},(S.meta.name||'EarthSync')+' · Khuzam 04 Enabling'),h('span',{},'Khatib & Alami – Surveying'),h('span',{},'build '+APP_BUILD)));
   el.append(rail,main,scrim,dr);
@@ -1729,6 +1737,7 @@ function homeTiles(el){
     const mk=([ic,t,sub,cls,fn])=>h('button',{class:'tile',onclick:fn},h('div',{class:'tt'},h('span',{class:'ti'},ic)),h('b',{},t),h('small',{},sub));
     const mt=main.map(([t])=>mk(t));let dT=null;try{dT=doneTile()}catch(e){console.warn(e)}let lT=null;try{lT=latestTile()}catch(e){console.warn(e)}let fT=null,aT=null;try{fT=forecastTile()}catch(e){console.warn(e)}try{aT=attentionTile()}catch(e){console.warn(e)}
     const V2=innerWidth>=700;el.append(h('div',{class:'tiles simple'+(V2?' dash':'')},...(dT?[dT]:[]),...(spT?[spT]:[]),...(lT?[lT]:[]),...(fT?[fT]:[]),...(aT?[aT]:[])));
+    if(!V2){if(lsGet('es_mpl','1')!=='0'){try{const pu=sitePulse(true);pu.querySelector('.v3-ph').append(h('button',{class:'m-phide',onclick:()=>{lsSet('es_mpl','0');renderHome()}},'Hide'));el.append(pu);requestAnimationFrame(()=>{const sc=pu.querySelector('.v3-pv');if(sc)sc.scrollLeft=sc.scrollWidth})}catch(e){console.warn(e)}}}
     const rest=T.filter(t=>!MAIN.includes(t[1]));
     if(V2){
     const QC={'Work areas':'#4f8ff7','WIR register':'#0e8f8a','Contractor WIR':'#3b62c4','3D terrain':'#7c5cff','Monthly report':'#2a8a4b','Daily report':'#2a8a4b','Scan photo':'#8fa6c0','Waste spot-check':'#f08c2e','Site refusals':'#e5645f','Findings':'#e0a13a','BOQ & quantities':'#b48cff','Progress replay':'#22b4e6','Points for QS':'#0e8f8a','Site check':'#e5645f','BM check':'#8fa6c0','Khuzam 3 joint':'#e8892b','Data':'#69727a'};
@@ -1739,15 +1748,15 @@ function homeTiles(el){
     }else{
     el.append(h('div',{class:'morebar'},...rest.map(([ic,t,sub,cls,fn])=>{const n=t==='Findings'?findOpenCount():t==='WIR register'?openN:0;
         return h('button',{class:'mlink',title:sub,onclick:fn},h('span',{class:'mi'},ic),t,n?h('span',{class:'mb'},String(n)):null)}),
-      h('button',{class:'mlink mt',onclick:()=>setMode('all')},'Show all tiles')));
+      h('button',{class:'mlink mt',onclick:()=>setMode('all')},'Show all tiles'),lsGet('es_mpl','1')==='0'?h('button',{class:'mlink mt',onclick:()=>{lsSet('es_mpl','1');renderHome()}},'Show site pulse'):null));
     }
     spinNeedles(el);
-    if(!V2)el.append(h('div',{class:'mut',style:'font-size:12px;margin:14px 0 26px;text-align:center'},(S.meta.name||'EarthSync')+' · build 458'));else el.append(h('div',{class:'hfoot'},h('span',{},(S.meta.name||'EarthSync')+' · Khuzam 04 Enabling'),h('span',{},'Khatib & Alami – Surveying'),h('span',{},'build 458')));
+    if(!V2)el.append(h('div',{class:'mut',style:'font-size:12px;margin:14px 0 26px;text-align:center'},(S.meta.name||'EarthSync')+' · build 459'));else el.append(h('div',{class:'hfoot'},h('span',{},(S.meta.name||'EarthSync')+' · Khuzam 04 Enabling'),h('span',{},'Khatib & Alami – Surveying'),h('span',{},'build 459')));
     return;
   }
   el.append(h('div',{class:'tiles'},...tiles));spinNeedles(el);
   el.append(h('div',{style:'text-align:center;margin-top:12px'},h('button',{class:'mlink mt',onclick:()=>setMode('simple')},'Simple view'),innerWidth>=1000?h('button',{class:'mlink mt',style:'margin-left:8px',onclick:()=>{lsSet('es_hv3','1');renderHome()}},'✦ New home'):null));
-  el.append(h('div',{class:'mut',style:'font-size:12px;margin:12px 0 26px;text-align:center'},(S.meta.name||'EarthSync')+' · '+W.length+' WIRs · '+fmt(pts)+' contractor points loaded · build 458'));
+  el.append(h('div',{class:'mut',style:'font-size:12px;margin:12px 0 26px;text-align:center'},(S.meta.name||'EarthSync')+' · '+W.length+' WIRs · '+fmt(pts)+' contractor points loaded · build 459'));
   el.append(themeBar());
 }
 /* =====================================================================
@@ -3970,7 +3979,7 @@ function build3D(){
   const oc=$('#cwBox');if(oc)oc.remove();const opb=$('#ptBox');if(opb)opb.remove();
   const ol=$('#legBox3');if(ol)ol.remove();
   if(!hasZ)$('#three').append(h('div',{id:'threeMsg'},`No elevations yet (${Z.length} of ${C.length} points). Load the design file or import a PNEZ file with Z in the Data tab.`));
-  else $('#three').append(h('div',{id:'threeMsg',style:'border-color:var(--line);width:auto;font-size:12px'},`${DES?'Design':'Control'} Z ${zmin.toFixed(2)} → ${zmax.toFixed(2)} m · vertical ×${exag}${pondsOn&&DES&&pondCache?` · ${pondCache.list.length} ponds`:''} · build 458`));
+  else $('#three').append(h('div',{id:'threeMsg',style:'border-color:var(--line);width:auto;font-size:12px'},`${DES?'Design':'Control'} Z ${zmin.toFixed(2)} → ${zmax.toFixed(2)} m · vertical ×${exag}${pondsOn&&DES&&pondCache?` · ${pondCache.list.length} ponds`:''} · build 459`));
   if(cw)$('#three').append(cwAll?cwPanelAll():cwPanel(+cwSel));
   {const oc3=$('#pondChip');if(oc3)oc3.remove();$('#three').append(h('button',{id:'pondChip',onclick:toggleBrook},''),h('button',{id:'pondsChip',onclick:togglePonds},''),h('button',{id:'wasteChip',onclick:toggleWaste},''));pondLabels();placeChips()}
   {const ot=$('#tools3');if(ot)ot.remove();$('#three').append(tools3());const ox=$('#fsExit');if(ox)ox.remove();if(document.body.classList.contains('fs3'))$('#three').append(fsExitBtn())}
@@ -6998,8 +7007,9 @@ async function accRequestsCard(){
    1) on opening: "What's new" card for builds newer than the one this device last saw
    2) app left open: checks every 10 min for a newer earthsync.html and offers "Update now"
    3) owner: Announce card – one message to copy / share on WhatsApp to the approved users */
-const APP_BUILD=458;
+const APP_BUILD=459;
 const WHATS_NEW={
+  459:['Phone: the site pulse is now on the home page – swipe it sideways and tap a WIR dot for its breakdown and its place in 3D (Hide / Show site pulse to switch it off).'],
   457:['Desktop home: the urgent instruction, site progress and headline numbers now sit in a column on the right, giving the map and a taller site pulse more room.'],
   455:['Site pulse window: the clicked WIR is now outlined in yellow in the 3D, with its points, a label and the camera flying to it.'],
   454:['3D: the 80 m road along Khuzam 4 now looks like a real road – sidewalks, service roads, islands, main carriageways, lane markings and kerbs (🛣 Road 80 button).'],
